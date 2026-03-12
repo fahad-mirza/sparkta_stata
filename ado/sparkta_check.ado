@@ -1,10 +1,10 @@
-*! sparkta_check version 3.5.41
+*! sparkta_check version 3.5.42
 *! Verifies sparkta installation and option parsing
 *! v2.0.8: extracted to standalone sparkta_check.ado so Stata can find it
 program define sparkta_check
     version 17
     display as text ""
-    display as text "  === Sparkta v3.5.41 Installation Check ==="
+    display as text "  === Sparkta v3.5.42 Installation Check ==="
     display as text "  Loaded from: `c(sysdir_personal)'"
     display as text ""
     display as text "  Testing option recognition..."
@@ -38,7 +38,7 @@ program define sparkta_check
     else         display as error "  sortgroups()         ... FAIL (rc=`_rc')"
 
     display as text ""
-    // Check sparkta.jar is locatable (same search order as sparkta.ado v3.5.41)
+    // Check sparkta.jar is locatable (same search order as sparkta.ado v3.5.42)
     local jarfound 0
     local jarfoundpath ""
 

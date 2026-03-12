@@ -1560,7 +1560,7 @@ With {cmd:indexAxis:'y'}, Chart.js puts the numeric value in
 {cmd:ctx.parsed.x} not {cmd:ctx.parsed.y}. Stack100 tooltip callback
 now uses {cmd:ctx.parsed.x} when horizontal, {cmd:ctx.parsed.y} otherwise.
 Java recompile required.{p_end}
-{p2col:{bf:v3.5.41}}Jar search reverted to {cmd:findfile} as primary lookup.
+{p2col:{bf:v3.5.42}}Jar search reverted to {cmd:findfile} as primary lookup.
 {cmd:c(source)} referenced in v3.5.40 does not exist in Stata -- removed.
 Added {cmd:sysdir_personal} forward-slash variant for Mac/Linux and explicit
 {cmd:sysdir_PLUS/s/sparkta/} fallback. Ado-only, no recompile needed.{p_end}
@@ -1722,7 +1722,7 @@ feature development.
 {title:Package Information}
 
 {p 4 4 2}
-{bf:sparkta} v3.5.41{break}
+{bf:sparkta} v3.5.42{break}
 Chart rendering: Chart.js 4.4 ({browse "https://cdn.jsdelivr.net":cdn.jsdelivr.net}){break}
 Java bridge: Stata Java Plugin Interface (JPI){break}
 Requires: Stata 17+ and {cmd:sparkta.jar}
@@ -1735,4 +1735,4 @@ Requires: Stata 17+ and {cmd:sparkta.jar}
 {helpb query} {hline 2} Java heap information ({cmd:query java})
 
 {hline}
-{it:sparkta.sthlp  version 3.5.41  2026-03-12}
+{it:sparkta.sthlp  version 3.5.42  2026-03-12}
