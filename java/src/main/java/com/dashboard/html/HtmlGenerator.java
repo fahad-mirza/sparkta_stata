@@ -22,7 +22,7 @@ public class HtmlGenerator {
 
     // v3.5.36: single source of truth for the jar version stamped into HTML comments.
     // Update this constant with every version bump -- it is the ONLY place to change.
-    public static final String VERSION = "3.5.41";
+    public static final String VERSION = "3.5.42";
 
     private final DashboardOptions o;
     private String[] seriesColors;
