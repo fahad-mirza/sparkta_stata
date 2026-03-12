@@ -1,3 +1,0 @@
-v 3
-d sparkta packages
-p sparkta Interactive self-contained HTML charts from Stata
