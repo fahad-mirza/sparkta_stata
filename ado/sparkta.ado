@@ -254,7 +254,7 @@ program define sparkta
     local sparkta_version "3.5.42"
 
     // Print version so user can confirm which ado is loaded
-    display as text "  [sparkta v`sparkta_version' | `c(sysdir_personal)']"
+    display as text "  [sparkta v`sparkta_version']"
 
     syntax varlist [if] [in],           ///
         [TYPE(string)]                  ///  bar line scatter pie hbar stackedbar stackedarea area bubble donut cibar ciline stackedbar100 stackedhbar100
@@ -1093,7 +1093,6 @@ program define sparkta
     // Pass the tempvar name so Java reads it via Data.getVarIndex()
     local tousename "`touse'"
     display as text "Building sparkta v`sparkta_version' with `nobs' observations..."
-    display as text "  (Stata personal dir: `c(sysdir_personal)')"
 
     // - Large dataset memory warning (v1.6.0) -
     // Java heap defaults vary by Stata version. If sparkta crashes with a
