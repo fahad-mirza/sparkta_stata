@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<!-- sparkta v3.5.41 fill=false stack=false type=violin -->
+<html lang='en'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width,initial-scale=1.0'>
+  <title>Price Distribution by Repair Record</title>
+  <script src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'></script>
+  <style>* {box-sizing:border-box;margin:0;padding:0;}
+body{background:#f8f9fa;color:#333333;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:2rem;}
+.container{max-width:1200px;margin:0 auto;}
+h1{font-size:1.8rem;color:#2c3e50;margin-bottom:.15rem;}
+.subtitle2{font-size:1.05rem;color:#2c3e50;opacity:.75;margin-bottom:.2rem;}
+.subtitle{font-size:.8rem;color:#888888;margin-bottom:1.5rem;}
+.panels-vertical{display:flex;flex-direction:column;gap:1.5rem;margin-bottom:1.5rem;}
+.panels-horizontal{display:flex;flex-direction:row;flex-wrap:nowrap;gap:1.5rem;margin-bottom:1.5rem;overflow-x:auto;}
+.panels-horizontal .panel-item{flex:1 1 0;min-width:280px;}
+.panels-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;margin-bottom:1.5rem;}
+.panel-empty{border-radius:8px;min-height:200px;}
+.chart-wrapper{background:#ffffff;border-radius:8px;border:1px solid #e0e0e0;padding:1.5rem;margin-bottom:1.5rem;}
+.panels-vertical .chart-wrapper,.panels-horizontal .chart-wrapper,.panels-grid .chart-wrapper{margin-bottom:0;}
+.panel-title{font-size:.92rem;font-weight:600;color:#2c3e50;margin-bottom:.6rem;padding:.35rem .6rem;background:#d6e4f0;border-radius:4px;}
+.note-area{margin-bottom:1.5rem;}
+.note{font-size:.85rem;color:#888888;font-style:italic;margin-bottom:.2rem;}
+.caption{font-size:.78rem;color:#888888;}
+.stats-panel{border-radius:12px;border:1px solid #e0e0e0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);margin-top:1.5rem;}
+.shell-header{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.25rem;background:linear-gradient(135deg,#ffffff 0%,#f8f9fa 100%);border-bottom:1px solid #e0e0e0;}
+.shell-title{display:flex;align-items:center;gap:.5rem;font-size:.88rem;font-weight:600;color:#2c3e50;}
+.shell-icon{width:20px;height:20px;background:#4e79a7;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.shell-icon svg{width:12px;height:12px;fill:#fff;}
+.hide-btn{padding:.28rem .7rem;font-size:.75rem;font-weight:500;color:#333333;background:#ffffff;border:1px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all .15s;}
+.hide-btn:hover{background:#e0e0e0;}
+.col-toggles{display:flex;align-items:center;gap:.35rem;padding:.6rem 1.25rem;background:#f8f9fa;border-bottom:1px solid #e0e0e0;flex-wrap:wrap;}
+.toggle-lbl{font-size:.7rem;font-weight:600;color:#888888;letter-spacing:.06em;text-transform:uppercase;margin-right:.1rem;}
+.chip{display:flex;align-items:center;gap:.22rem;padding:.22rem .6rem;font-size:.72rem;font-weight:500;border-radius:20px;border:1.5px solid #e0e0e0;background:#ffffff;color:#888888;cursor:pointer;transition:all .15s;}
+.chip:hover{border-color:#4e79a7;color:#4e79a7;}
+.chip.on{background:#4e79a7;border-color:#4e79a7;color:#ffffff;}
+.chip-dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.8;}
+.chip-all{margin-left:auto;padding:.22rem .65rem;font-size:.72rem;font-weight:500;border-radius:20px;border:1.5px solid #e0e0e0;background:transparent;color:#888888;cursor:pointer;transition:all .15s;}
+.chip-all:hover{border-color:#888888;color:#333333;}
+.stats-body{padding:0 1.25rem 1.25rem;background:#ffffff;}
+.grp{margin-top:.9rem;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;content-visibility:auto;contain-intrinsic-size:0 120px;}
+.grp-hdr{display:flex;align-items:center;justify-content:space-between;padding:.52rem .9rem;background:#d6e4f0;cursor:pointer;user-select:none;}
+.grp-hdr:hover{filter:brightness(.97);}
+.grp-title{display:flex;align-items:center;gap:.45rem;font-size:.8rem;font-weight:600;color:#2c3e50;}
+.grp-badge{padding:.1rem .42rem;font-size:.67rem;font-weight:700;background:#4e79a7;color:#fff;border-radius:10px;}
+.grp-chev{font-size:.65rem;color:#888888;}
+.tbl-wrap{overflow-x:auto;}
+table.st{width:100%;border-collapse:collapse;font-size:.83rem;}
+table.st thead tr{background:#f8f9fa;border-bottom:2px solid #e0e0e0;}
+table.st th{padding:.5rem .85rem;text-align:right;font-size:.7rem;font-weight:600;color:#888888;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;}
+table.st th:first-child{text-align:left;cursor:default;}
+table.st th.dist-hdr{cursor:default;}
+table.st th:hover:not(:first-child):not(.dist-hdr){color:#4e79a7;}
+table.st th.sorted{color:#4e79a7;}
+.sort-arr{margin-left:.18rem;font-size:.6rem;opacity:.5;}
+th.sorted .sort-arr{opacity:1;}
+table.st td{padding:.44rem .85rem;text-align:right;border-bottom:1px solid #e0e0e0;color:#333333;transition:background .1s;}
+table.st td:first-child{text-align:left;font-weight:600;color:#2c3e50;}
+table.st tbody tr:last-child td{border-bottom:none;}
+table.st tbody tr:hover td{background:#f0f4f8;}
+.nb{display:inline-flex;align-items:center;justify-content:center;min-width:30px;padding:.08rem .4rem;background:#d6e4f0;border-radius:4px;font-size:.77rem;font-weight:600;color:#2c3e50;}
+.cv{display:inline-flex;align-items:center;padding:.09rem .38rem;font-size:.67rem;font-weight:700;border-radius:4px;margin-left:.35rem;vertical-align:middle;}
+.cv-low{background:#dcfce7;color:#166534;}
+.cv-med{background:#fef9c3;color:#854d0e;}
+.cv-high{background:#fee2e2;color:#991b1b;}
+.spark-cell{padding:.35rem .85rem !important;}
+.spark-wrap{display:flex;align-items:center;justify-content:flex-end;gap:.4rem;}
+.spark-labels{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:.63rem;color:#888888;line-height:1;}
+.stats-footer{display:flex;align-items:center;justify-content:space-between;padding:.3rem .9rem .55rem;}
+.spark-legend{display:flex;align-items:center;gap:1rem;font-size:.68rem;color:#888888;}
+.leg-item{display:flex;align-items:center;gap:.3rem;}
+.leg-dot{width:7px;height:7px;border-radius:50%;}
+.sort-hint{font-size:.7rem;color:#888888;font-style:italic;}
+</style>
+</head>
+<body>
+<div class='container'>
+  <h1 style=''>Price Distribution by Repair Record</h1>
+  <p class='subtitle'>Generated by Stata Dashboard &bull; Wed Mar 11 22:58:22 EDT 2026</p>
+<div class='chart-wrapper'><canvas id='mainChart'></canvas></div>
+<div class='stats-panel' id='statsPanel'>
+  <div class='shell-header'>
+    <div class='shell-title'>
+      <div class='shell-icon'><svg viewBox='0 0 12 12'><rect x='1' y='4' width='2' height='7'/><rect x='5' y='2' width='2' height='9'/><rect x='9' y='5' width='2' height='6'/></svg></div>
+      Summary Statistics
+    </div>
+    <button class='hide-btn' id='hideBtn' onclick='toggleStatsPanel(this)'>&#9650; Hide</button>
+  </div>
+  <div class='col-toggles' id='chipsRow'>
+    <span class='toggle-lbl'>Columns</span>
+    <button class='chip on' onclick='toggleStatCol(0,this)'><span class='chip-dot'></span>N</button>
+    <button class='chip on' onclick='toggleStatCol(1,this)'><span class='chip-dot'></span>Mean</button>
+    <button class='chip on' onclick='toggleStatCol(2,this)'><span class='chip-dot'></span>Median</button>
+    <button class='chip on' onclick='toggleStatCol(3,this)'><span class='chip-dot'></span>Min</button>
+    <button class='chip on' onclick='toggleStatCol(4,this)'><span class='chip-dot'></span>Max</button>
+    <button class='chip on' onclick='toggleStatCol(5,this)'><span class='chip-dot'></span>Std Dev</button>
+    <button class='chip on' onclick='toggleStatCol(6,this)'><span class='chip-dot'></span>Distribution</button>
+    <button class='chip-all' onclick='toggleAllStatCols(this)'>Hide all</button>
+  </div>
+  <div class='stats-body' id='statsBody'>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g0",this)'>
+        <div class='grp-title'>Overall <span class='grp-badge'>N=69</span></div>
+        <span class='grp-chev' id='chev0'>&#9650;</span>
+      </div>
+      <div id='g0'>
+        <div class='tbl-wrap'><table class='st' id='tbl0'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(0,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(0,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(0,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(0,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(0,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(0,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>69</span></td>
+            <td data-col='1' data-v='6146.04347826087'>6,146.04</td>
+            <td data-col='2' data-v='5079.0'>5,079</td>
+            <td data-col='3' data-v='3291.0'>3,291</td>
+            <td data-col='4' data-v='15906.0'>15,906</td>
+            <td data-col='5' data-v='2912.4402515193474'>2,912.44 <span class='cv cv-high'>CV 47%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>15,906</span>
+                  <span>3,291</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#e2e8f0'/>
+                  <rect x='10' y='8' width='17' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='26' y1='3' x2='26' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='17' y1='3' x2='17' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='9,14,15,40,23,18,9,2,22,12,17,5,8,8,8,24,28,11,10,7,20,26,12,27,2,48,18,14,15,9,10,13,12,12,8,23,16,18,14,9,27,27,13,17,43,10,23,12,8,7,6,24,6,22,34,20,14,32' data-out='61,70,96,108,71,89,87,61,56,56,75' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g1",this)'>
+        <div class='grp-title'>Repair record 1978 = 1 <span class='grp-badge'>N=2</span></div>
+        <span class='grp-chev' id='chev1'>&#9650;</span>
+      </div>
+      <div id='g1'>
+        <div class='tbl-wrap'><table class='st' id='tbl1'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(1,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(1,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(1,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(1,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(1,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(1,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>2</span></td>
+            <td data-col='1' data-v='4564.5'>4,564.50</td>
+            <td data-col='2' data-v='4564.5'>4,564.50</td>
+            <td data-col='3' data-v='4195.0'>4,195</td>
+            <td data-col='4' data-v='4934.0'>4,934</td>
+            <td data-col='5' data-v='522.5519112968586'>522.55 <span class='cv cv-low'>CV 11%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>4,934</span>
+                  <span>4,195</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#e2e8f0'/>
+                  <rect x='2' y='8' width='106' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='53' y1='3' x2='53' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='57' y1='3' x2='57' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='2,108' data-out='' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g2",this)'>
+        <div class='grp-title'>Repair record 1978 = 2 <span class='grp-badge'>N=8</span></div>
+        <span class='grp-chev' id='chev2'>&#9650;</span>
+      </div>
+      <div id='g2'>
+        <div class='tbl-wrap'><table class='st' id='tbl2'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(2,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(2,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(2,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(2,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(2,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(2,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>8</span></td>
+            <td data-col='1' data-v='5967.625'>5,967.63</td>
+            <td data-col='2' data-v='4638.0'>4,638</td>
+            <td data-col='3' data-v='3667.0'>3,667</td>
+            <td data-col='4' data-v='14500.0'>14,500</td>
+            <td data-col='5' data-v='3579.3567633425023'>3,579.36 <span class='cv cv-high'>CV 60%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>14,500</span>
+                  <span>3,667</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#e2e8f0'/>
+                  <rect x='5' y='8' width='22' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='25' y1='3' x2='25' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='12' y1='3' x2='12' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='16,2,5,24,28,6,7' data-out='108' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g3",this)'>
+        <div class='grp-title'>Repair record 1978 = 3 <span class='grp-badge'>N=30</span></div>
+        <span class='grp-chev' id='chev3'>&#9650;</span>
+      </div>
+      <div id='g3'>
+        <div class='tbl-wrap'><table class='st' id='tbl3'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(3,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(3,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(3,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(3,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(3,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(3,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>30</span></td>
+            <td data-col='1' data-v='6429.233333333334'>6,429.23</td>
+            <td data-col='2' data-v='4741.0'>4,741</td>
+            <td data-col='3' data-v='3291.0'>3,291</td>
+            <td data-col='4' data-v='15906.0'>15,906</td>
+            <td data-col='5' data-v='3525.1398376110765'>3,525.14 <span class='cv cv-high'>CV 55%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>15,906</span>
+                  <span>3,291</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#e2e8f0'/>
+                  <rect x='10' y='8' width='26' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='28' y1='3' x2='28' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='14' y1='3' x2='14' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='9,14,15,23,18,61,9,70,2,12,8,10,71,26,12,2,18,14,9,61,13,12,18,14,27,10,7' data-out='108,89,87' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g4",this)'>
+        <div class='grp-title'>Repair record 1978 = 4 <span class='grp-badge'>N=18</span></div>
+        <span class='grp-chev' id='chev4'>&#9650;</span>
+      </div>
+      <div id='g4'>
+        <div class='tbl-wrap'><table class='st' id='tbl4'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(4,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(4,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(4,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(4,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(4,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(4,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>18</span></td>
+            <td data-col='1' data-v='6071.5'>6,071.50</td>
+            <td data-col='2' data-v='5751.5'>5,751.50</td>
+            <td data-col='3' data-v='3829.0'>3,829</td>
+            <td data-col='4' data-v='9735.0'>9,735</td>
+            <td data-col='5' data-v='1709.6082884684433'>1,709.61 <span class='cv cv-med'>CV 28%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>9,735</span>
+                  <span>3,829</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#e2e8f0'/>
+                  <rect x='17' y='8' width='48' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='42' y1='3' x2='42' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='37' y1='3' x2='37' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='74,36,12,2,30,46,91,21,37,108,45,24,79,14,5,61,18,56' data-out='' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g5",this)'>
+        <div class='grp-title'>Repair record 1978 = 5 <span class='grp-badge'>N=11</span></div>
+        <span class='grp-chev' id='chev5'>&#9650;</span>
+      </div>
+      <div id='g5'>
+        <div class='tbl-wrap'><table class='st' id='tbl5'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(5,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(5,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(5,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(5,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(5,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(5,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>11</span></td>
+            <td data-col='1' data-v='5913.0'>5,913</td>
+            <td data-col='2' data-v='5397.0'>5,397</td>
+            <td data-col='3' data-v='3748.0'>3,748</td>
+            <td data-col='4' data-v='11995.0'>11,995</td>
+            <td data-col='5' data-v='2615.7627568263906'>2,615.76 <span class='cv cv-high'>CV 44%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>11,995</span>
+                  <span>3,748</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#e2e8f0'/>
+                  <rect x='5' y='8' width='25' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='30' y1='3' x2='30' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='23' y1='3' x2='23' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='5,11,13,28,3,30,2,27,23' data-out='78,108' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+(function(){
+var _mainChart=null;
+var _violinData=[
+{label:'1',xIdx:0,color:'rgba(78,121,167,0.85)',borderColor:'rgba(78,121,167,1)',kde:[[4195.000000,0.877893],[4210.081633,0.887634],[4225.163265,0.896987],[4240.244898,0.905947],[4255.326531,0.914508],[4270.408163,0.922668],[4285.489796,0.930423],[4300.571429,0.937771],[4315.653061,0.944710],[4330.734694,0.951238],[4345.816327,0.957356],[4360.897959,0.963062],[4375.979592,0.968357],[4391.061224,0.973240],[4406.142857,0.977713],[4421.224490,0.981775],[4436.306122,0.985427],[4451.387755,0.988671],[4466.469388,0.991507],[4481.551020,0.993936],[4496.632653,0.995959],[4511.714286,0.997576],[4526.795918,0.998788],[4541.877551,0.999596],[4556.959184,1.000000],[4572.040816,1.000000],[4587.122449,0.999596],[4602.204082,0.998788],[4617.285714,0.997576],[4632.367347,0.995959],[4647.448980,0.993936],[4662.530612,0.991507],[4677.612245,0.988671],[4692.693878,0.985427],[4707.775510,0.981775],[4722.857143,0.977713],[4737.938776,0.973240],[4753.020408,0.968357],[4768.102041,0.963062],[4783.183673,0.957356],[4798.265306,0.951238],[4813.346939,0.944710],[4828.428571,0.937771],[4843.510204,0.930423],[4858.591837,0.922668],[4873.673469,0.914508],[4888.755102,0.905947],[4903.836735,0.896987],[4918.918367,0.887634],[4934.000000,0.877893],],median:4564.500000,mean:4564.500000,q1:4195.000000,q3:4934.000000,whiskerLo:4195.000000,whiskerHi:4934.000000,min:4195.000000,max:4934.000000,n:2,medianColor:'#000000',meanColor:'#000000'},
+{label:'2',xIdx:1,color:'rgba(242,142,43,0.85)',borderColor:'rgba(242,142,43,1)',kde:[[3667.000000,0.928395],[3888.081633,0.955143],[4109.163265,0.976004],[4330.244898,0.990589],[4551.326531,0.998633],[4772.408163,1.000000],[4993.489796,0.994688],[5214.571429,0.982827],[5435.653061,0.964676],[5656.734694,0.940613],[5877.816327,0.911124],[6098.897959,0.876785],[6319.979592,0.838245],[6541.061224,0.796212],[6762.142857,0.751424],[6983.224490,0.704639],[7204.306122,0.656606],[7425.387755,0.608058],[7646.469388,0.559689],[7867.551020,0.512141],[8088.632653,0.465997],[8309.714286,0.421771],[8530.795918,0.379902],[8751.877551,0.340751],[8972.959184,0.304602],[9194.040816,0.271662],[9415.122449,0.242064],[9636.204082,0.215875],[9857.285714,0.193097],[10078.367347,0.173674],[10299.448980,0.157502],[10520.530612,0.144433],[10741.612245,0.134278],[10962.693878,0.126820],[11183.775510,0.121817],[11404.857143,0.119003],[11625.938776,0.118100],[11847.020408,0.118820],[12068.102041,0.120869],[12289.183673,0.123951],[12510.265306,0.127776],[12731.346939,0.132062],[12952.428571,0.136536],[13173.510204,0.140947],[13394.591837,0.145061],[13615.673469,0.148670],[13836.755102,0.151595],[14057.836735,0.153687],[14278.918367,0.154829],[14500.000000,0.154940],],median:4638.000000,mean:5967.625000,q1:4022.500000,q3:6228.000000,whiskerLo:3667.000000,whiskerHi:6342.000000,min:3667.000000,max:14500.000000,n:8,medianColor:'#000000',meanColor:'#000000'},
+{label:'3',xIdx:2,color:'rgba(225,87,89,0.85)',borderColor:'rgba(225,87,89,1)',kde:[[3291.000000,0.813438],[3548.448980,0.875484],[3805.897959,0.927138],[4063.346939,0.966146],[4320.795918,0.990786],[4578.244898,1.000000],[4835.693878,0.993474],[5093.142857,0.971668],[5350.591837,0.935781],[5608.040816,0.887657],[5865.489796,0.829654],[6122.938776,0.764471],[6380.387755,0.694965],[6637.836735,0.623976],[6895.285714,0.554154],[7152.734694,0.487831],[7410.183673,0.426917],[7667.632653,0.372841],[7925.081633,0.326528],[8182.530612,0.288411],[8439.979592,0.258473],[8697.428571,0.236306],[8954.877551,0.221187],[9212.326531,0.212166],[9469.775510,0.208144],[9727.224490,0.207960],[9984.673469,0.210462],[10242.122449,0.214569],[10499.571429,0.219319],[10757.020408,0.223906],[11014.469388,0.227696],[11271.918367,0.230234],[11529.367347,0.231234],[11786.816327,0.230560],[12044.265306,0.228202],[12301.714286,0.224247],[12559.163265,0.218848],[12816.612245,0.212198],[13074.061224,0.204505],[13331.510204,0.195977],[13588.959184,0.186807],[13846.408163,0.177166],[14103.857143,0.167202],[14361.306122,0.157037],[14618.755102,0.146773],[14876.204082,0.136492],[15133.653061,0.126262],[15391.102041,0.116140],[15648.551020,0.106177],[15906.000000,0.096421],],median:4741.000000,mean:6429.233333,q1:4185.500000,q3:7314.000000,whiskerLo:3291.000000,whiskerHi:11497.000000,min:3291.000000,max:15906.000000,n:30,medianColor:'#000000',meanColor:'#000000'},
+{label:'4',xIdx:3,color:'rgba(118,183,178,0.85)',borderColor:'rgba(118,183,178,1)',kde:[[3829.000000,0.643735],[3949.530612,0.696986],[4070.061224,0.747940],[4190.591837,0.795740],[4311.122449,0.839616],[4431.653061,0.878910],[4552.183673,0.913099],[4672.714286,0.941804],[4793.244898,0.964796],[4913.775510,0.981996],[5034.306122,0.993459],[5154.836735,0.999366],[5275.367347,1.000000],[5395.897959,0.995730],[5516.428571,0.986985],[5636.959184,0.974240],[5757.489796,0.957994],[5878.020408,0.938754],[5998.551020,0.917026],[6119.081633,0.893302],[6239.612245,0.868050],[6360.142857,0.841710],[6480.673469,0.814686],[6601.204082,0.787342],[6721.734694,0.759996],[6842.265306,0.732918],[6962.795918,0.706326],[7083.326531,0.680385],[7203.857143,0.655206],[7324.387755,0.630853],[7444.918367,0.607339],[7565.448980,0.584638],[7685.979592,0.562691],[7806.510204,0.541414],[7927.040816,0.520708],[8047.571429,0.500464],[8168.102041,0.480576],[8288.632653,0.460945],[8409.163265,0.441481],[8529.693878,0.422110],[8650.224490,0.402774],[8770.755102,0.383430],[8891.285714,0.364050],[9011.816327,0.344619],[9132.346939,0.325138],[9252.877551,0.305618],[9373.408163,0.286086],[9493.938776,0.266581],[9614.469388,0.247158],[9735.000000,0.227887],],median:5751.500000,mean:6071.500000,q1:4647.500000,q3:7311.750000,whiskerLo:3829.000000,whiskerHi:9735.000000,min:3829.000000,max:9735.000000,n:18,medianColor:'#000000',meanColor:'#000000'},
+{label:'5',xIdx:4,color:'rgba(89,161,79,0.85)',borderColor:'rgba(89,161,79,1)',kde:[[3748.000000,0.860739],[3916.306122,0.899065],[4084.612245,0.932082],[4252.918367,0.959146],[4421.224490,0.979727],[4589.530612,0.993428],[4757.836735,1.000000],[4926.142857,0.999348],[5094.448980,0.991538],[5262.755102,0.976792],[5431.061224,0.955486],[5599.367347,0.928133],[5767.673469,0.895372],[5935.979592,0.857946],[6104.285714,0.816678],[6272.591837,0.772449],[6440.897959,0.726167],[6609.204082,0.678742],[6777.510204,0.631062],[6945.816327,0.583962],[7114.122449,0.538207],[7282.428571,0.494473],[7450.734694,0.453329],[7619.040816,0.415231],[7787.346939,0.380514],[7955.653061,0.349392],[8123.959184,0.321963],[8292.265306,0.298216],[8460.571429,0.278043],[8628.877551,0.261255],[8797.183673,0.247592],[8965.489796,0.236745],[9133.795918,0.228372],[9302.102041,0.222109],[9470.408163,0.217588],[9638.714286,0.214449],[9807.020408,0.212347],[9975.326531,0.210963],[10143.632653,0.210005],[10311.938776,0.209213],[10480.244898,0.208362],[10648.551020,0.207259],[10816.857143,0.205743],[10985.163265,0.203685],[11153.469388,0.200983],[11321.775510,0.197562],[11490.081633,0.193376],[11658.387755,0.188400],[11826.693878,0.182633],[11995.000000,0.176096],],median:5397.000000,mean:5913.000000,q1:3984.000000,q3:5899.000000,whiskerLo:3748.000000,whiskerHi:5899.000000,min:3748.000000,max:11995.000000,n:11,medianColor:'#000000',meanColor:'#000000'},
+];
+var _vLegendPlugin={
+  id:'vInlineLegend',
+  afterDraw:function(chart){
+    var ctx=chart.ctx;
+    var ca=chart.chartArea;
+    if(!ca||!_violinData||!_violinData.length)return;
+    var vd0=_violinData[0];
+    if(!vd0)return;
+    var shapeColor=vd0.color||'rgba(78,121,167,0.85)';
+    var medColor=vd0.medianColor||'#000000';
+    var meanColor=vd0.meanColor||'#000000';
+    var iqrColor=_vIsDark?'rgba(255,255,255,0.18)':'rgba(0,0,0,0.15)';
+    var wColor=_vIsDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.35)';
+    var items=[
+      {label:'Median',type:'diamond',color:medColor},
+      {label:'Mean',type:'dot',color:meanColor},
+      {label:'IQR Box',type:'rect',color:iqrColor,border:wColor},
+      {label:'Whiskers',type:'whisker',color:wColor},
+      {label:'KDE Shape',type:'rect',color:shapeColor,border:vd0.borderColor}
+    ];
+    var fs=11,lh=18,pw=14,gap=6,padX=10,padY=8,bw=0;
+    ctx.font=fs+'px -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif';
+    items.forEach(function(it){var tw=ctx.measureText(it.label).width;if(tw+pw+gap>bw)bw=tw+pw+gap;});
+    bw+=padX*2;
+    var bh=items.length*lh+padY*2;
+    var bx=ca.right-bw-8,by=ca.top+8;
+    ctx.save();
+    ctx.fillStyle='rgba(0,0,0,0.55)';
+    ctx.strokeStyle='rgba(255,255,255,0.25)';
+    ctx.lineWidth=1;
+    var r=6;ctx.beginPath();
+    ctx.moveTo(bx+r,by);ctx.lineTo(bx+bw-r,by);ctx.arcTo(bx+bw,by,bx+bw,by+r,r);
+    ctx.lineTo(bx+bw,by+bh-r);ctx.arcTo(bx+bw,by+bh,bx+bw-r,by+bh,r);
+    ctx.lineTo(bx+r,by+bh);ctx.arcTo(bx,by+bh,bx,by+bh-r,r);
+    ctx.lineTo(bx,by+r);ctx.arcTo(bx,by,bx+r,by,r);ctx.closePath();
+    ctx.fill();ctx.stroke();
+    items.forEach(function(it,i){
+      var ix=bx+padX,iy=by+padY+i*lh+lh/2;
+      ctx.save();
+      if(it.type==='diamond'){ctx.fillStyle=it.color;ctx.beginPath();var dm=6;ctx.moveTo(ix+pw/2,iy-dm);ctx.lineTo(ix+pw/2+dm,iy);ctx.lineTo(ix+pw/2,iy+dm);ctx.lineTo(ix+pw/2-dm,iy);ctx.closePath();ctx.fill();}
+      else if(it.type==='dot'){ctx.fillStyle=it.color;ctx.strokeStyle=_vIsDark?'rgba(255,255,255,0.7)':'rgba(0,0,0,0.4)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(ix+pw/2,iy,4,0,Math.PI*2);ctx.fill();ctx.stroke();}
+      else if(it.type==='rect'){ctx.fillStyle=it.color;ctx.strokeStyle=it.border||'rgba(255,255,255,0.6)';ctx.lineWidth=1.2;ctx.fillRect(ix,iy-5,pw,10);ctx.strokeRect(ix,iy-5,pw,10);}
+      else if(it.type==='whisker'){ctx.strokeStyle=it.color;ctx.lineWidth=1.8;ctx.setLineDash([3,2]);ctx.beginPath();ctx.moveTo(ix+pw/2,iy-6);ctx.lineTo(ix+pw/2,iy+6);ctx.stroke();ctx.setLineDash([]);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(ix+2,iy-6);ctx.lineTo(ix+pw-2,iy-6);ctx.stroke();ctx.beginPath();ctx.moveTo(ix+2,iy+6);ctx.lineTo(ix+pw-2,iy+6);ctx.stroke();}
+      ctx.restore();
+      ctx.fillStyle='#ffffff';
+      ctx.font=fs+'px -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif';
+      ctx.textBaseline='middle';
+      ctx.fillText(it.label,ix+pw+gap,iy);
+    });
+    ctx.restore();
+  }
+};
+var _vIsHoriz=false;
+var _vIsDark=false;
+var _vTooltipEl=null;
+var _vPlugin={
+  id:'customViolin',
+  afterDraw:function(chart){
+    var ca=chart.chartArea;
+    if(!ca||!_violinData||!_violinData.length)return;
+    var ctx=chart.ctx;
+    var n=_violinData.length;
+    var catScale=_vIsHoriz?chart.scales.y:chart.scales.x;
+    var valScale=_vIsHoriz?chart.scales.x:chart.scales.y;
+    if(!catScale||!valScale)return;
+    var catSpan=_vIsHoriz?(ca.bottom-ca.top):(ca.right-ca.left);
+    var nCats=catScale.ticks?catScale.ticks.length:n;
+    if(nCats<1)nCats=1;
+    var halfW=Math.min((catSpan/nCats)*0.38, 60);
+    var iqrW=halfW*0.28;
+    _violinData.forEach(function(vd,i){
+      if(!vd.kde||vd.kde.length===0||vd.n===0)return;
+      var cx=_vIsHoriz?null:catScale.getPixelForValue(vd.xIdx);
+      var cy=_vIsHoriz?catScale.getPixelForValue(vd.xIdx):null;
+      ctx.save();
+      ctx.beginPath();
+      var first=true;
+      vd.kde.forEach(function(pt){
+        var pv=valScale.getPixelForValue(pt[0]);
+        var off=pt[1]*halfW;
+        var px,py;
+        if(_vIsHoriz){px=pv;py=cy-off;}else{px=cx+off;py=pv;}
+        if(first){ctx.moveTo(px,py);first=false;}else{ctx.lineTo(px,py);}
+      });
+      for(var ki=vd.kde.length-1;ki>=0;ki--){
+        var pt2=vd.kde[ki];
+        var pv2=valScale.getPixelForValue(pt2[0]);
+        var off2=pt2[1]*halfW;
+        var px2,py2;
+        if(_vIsHoriz){px2=pv2;py2=cy+off2;}else{px2=cx-off2;py2=pv2;}
+        ctx.lineTo(px2,py2);
+      }
+      ctx.closePath();
+      ctx.fillStyle=vd.color;
+      ctx.fill();
+      ctx.strokeStyle=vd.borderColor;
+      ctx.lineWidth=1.5;
+      ctx.stroke();
+      ctx.restore();
+      if(vd.whiskerLo!=null&&vd.whiskerHi!=null){
+        ctx.save();
+        ctx.strokeStyle=_vIsDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.35)';
+        ctx.lineWidth=1.5;
+        ctx.setLineDash([4,3]);
+        ctx.beginPath();
+        var wLoPx=valScale.getPixelForValue(vd.whiskerLo);
+        var wHiPx=valScale.getPixelForValue(vd.whiskerHi);
+        if(_vIsHoriz){
+          ctx.moveTo(wLoPx,cy);ctx.lineTo(wHiPx,cy);
+        }else{
+          ctx.moveTo(cx,wLoPx);ctx.lineTo(cx,wHiPx);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.lineWidth=2;
+        var capOff=iqrW*0.5;
+        if(_vIsHoriz){
+          ctx.beginPath();ctx.moveTo(wLoPx,cy-capOff);ctx.lineTo(wLoPx,cy+capOff);ctx.stroke();
+          ctx.beginPath();ctx.moveTo(wHiPx,cy-capOff);ctx.lineTo(wHiPx,cy+capOff);ctx.stroke();
+        }else{
+          ctx.beginPath();ctx.moveTo(cx-capOff,wLoPx);ctx.lineTo(cx+capOff,wLoPx);ctx.stroke();
+          ctx.beginPath();ctx.moveTo(cx-capOff,wHiPx);ctx.lineTo(cx+capOff,wHiPx);ctx.stroke();
+        }
+        ctx.restore();
+      }
+      if(vd.q1!=null&&vd.q3!=null){
+        ctx.save();
+        var q1px=valScale.getPixelForValue(vd.q1);
+        var q3px=valScale.getPixelForValue(vd.q3);
+        ctx.fillStyle=_vIsDark?'rgba(255,255,255,0.18)':'rgba(0,0,0,0.15)';
+        ctx.strokeStyle=_vIsDark?'rgba(255,255,255,0.5)':'rgba(0,0,0,0.4)';
+        ctx.lineWidth=1.5;
+        if(_vIsHoriz){
+          var bx=Math.min(q1px,q3px),bw=Math.abs(q3px-q1px);
+          ctx.fillRect(bx,cy-iqrW,bw,iqrW*2);
+          ctx.strokeRect(bx,cy-iqrW,bw,iqrW*2);
+        }else{
+          var by=Math.min(q1px,q3px),bh=Math.abs(q3px-q1px);
+          ctx.fillRect(cx-iqrW,by,iqrW*2,bh);
+          ctx.strokeRect(cx-iqrW,by,iqrW*2,bh);
+        }
+        ctx.restore();
+      }
+      if(vd.median!=null){
+        ctx.save();
+        var medPx=valScale.getPixelForValue(vd.median);
+        var dm=6;
+        ctx.fillStyle=vd.medianColor;
+        ctx.beginPath();
+        if(_vIsHoriz){
+          ctx.moveTo(medPx,cy-dm);ctx.lineTo(medPx+dm,cy);
+          ctx.lineTo(medPx,cy+dm);ctx.lineTo(medPx-dm,cy);
+        }else{
+          ctx.moveTo(cx,medPx-dm);ctx.lineTo(cx+dm,medPx);
+          ctx.lineTo(cx,medPx+dm);ctx.lineTo(cx-dm,medPx);
+        }
+        ctx.closePath();ctx.fill();
+        ctx.restore();
+      }
+      if(vd.mean!=null){
+        ctx.save();
+        var mnPx=valScale.getPixelForValue(vd.mean);
+        ctx.fillStyle=vd.meanColor;
+        ctx.strokeStyle=_vIsDark?'rgba(255,255,255,0.7)':'rgba(0,0,0,0.4)';
+        ctx.lineWidth=1.5;
+        ctx.beginPath();
+        if(_vIsHoriz){ctx.arc(mnPx,cy,5,0,Math.PI*2);}
+        else{ctx.arc(cx,mnPx,5,0,Math.PI*2);}
+        ctx.fill();ctx.stroke();
+        ctx.restore();
+      }
+    });
+  }
+};
+var _vOrigData=_violinData.slice();
+var _vAnimT=0;
+var _vAnimFrom=null;
+var _vAnimTo=null;
+var _vAnimStart=null;
+var _vAnimDur=400;
+var _vAnimRaf=null;
+function _vEase(t){return 1-(1-t)*(1-t)*(1-t);}
+function _vLerp(a,b,t){return a+(b-a)*t;}
+function _vFlatSnap(src){
+  return src.map(function(vd){
+    var flat={};
+    for(var k in vd)flat[k]=vd[k];
+    flat.kde=vd.kde.map(function(pt){return[pt[0],0];});
+    return flat;
+  });
+}
+function _vZeroEntry(newVd){
+  var e={};
+  for(var k in newVd)e[k]=newVd[k];
+  e.kde=newVd.kde.map(function(pt){return[pt[0],0];});
+  e.n=0;
+  return e;
+}
+function _vInterp(from,to,t){
+  var et=_vEase(t);
+  _violinData=to.map(function(toVd,i){
+    var fromVd=(i<from.length)?from[i]:_vZeroEntry(toVd);
+    var r={};
+    for(var k in toVd)r[k]=toVd[k];
+    if(fromVd.kde&&toVd.kde&&fromVd.kde.length===toVd.kde.length){
+      r.kde=toVd.kde.map(function(pt,j){
+        return[pt[0],_vLerp(fromVd.kde[j][1],pt[1],et)];
+      });
+    }
+    var sc=['median','mean','q1','q3','whiskerLo','whiskerHi','min','max'];
+    sc.forEach(function(k){
+      if(fromVd[k]!=null&&toVd[k]!=null)
+        r[k]=_vLerp(fromVd[k],toVd[k],et);
+    });
+    return r;
+  });
+}
+function _vCancelAnim(){
+  if(_vAnimRaf){cancelAnimationFrame(_vAnimRaf);_vAnimRaf=null;}
+}
+function _vRunAnim(from,to){
+  _vCancelAnim();
+  _vAnimFrom=from;
+  _vAnimTo=to;
+  _vAnimStart=null;
+  function step(ts){
+    if(!_vAnimStart)_vAnimStart=ts;
+    var elapsed=ts-_vAnimStart;
+    var t=Math.min(elapsed/_vAnimDur,1);
+    _vInterp(_vAnimFrom,_vAnimTo,t);
+    if(_mainChart)_mainChart.render();
+    if(t<1)_vAnimRaf=requestAnimationFrame(step);
+    else{_violinData=_vAnimTo;_vAnimRaf=null;}
+  }
+  _vAnimRaf=requestAnimationFrame(step);
+}
+function _vAnimateTo(newViolins,newLabels){
+  var from=_violinData.map(function(vd){
+    var c={};
+    for(var k in vd)c[k]=vd[k];
+    if(vd.kde)c.kde=vd.kde.map(function(pt){return[pt[0],pt[1]];});
+    return c;
+  });
+  if(_mainChart){
+    _mainChart.data.labels=newLabels;
+    _mainChart.data.datasets=[{label:'_v',
+      data:newLabels.map(function(){return 0;}),
+      backgroundColor:'rgba(0,0,0,0)',
+      borderColor:'rgba(0,0,0,0)',borderWidth:0}];
+    _mainChart.options.animation={duration:0};
+    _mainChart.update();
+    _mainChart.options.animation={duration:400};
+  }
+  var alignedFrom=newViolins.map(function(toVd,i){
+    if(i<from.length)return from[i];
+    return _vZeroEntry(toVd);
+  });
+  _vRunAnim(alignedFrom,newViolins);
+}
+function _initChart(_labels,_datasets){
+  var existing=Chart.getChart('mainChart');
+  if(existing)existing.destroy();
+  _mainChart=new Chart(document.getElementById('mainChart'), {
+    type:'bar',
+    data:{labels:_labels,datasets:_datasets},
+    options:{
+      
+      responsive:true,maintainAspectRatio:true,
+      animation:{duration:0},
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:false}
+      },
+      scales:{x:{type:'category',ticks:{color:'#333333'},grid:{color:'rgba(0,0,0,0.15)',display:true},border:{color:'rgba(0,0,0,0.15)',display:true},title:{display:true,text:'Repair record 1978',color:'#333333'},},y:{type:'linear',min:2281.8000,max:16915.2000,ticks:{color:'#333333'},grid:{color:'rgba(0,0,0,0.15)',display:true},border:{color:'rgba(0,0,0,0.15)',display:true},title:{display:true,text:'Price',color:'#333333'},}}
+    },
+    plugins:[_vPlugin,_vLegendPlugin]
+  });
+  document.getElementById('mainChart').addEventListener('mousemove',function(e){
+  var chart=Chart.getChart('mainChart');
+  if(!chart)return;
+  var ca=chart.chartArea;
+  if(!ca)return;
+  var rect=e.target.getBoundingClientRect();
+  var mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  var catScale=_vIsHoriz?chart.scales.y:chart.scales.x;
+  var valScale=_vIsHoriz?chart.scales.x:chart.scales.y;
+  var catSpan=_vIsHoriz?(ca.bottom-ca.top):(ca.right-ca.left);
+  var nCats=catScale.ticks?catScale.ticks.length:_violinData.length;
+  if(nCats<1)nCats=1;
+  var halfW=Math.min((catSpan/nCats)*0.38,60);
+  var hit=null;
+  _violinData.forEach(function(vd){
+    if(vd.n===0)return;
+    var ctr=catScale.getPixelForValue(vd.xIdx);
+    var dist=_vIsHoriz?Math.abs(my-ctr):Math.abs(mx-ctr);
+    if(dist>halfW)return;
+    var cursor=_vIsHoriz?valScale.getValueForPixel(mx):valScale.getValueForPixel(my);
+    if(cursor<vd.min-1||cursor>vd.max+1)return;
+    hit=vd;
+  });
+  if(!_vTooltipEl){
+    _vTooltipEl=document.createElement('div');
+    _vTooltipEl.style.cssText='position:fixed;background:rgba(0,0,0,0.82);color:#fff;font:12px -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;padding:8px 12px;border-radius:6px;pointer-events:none;z-index:9999;line-height:1.6;white-space:nowrap;display:none;';
+    document.body.appendChild(_vTooltipEl);
+  }
+  if(!hit){
+    _vTooltipEl.style.display='none';
+    return;
+  }
+  var f=function(v){return v==null?'--':(Math.round(v*100)/100).toLocaleString();};
+  _vTooltipEl.innerHTML=    '<b>'+hit.label+'</b><br>'    +'Median: '+f(hit.median)+'<br>'    +'Mean: &nbsp;&nbsp;'+f(hit.mean)+'<br>'    +'Q1: &nbsp;&nbsp;&nbsp;&nbsp;'+f(hit.q1)+'<br>'    +'Q3: &nbsp;&nbsp;&nbsp;&nbsp;'+f(hit.q3)+'<br>'    +'Whisker Lo: '+f(hit.whiskerLo)+'<br>'    +'Whisker Hi: '+f(hit.whiskerHi)+'<br>'    +'N: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'+hit.n;
+  _vTooltipEl.style.display='block';
+  _vTooltipEl.style.left=(e.clientX+14)+'px';
+  _vTooltipEl.style.top=(e.clientY-10)+'px';
+});
+document.getElementById('mainChart').addEventListener('mouseleave',function(){
+  if(_vTooltipEl)_vTooltipEl.style.display='none';
+});
+}
+window._vAnimateTo=_vAnimateTo;
+var _initLabels=['1','2','3','4','5',];
+var _initDatasets=[{label:'_v',data:[0,0,0,0,0,],backgroundColor:'rgba(0,0,0,0)',borderColor:'rgba(0,0,0,0)',borderWidth:0}];
+_initChart(_initLabels,_initDatasets);
+_vRunAnim(_vFlatSnap(_vOrigData),_vOrigData);
+})();
+
+// Stats panel JS (v1.5)
+function toggleStatsPanel(btn){var body=document.getElementById('statsBody');var chips=document.getElementById('chipsRow');var hiding=body.style.display!=='none';body.style.display=hiding?'none':'';if(chips)chips.style.display=hiding?'none':'';btn.innerHTML=hiding?'&#9660; Show':'&#9650; Hide';}
+function toggleStatsBlock(id,hdr){var body=document.getElementById(id);var chev=hdr.querySelector('.grp-chev');var hiding=body.style.display!=='none';body.style.display=hiding?'none':'';if(chev)chev.innerHTML=hiding?'&#9660;':'&#9650;';}
+var _statColVis=[true,true,true,true,true,true,true];
+function toggleStatCol(ci,btn){_statColVis[ci]=!_statColVis[ci];btn.classList.toggle('on',_statColVis[ci]);document.querySelectorAll('[data-col="'+ci+'"]').forEach(function(c){c.style.display=_statColVis[ci]?'':'none';});}
+function toggleAllStatCols(btn){var anyOn=_statColVis.some(function(v){return v;});_statColVis=_statColVis.map(function(){return !anyOn;});document.querySelectorAll('.chip').forEach(function(c,i){c.classList.toggle('on',!anyOn);});for(var ci=0;ci<7;ci++){document.querySelectorAll('[data-col="'+ci+'"]').forEach(function(c){c.style.display=(!anyOn)?'':'none';});}btn.textContent=anyOn?'Show all':'Hide all';}
+var _sortStates={};
+function doSort(tblIdx,col){var tbl=document.getElementById('tbl'+tblIdx);if(!tbl)return;var tbody=tbl.querySelector('tbody');var key=tblIdx+'-'+col;var asc=_sortStates[key]!==true;_sortStates[key]=asc;var rows=Array.from(tbody.querySelectorAll('tr'));rows.sort(function(a,b){var av=parseFloat(a.cells[col].getAttribute('data-v')||a.cells[col].textContent.replace(/[^0-9.-]/g,''));var bv=parseFloat(b.cells[col].getAttribute('data-v')||b.cells[col].textContent.replace(/[^0-9.-]/g,''));return asc?av-bv:bv-av;});rows.forEach(function(r){tbody.appendChild(r);});tbl.querySelectorAll('th').forEach(function(th,i){th.classList.remove('sorted');var arr=th.querySelector('.sort-arr');if(arr)arr.textContent='';if(i===col){th.classList.add('sorted');if(arr)arr.textContent=asc?' ^':' v';}});}
+(function(){
+if(!window.IntersectionObserver)return;
+var _sparkObs=new IntersectionObserver(function(entries){
+entries.forEach(function(e){
+if(!e.isIntersecting)return;
+var ph=e.target;
+_sparkObs.unobserve(ph);
+var svg=ph.previousElementSibling;
+if(!svg||svg.tagName.toLowerCase()!=='svg')return;
+var cy=ph.getAttribute('data-cy')||'14';
+var inPts=ph.getAttribute('data-in');
+if(inPts&&inPts.length>0){
+inPts.split(',').forEach(function(cx){
+var c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+c.setAttribute('cx',cx);c.setAttribute('cy',cy);
+c.setAttribute('r','2.2');c.setAttribute('fill','#4e79a7');
+c.setAttribute('opacity','.55');svg.appendChild(c);});}
+var outPts=ph.getAttribute('data-out');
+if(outPts&&outPts.length>0){
+outPts.split(',').forEach(function(cx){
+var c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+c.setAttribute('cx',cx);c.setAttribute('cy',cy);
+c.setAttribute('r','2.2');c.setAttribute('fill','#e74c3c');
+c.setAttribute('opacity','.8');svg.appendChild(c);});}
+});},{rootMargin:'200px'});
+document.querySelectorAll('.spark-ph').forEach(function(ph){
+_sparkObs.observe(ph);});
+if(window.MutationObserver){
+new MutationObserver(function(muts){
+muts.forEach(function(m){
+m.addedNodes.forEach(function(n){
+if(n.nodeType!==1)return;
+if(n.classList&&n.classList.contains('spark-ph'))_sparkObs.observe(n);
+n.querySelectorAll&&n.querySelectorAll('.spark-ph').forEach(function(ph){
+_sparkObs.observe(ph);});});});
+}).observe(document.getElementById('statsPanel')||document.body,
+{childList:true,subtree:true});}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<!-- sparkta v3.5.41 fill=false stack=false type=bar -->
+<html lang='en'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width,initial-scale=1.0'>
+  <title>Price by Repair Record</title>
+  <script src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'></script>
+  <style>* {box-sizing:border-box;margin:0;padding:0;}
+body{background:#1a1a2e;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:2rem;}
+.container{max-width:1200px;margin:0 auto;}
+h1{font-size:1.8rem;color:#a8d8ea;margin-bottom:.15rem;}
+.subtitle2{font-size:1.05rem;color:#a8d8ea;opacity:.75;margin-bottom:.2rem;}
+.subtitle{font-size:.8rem;color:#888888;margin-bottom:1.5rem;}
+.panels-vertical{display:flex;flex-direction:column;gap:1.5rem;margin-bottom:1.5rem;}
+.panels-horizontal{display:flex;flex-direction:row;flex-wrap:nowrap;gap:1.5rem;margin-bottom:1.5rem;overflow-x:auto;}
+.panels-horizontal .panel-item{flex:1 1 0;min-width:280px;}
+.panels-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;margin-bottom:1.5rem;}
+.panel-empty{border-radius:8px;min-height:200px;}
+.chart-wrapper{background:#16213e;border-radius:8px;border:1px solid #2a2a4a;padding:1.5rem;margin-bottom:1.5rem;}
+.panels-vertical .chart-wrapper,.panels-horizontal .chart-wrapper,.panels-grid .chart-wrapper{margin-bottom:0;}
+.panel-title{font-size:.92rem;font-weight:600;color:#a8d8ea;margin-bottom:.6rem;padding:.35rem .6rem;background:#1e3a5a;border-radius:4px;}
+.note-area{margin-bottom:1.5rem;}
+.note{font-size:.85rem;color:#888888;font-style:italic;margin-bottom:.2rem;}
+.caption{font-size:.78rem;color:#888888;}
+.stats-panel{border-radius:12px;border:1px solid #2a2a4a;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);margin-top:1.5rem;}
+.shell-header{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.25rem;background:linear-gradient(135deg,#16213e 0%,#1a1a2e 100%);border-bottom:1px solid #2a2a4a;}
+.shell-title{display:flex;align-items:center;gap:.5rem;font-size:.88rem;font-weight:600;color:#a8d8ea;}
+.shell-icon{width:20px;height:20px;background:#0f3460;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.shell-icon svg{width:12px;height:12px;fill:#fff;}
+.hide-btn{padding:.28rem .7rem;font-size:.75rem;font-weight:500;color:#e0e0e0;background:#16213e;border:1px solid #2a2a4a;border-radius:6px;cursor:pointer;transition:all .15s;}
+.hide-btn:hover{background:#2a2a4a;}
+.col-toggles{display:flex;align-items:center;gap:.35rem;padding:.6rem 1.25rem;background:#1a1a2e;border-bottom:1px solid #2a2a4a;flex-wrap:wrap;}
+.toggle-lbl{font-size:.7rem;font-weight:600;color:#888888;letter-spacing:.06em;text-transform:uppercase;margin-right:.1rem;}
+.chip{display:flex;align-items:center;gap:.22rem;padding:.22rem .6rem;font-size:.72rem;font-weight:500;border-radius:20px;border:1.5px solid #2a2a4a;background:#16213e;color:#888888;cursor:pointer;transition:all .15s;}
+.chip:hover{border-color:#3a7abf;color:#3a7abf;}
+.chip.on{background:#1a4a7a;border-color:#1a4a7a;color:#a8d8ea;}
+.chip-dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.8;}
+.chip-all{margin-left:auto;padding:.22rem .65rem;font-size:.72rem;font-weight:500;border-radius:20px;border:1.5px solid #2a2a4a;background:transparent;color:#888888;cursor:pointer;transition:all .15s;}
+.chip-all:hover{border-color:#888888;color:#e0e0e0;}
+.stats-body{padding:0 1.25rem 1.25rem;background:#16213e;}
+.grp{margin-top:.9rem;border:1px solid #2a2a4a;border-radius:8px;overflow:hidden;content-visibility:auto;contain-intrinsic-size:0 120px;}
+.grp-hdr{display:flex;align-items:center;justify-content:space-between;padding:.52rem .9rem;background:#1e3a5a;cursor:pointer;user-select:none;}
+.grp-hdr:hover{filter:brightness(.97);}
+.grp-title{display:flex;align-items:center;gap:.45rem;font-size:.8rem;font-weight:600;color:#a8d8ea;}
+.grp-badge{padding:.1rem .42rem;font-size:.67rem;font-weight:700;background:#0f3460;color:#fff;border-radius:10px;}
+.grp-chev{font-size:.65rem;color:#888888;}
+.tbl-wrap{overflow-x:auto;}
+table.st{width:100%;border-collapse:collapse;font-size:.83rem;}
+table.st thead tr{background:#1a1a2e;border-bottom:2px solid #2a2a4a;}
+table.st th{padding:.5rem .85rem;text-align:right;font-size:.7rem;font-weight:600;color:#888888;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;}
+table.st th:first-child{text-align:left;cursor:default;}
+table.st th.dist-hdr{cursor:default;}
+table.st th:hover:not(:first-child):not(.dist-hdr){color:#3a7abf;}
+table.st th.sorted{color:#3a7abf;}
+.sort-arr{margin-left:.18rem;font-size:.6rem;opacity:.5;}
+th.sorted .sort-arr{opacity:1;}
+table.st td{padding:.44rem .85rem;text-align:right;border-bottom:1px solid #2a2a4a;color:#e0e0e0;transition:background .1s;}
+table.st td:first-child{text-align:left;font-weight:600;color:#a8d8ea;}
+table.st tbody tr:last-child td{border-bottom:none;}
+table.st tbody tr:hover td{background:#1e2a4a;}
+.nb{display:inline-flex;align-items:center;justify-content:center;min-width:30px;padding:.08rem .4rem;background:#1e3a5a;border-radius:4px;font-size:.77rem;font-weight:600;color:#a8d8ea;}
+.cv{display:inline-flex;align-items:center;padding:.09rem .38rem;font-size:.67rem;font-weight:700;border-radius:4px;margin-left:.35rem;vertical-align:middle;}
+.cv-low{background:#14532d;color:#86efac;}
+.cv-med{background:#422006;color:#fde68a;}
+.cv-high{background:#450a0a;color:#fca5a5;}
+.spark-cell{padding:.35rem .85rem !important;}
+.spark-wrap{display:flex;align-items:center;justify-content:flex-end;gap:.4rem;}
+.spark-labels{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:.63rem;color:#888888;line-height:1;}
+.stats-footer{display:flex;align-items:center;justify-content:space-between;padding:.3rem .9rem .55rem;}
+.spark-legend{display:flex;align-items:center;gap:1rem;font-size:.68rem;color:#888888;}
+.leg-item{display:flex;align-items:center;gap:.3rem;}
+.leg-dot{width:7px;height:7px;border-radius:50%;}
+.sort-hint{font-size:.7rem;color:#888888;font-style:italic;}
+</style>
+</head>
+<body>
+<div class='container'>
+  <h1 style=''>Price by Repair Record</h1>
+  <p class='subtitle'>Generated by Stata Dashboard &bull; Wed Mar 11 22:58:23 EDT 2026</p>
+<div class='chart-wrapper'><canvas id='mainChart'></canvas></div>
+<div class='stats-panel' id='statsPanel'>
+  <div class='shell-header'>
+    <div class='shell-title'>
+      <div class='shell-icon'><svg viewBox='0 0 12 12'><rect x='1' y='4' width='2' height='7'/><rect x='5' y='2' width='2' height='9'/><rect x='9' y='5' width='2' height='6'/></svg></div>
+      Summary Statistics
+    </div>
+    <button class='hide-btn' id='hideBtn' onclick='toggleStatsPanel(this)'>&#9650; Hide</button>
+  </div>
+  <div class='col-toggles' id='chipsRow'>
+    <span class='toggle-lbl'>Columns</span>
+    <button class='chip on' onclick='toggleStatCol(0,this)'><span class='chip-dot'></span>N</button>
+    <button class='chip on' onclick='toggleStatCol(1,this)'><span class='chip-dot'></span>Mean</button>
+    <button class='chip on' onclick='toggleStatCol(2,this)'><span class='chip-dot'></span>Median</button>
+    <button class='chip on' onclick='toggleStatCol(3,this)'><span class='chip-dot'></span>Min</button>
+    <button class='chip on' onclick='toggleStatCol(4,this)'><span class='chip-dot'></span>Max</button>
+    <button class='chip on' onclick='toggleStatCol(5,this)'><span class='chip-dot'></span>Std Dev</button>
+    <button class='chip on' onclick='toggleStatCol(6,this)'><span class='chip-dot'></span>Distribution</button>
+    <button class='chip-all' onclick='toggleAllStatCols(this)'>Hide all</button>
+  </div>
+  <div class='stats-body' id='statsBody'>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g0",this)'>
+        <div class='grp-title'>Overall <span class='grp-badge'>N=69</span></div>
+        <span class='grp-chev' id='chev0'>&#9650;</span>
+      </div>
+      <div id='g0'>
+        <div class='tbl-wrap'><table class='st' id='tbl0'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(0,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(0,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(0,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(0,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(0,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(0,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>69</span></td>
+            <td data-col='1' data-v='6146.04347826087'>6,146.04</td>
+            <td data-col='2' data-v='5079.0'>5,079</td>
+            <td data-col='3' data-v='3291.0'>3,291</td>
+            <td data-col='4' data-v='15906.0'>15,906</td>
+            <td data-col='5' data-v='2912.4402515193474'>2,912.44 <span class='cv cv-high'>CV 47%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>15,906</span>
+                  <span>3,291</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#2a3a4a'/>
+                  <rect x='10' y='8' width='17' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='26' y1='3' x2='26' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='17' y1='3' x2='17' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='9,14,15,40,23,18,9,2,22,12,17,5,8,8,8,24,28,11,10,7,20,26,12,27,2,48,18,14,15,9,10,13,12,12,8,23,16,18,14,9,27,27,13,17,43,10,23,12,8,7,6,24,6,22,34,20,14,32' data-out='61,70,96,108,71,89,87,61,56,56,75' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g1",this)'>
+        <div class='grp-title'>Repair record 1978 = 1 <span class='grp-badge'>N=2</span></div>
+        <span class='grp-chev' id='chev1'>&#9650;</span>
+      </div>
+      <div id='g1'>
+        <div class='tbl-wrap'><table class='st' id='tbl1'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(1,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(1,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(1,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(1,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(1,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(1,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>2</span></td>
+            <td data-col='1' data-v='4564.5'>4,564.50</td>
+            <td data-col='2' data-v='4564.5'>4,564.50</td>
+            <td data-col='3' data-v='4195.0'>4,195</td>
+            <td data-col='4' data-v='4934.0'>4,934</td>
+            <td data-col='5' data-v='522.5519112968586'>522.55 <span class='cv cv-low'>CV 11%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>4,934</span>
+                  <span>4,195</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#2a3a4a'/>
+                  <rect x='2' y='8' width='106' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='53' y1='3' x2='53' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='57' y1='3' x2='57' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='2,108' data-out='' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g2",this)'>
+        <div class='grp-title'>Repair record 1978 = 2 <span class='grp-badge'>N=8</span></div>
+        <span class='grp-chev' id='chev2'>&#9650;</span>
+      </div>
+      <div id='g2'>
+        <div class='tbl-wrap'><table class='st' id='tbl2'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(2,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(2,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(2,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(2,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(2,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(2,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>8</span></td>
+            <td data-col='1' data-v='5967.625'>5,967.63</td>
+            <td data-col='2' data-v='4638.0'>4,638</td>
+            <td data-col='3' data-v='3667.0'>3,667</td>
+            <td data-col='4' data-v='14500.0'>14,500</td>
+            <td data-col='5' data-v='3579.3567633425023'>3,579.36 <span class='cv cv-high'>CV 60%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>14,500</span>
+                  <span>3,667</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#2a3a4a'/>
+                  <rect x='5' y='8' width='22' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='25' y1='3' x2='25' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='12' y1='3' x2='12' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='16,2,5,24,28,6,7' data-out='108' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g3",this)'>
+        <div class='grp-title'>Repair record 1978 = 3 <span class='grp-badge'>N=30</span></div>
+        <span class='grp-chev' id='chev3'>&#9650;</span>
+      </div>
+      <div id='g3'>
+        <div class='tbl-wrap'><table class='st' id='tbl3'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(3,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(3,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(3,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(3,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(3,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(3,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>30</span></td>
+            <td data-col='1' data-v='6429.233333333334'>6,429.23</td>
+            <td data-col='2' data-v='4741.0'>4,741</td>
+            <td data-col='3' data-v='3291.0'>3,291</td>
+            <td data-col='4' data-v='15906.0'>15,906</td>
+            <td data-col='5' data-v='3525.1398376110765'>3,525.14 <span class='cv cv-high'>CV 55%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>15,906</span>
+                  <span>3,291</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#2a3a4a'/>
+                  <rect x='10' y='8' width='26' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='28' y1='3' x2='28' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='14' y1='3' x2='14' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='9,14,15,23,18,61,9,70,2,12,8,10,71,26,12,2,18,14,9,61,13,12,18,14,27,10,7' data-out='108,89,87' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g4",this)'>
+        <div class='grp-title'>Repair record 1978 = 4 <span class='grp-badge'>N=18</span></div>
+        <span class='grp-chev' id='chev4'>&#9650;</span>
+      </div>
+      <div id='g4'>
+        <div class='tbl-wrap'><table class='st' id='tbl4'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(4,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(4,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(4,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(4,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(4,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(4,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>18</span></td>
+            <td data-col='1' data-v='6071.5'>6,071.50</td>
+            <td data-col='2' data-v='5751.5'>5,751.50</td>
+            <td data-col='3' data-v='3829.0'>3,829</td>
+            <td data-col='4' data-v='9735.0'>9,735</td>
+            <td data-col='5' data-v='1709.6082884684433'>1,709.61 <span class='cv cv-med'>CV 28%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>9,735</span>
+                  <span>3,829</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#2a3a4a'/>
+                  <rect x='17' y='8' width='48' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='42' y1='3' x2='42' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='37' y1='3' x2='37' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='74,36,12,2,30,46,91,21,37,108,45,24,79,14,5,61,18,56' data-out='' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g5",this)'>
+        <div class='grp-title'>Repair record 1978 = 5 <span class='grp-badge'>N=11</span></div>
+        <span class='grp-chev' id='chev5'>&#9650;</span>
+      </div>
+      <div id='g5'>
+        <div class='tbl-wrap'><table class='st' id='tbl5'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(5,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(5,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(5,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(5,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(5,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(5,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>11</span></td>
+            <td data-col='1' data-v='5913.0'>5,913</td>
+            <td data-col='2' data-v='5397.0'>5,397</td>
+            <td data-col='3' data-v='3748.0'>3,748</td>
+            <td data-col='4' data-v='11995.0'>11,995</td>
+            <td data-col='5' data-v='2615.7627568263906'>2,615.76 <span class='cv cv-high'>CV 44%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>11,995</span>
+                  <span>3,748</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#2a3a4a'/>
+                  <rect x='5' y='8' width='25' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='30' y1='3' x2='30' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='23' y1='3' x2='23' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='5,11,13,28,3,30,2,27,23' data-out='78,108' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+new Chart(document.getElementById('mainChart'), {
+  type:'bar',
+  data:{labels:['1','2','3','4','5',],datasets:[{label:'Price',data:[4564.500000,5967.625000,6429.233333,6071.500000,5913.000000,],backgroundColor:['rgba(255,111,255,0.85)','rgba(5,244,183,0.85)','rgba(247,230,43,0.85)','rgba(1,205,254,0.85)','rgba(255,107,107,0.85)',],borderColor:['rgba(255,111,255,1.0)','rgba(5,244,183,1.0)','rgba(247,230,43,1.0)','rgba(1,205,254,1.0)','rgba(255,107,107,1.0)',],borderWidth:1,},
+]},
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    animation:{duration:400},
+    plugins:{
+      legend:{display:true,position:'top',labels:{color:'#cccccc'}},
+      tooltip:{mode:'nearest',position:'nearest',callbacks:{title:function(items){return items.length?items[0].label:'';},label:function(ctx){var v=ctx.parsed.y;if(v===null||v===undefined)return '';var lbl=ctx.dataset.label||'';var val=parseFloat(v.toFixed(4)).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:4});return ['  '+lbl,'  Mean:  '+val];},afterBody:function(items){if(!items.length)return [];var k1=document.getElementById('_f1')?document.getElementById('_f1').value:'ALL';var k2=document.getElementById('_f2')?document.getElementById('_f2').value:'ALL';var nd=typeof _dashData!=='undefined'?_dashData[k1+'||'+k2]:null;if(nd&&nd.n!==undefined)return ['  N:  '+nd.n];return [];}}}
+    },
+    scales:{x:{ticks:{color:'#cccccc',maxRotation:0,minRotation:0},grid:{color:'rgba(255,255,255,0.15)',display:true},border:{color:'rgba(255,255,255,0.15)',display:true},title:{display:true,text:'Repair record 1978',color:'#cccccc'},},y:{type:'linear',ticks:{color:'#cccccc'},grid:{color:'rgba(255,255,255,0.15)',display:true},border:{color:'rgba(255,255,255,0.15)',display:true},title:{display:true,text:'Price',color:'#cccccc'},}}
+  }
+});
+
+// Stats panel JS (v1.5)
+function toggleStatsPanel(btn){var body=document.getElementById('statsBody');var chips=document.getElementById('chipsRow');var hiding=body.style.display!=='none';body.style.display=hiding?'none':'';if(chips)chips.style.display=hiding?'none':'';btn.innerHTML=hiding?'&#9660; Show':'&#9650; Hide';}
+function toggleStatsBlock(id,hdr){var body=document.getElementById(id);var chev=hdr.querySelector('.grp-chev');var hiding=body.style.display!=='none';body.style.display=hiding?'none':'';if(chev)chev.innerHTML=hiding?'&#9660;':'&#9650;';}
+var _statColVis=[true,true,true,true,true,true,true];
+function toggleStatCol(ci,btn){_statColVis[ci]=!_statColVis[ci];btn.classList.toggle('on',_statColVis[ci]);document.querySelectorAll('[data-col="'+ci+'"]').forEach(function(c){c.style.display=_statColVis[ci]?'':'none';});}
+function toggleAllStatCols(btn){var anyOn=_statColVis.some(function(v){return v;});_statColVis=_statColVis.map(function(){return !anyOn;});document.querySelectorAll('.chip').forEach(function(c,i){c.classList.toggle('on',!anyOn);});for(var ci=0;ci<7;ci++){document.querySelectorAll('[data-col="'+ci+'"]').forEach(function(c){c.style.display=(!anyOn)?'':'none';});}btn.textContent=anyOn?'Show all':'Hide all';}
+var _sortStates={};
+function doSort(tblIdx,col){var tbl=document.getElementById('tbl'+tblIdx);if(!tbl)return;var tbody=tbl.querySelector('tbody');var key=tblIdx+'-'+col;var asc=_sortStates[key]!==true;_sortStates[key]=asc;var rows=Array.from(tbody.querySelectorAll('tr'));rows.sort(function(a,b){var av=parseFloat(a.cells[col].getAttribute('data-v')||a.cells[col].textContent.replace(/[^0-9.-]/g,''));var bv=parseFloat(b.cells[col].getAttribute('data-v')||b.cells[col].textContent.replace(/[^0-9.-]/g,''));return asc?av-bv:bv-av;});rows.forEach(function(r){tbody.appendChild(r);});tbl.querySelectorAll('th').forEach(function(th,i){th.classList.remove('sorted');var arr=th.querySelector('.sort-arr');if(arr)arr.textContent='';if(i===col){th.classList.add('sorted');if(arr)arr.textContent=asc?' ^':' v';}});}
+(function(){
+if(!window.IntersectionObserver)return;
+var _sparkObs=new IntersectionObserver(function(entries){
+entries.forEach(function(e){
+if(!e.isIntersecting)return;
+var ph=e.target;
+_sparkObs.unobserve(ph);
+var svg=ph.previousElementSibling;
+if(!svg||svg.tagName.toLowerCase()!=='svg')return;
+var cy=ph.getAttribute('data-cy')||'14';
+var inPts=ph.getAttribute('data-in');
+if(inPts&&inPts.length>0){
+inPts.split(',').forEach(function(cx){
+var c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+c.setAttribute('cx',cx);c.setAttribute('cy',cy);
+c.setAttribute('r','2.2');c.setAttribute('fill','#4e79a7');
+c.setAttribute('opacity','.55');svg.appendChild(c);});}
+var outPts=ph.getAttribute('data-out');
+if(outPts&&outPts.length>0){
+outPts.split(',').forEach(function(cx){
+var c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+c.setAttribute('cx',cx);c.setAttribute('cy',cy);
+c.setAttribute('r','2.2');c.setAttribute('fill','#e74c3c');
+c.setAttribute('opacity','.8');svg.appendChild(c);});}
+});},{rootMargin:'200px'});
+document.querySelectorAll('.spark-ph').forEach(function(ph){
+_sparkObs.observe(ph);});
+if(window.MutationObserver){
+new MutationObserver(function(muts){
+muts.forEach(function(m){
+m.addedNodes.forEach(function(n){
+if(n.nodeType!==1)return;
+if(n.classList&&n.classList.contains('spark-ph'))_sparkObs.observe(n);
+n.querySelectorAll&&n.querySelectorAll('.spark-ph').forEach(function(ph){
+_sparkObs.observe(ph);});});});
+}).observe(document.getElementById('statsPanel')||document.body,
+{childList:true,subtree:true});}
+})();
+</script>
+</body>
+</html>

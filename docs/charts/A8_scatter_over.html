@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<!-- sparkta v3.5.41 fill=false stack=false type=scatter -->
+<html lang='en'>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width,initial-scale=1.0'>
+  <title>Price vs MPG by Origin</title>
+  <script src='https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'></script>
+  <style>* {box-sizing:border-box;margin:0;padding:0;}
+body{background:#f8f9fa;color:#333333;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:2rem;}
+.container{max-width:1200px;margin:0 auto;}
+h1{font-size:1.8rem;color:#2c3e50;margin-bottom:.15rem;}
+.subtitle2{font-size:1.05rem;color:#2c3e50;opacity:.75;margin-bottom:.2rem;}
+.subtitle{font-size:.8rem;color:#888888;margin-bottom:1.5rem;}
+.panels-vertical{display:flex;flex-direction:column;gap:1.5rem;margin-bottom:1.5rem;}
+.panels-horizontal{display:flex;flex-direction:row;flex-wrap:nowrap;gap:1.5rem;margin-bottom:1.5rem;overflow-x:auto;}
+.panels-horizontal .panel-item{flex:1 1 0;min-width:280px;}
+.panels-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem;margin-bottom:1.5rem;}
+.panel-empty{border-radius:8px;min-height:200px;}
+.chart-wrapper{background:#ffffff;border-radius:8px;border:1px solid #e0e0e0;padding:1.5rem;margin-bottom:1.5rem;}
+.panels-vertical .chart-wrapper,.panels-horizontal .chart-wrapper,.panels-grid .chart-wrapper{margin-bottom:0;}
+.panel-title{font-size:.92rem;font-weight:600;color:#2c3e50;margin-bottom:.6rem;padding:.35rem .6rem;background:#d6e4f0;border-radius:4px;}
+.note-area{margin-bottom:1.5rem;}
+.note{font-size:.85rem;color:#888888;font-style:italic;margin-bottom:.2rem;}
+.caption{font-size:.78rem;color:#888888;}
+.stats-panel{border-radius:12px;border:1px solid #e0e0e0;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);margin-top:1.5rem;}
+.shell-header{display:flex;align-items:center;justify-content:space-between;padding:.85rem 1.25rem;background:linear-gradient(135deg,#ffffff 0%,#f8f9fa 100%);border-bottom:1px solid #e0e0e0;}
+.shell-title{display:flex;align-items:center;gap:.5rem;font-size:.88rem;font-weight:600;color:#2c3e50;}
+.shell-icon{width:20px;height:20px;background:#4e79a7;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.shell-icon svg{width:12px;height:12px;fill:#fff;}
+.hide-btn{padding:.28rem .7rem;font-size:.75rem;font-weight:500;color:#333333;background:#ffffff;border:1px solid #e0e0e0;border-radius:6px;cursor:pointer;transition:all .15s;}
+.hide-btn:hover{background:#e0e0e0;}
+.col-toggles{display:flex;align-items:center;gap:.35rem;padding:.6rem 1.25rem;background:#f8f9fa;border-bottom:1px solid #e0e0e0;flex-wrap:wrap;}
+.toggle-lbl{font-size:.7rem;font-weight:600;color:#888888;letter-spacing:.06em;text-transform:uppercase;margin-right:.1rem;}
+.chip{display:flex;align-items:center;gap:.22rem;padding:.22rem .6rem;font-size:.72rem;font-weight:500;border-radius:20px;border:1.5px solid #e0e0e0;background:#ffffff;color:#888888;cursor:pointer;transition:all .15s;}
+.chip:hover{border-color:#4e79a7;color:#4e79a7;}
+.chip.on{background:#4e79a7;border-color:#4e79a7;color:#ffffff;}
+.chip-dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.8;}
+.chip-all{margin-left:auto;padding:.22rem .65rem;font-size:.72rem;font-weight:500;border-radius:20px;border:1.5px solid #e0e0e0;background:transparent;color:#888888;cursor:pointer;transition:all .15s;}
+.chip-all:hover{border-color:#888888;color:#333333;}
+.stats-body{padding:0 1.25rem 1.25rem;background:#ffffff;}
+.grp{margin-top:.9rem;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;content-visibility:auto;contain-intrinsic-size:0 120px;}
+.grp-hdr{display:flex;align-items:center;justify-content:space-between;padding:.52rem .9rem;background:#d6e4f0;cursor:pointer;user-select:none;}
+.grp-hdr:hover{filter:brightness(.97);}
+.grp-title{display:flex;align-items:center;gap:.45rem;font-size:.8rem;font-weight:600;color:#2c3e50;}
+.grp-badge{padding:.1rem .42rem;font-size:.67rem;font-weight:700;background:#4e79a7;color:#fff;border-radius:10px;}
+.grp-chev{font-size:.65rem;color:#888888;}
+.tbl-wrap{overflow-x:auto;}
+table.st{width:100%;border-collapse:collapse;font-size:.83rem;}
+table.st thead tr{background:#f8f9fa;border-bottom:2px solid #e0e0e0;}
+table.st th{padding:.5rem .85rem;text-align:right;font-size:.7rem;font-weight:600;color:#888888;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s;}
+table.st th:first-child{text-align:left;cursor:default;}
+table.st th.dist-hdr{cursor:default;}
+table.st th:hover:not(:first-child):not(.dist-hdr){color:#4e79a7;}
+table.st th.sorted{color:#4e79a7;}
+.sort-arr{margin-left:.18rem;font-size:.6rem;opacity:.5;}
+th.sorted .sort-arr{opacity:1;}
+table.st td{padding:.44rem .85rem;text-align:right;border-bottom:1px solid #e0e0e0;color:#333333;transition:background .1s;}
+table.st td:first-child{text-align:left;font-weight:600;color:#2c3e50;}
+table.st tbody tr:last-child td{border-bottom:none;}
+table.st tbody tr:hover td{background:#f0f4f8;}
+.nb{display:inline-flex;align-items:center;justify-content:center;min-width:30px;padding:.08rem .4rem;background:#d6e4f0;border-radius:4px;font-size:.77rem;font-weight:600;color:#2c3e50;}
+.cv{display:inline-flex;align-items:center;padding:.09rem .38rem;font-size:.67rem;font-weight:700;border-radius:4px;margin-left:.35rem;vertical-align:middle;}
+.cv-low{background:#dcfce7;color:#166534;}
+.cv-med{background:#fef9c3;color:#854d0e;}
+.cv-high{background:#fee2e2;color:#991b1b;}
+.spark-cell{padding:.35rem .85rem !important;}
+.spark-wrap{display:flex;align-items:center;justify-content:flex-end;gap:.4rem;}
+.spark-labels{display:flex;flex-direction:column;align-items:flex-end;gap:1px;font-size:.63rem;color:#888888;line-height:1;}
+.stats-footer{display:flex;align-items:center;justify-content:space-between;padding:.3rem .9rem .55rem;}
+.spark-legend{display:flex;align-items:center;gap:1rem;font-size:.68rem;color:#888888;}
+.leg-item{display:flex;align-items:center;gap:.3rem;}
+.leg-dot{width:7px;height:7px;border-radius:50%;}
+.sort-hint{font-size:.7rem;color:#888888;font-style:italic;}
+</style>
+</head>
+<body>
+<div class='container'>
+  <h1 style=''>Price vs MPG by Origin</h1>
+  <p class='subtitle'>Generated by Stata Dashboard &bull; Wed Mar 11 22:58:22 EDT 2026</p>
+<div class='chart-wrapper'><canvas id='mainChart'></canvas></div>
+<div class='stats-panel' id='statsPanel'>
+  <div class='shell-header'>
+    <div class='shell-title'>
+      <div class='shell-icon'><svg viewBox='0 0 12 12'><rect x='1' y='4' width='2' height='7'/><rect x='5' y='2' width='2' height='9'/><rect x='9' y='5' width='2' height='6'/></svg></div>
+      Summary Statistics
+    </div>
+    <button class='hide-btn' id='hideBtn' onclick='toggleStatsPanel(this)'>&#9650; Hide</button>
+  </div>
+  <div class='col-toggles' id='chipsRow'>
+    <span class='toggle-lbl'>Columns</span>
+    <button class='chip on' onclick='toggleStatCol(0,this)'><span class='chip-dot'></span>N</button>
+    <button class='chip on' onclick='toggleStatCol(1,this)'><span class='chip-dot'></span>Mean</button>
+    <button class='chip on' onclick='toggleStatCol(2,this)'><span class='chip-dot'></span>Median</button>
+    <button class='chip on' onclick='toggleStatCol(3,this)'><span class='chip-dot'></span>Min</button>
+    <button class='chip on' onclick='toggleStatCol(4,this)'><span class='chip-dot'></span>Max</button>
+    <button class='chip on' onclick='toggleStatCol(5,this)'><span class='chip-dot'></span>Std Dev</button>
+    <button class='chip on' onclick='toggleStatCol(6,this)'><span class='chip-dot'></span>Distribution</button>
+    <button class='chip-all' onclick='toggleAllStatCols(this)'>Hide all</button>
+  </div>
+  <div class='stats-body' id='statsBody'>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g0",this)'>
+        <div class='grp-title'>Overall <span class='grp-badge'>N=74</span></div>
+        <span class='grp-chev' id='chev0'>&#9650;</span>
+      </div>
+      <div id='g0'>
+        <div class='tbl-wrap'><table class='st' id='tbl0'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(0,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(0,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(0,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(0,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(0,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(0,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>74</span></td>
+            <td data-col='1' data-v='6165.256756756757'>6,165.26</td>
+            <td data-col='2' data-v='5006.5'>5,006.50</td>
+            <td data-col='3' data-v='3291.0'>3,291</td>
+            <td data-col='4' data-v='15906.0'>15,906</td>
+            <td data-col='5' data-v='2949.4958847689186'>2,949.50 <span class='cv cv-high'>CV 48%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>15,906</span>
+                  <span>3,291</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#e2e8f0'/>
+                  <rect x='10' y='8' width='18' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='26' y1='3' x2='26' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='16' y1='3' x2='16' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='9,14,6,15,40,23,12,18,9,2,22,12,17,5,8,8,8,24,28,11,10,7,20,26,12,27,2,48,18,14,15,9,10,13,12,12,29,8,23,16,18,14,12,9,27,27,13,17,43,10,23,12,8,7,6,24,6,22,34,20,14,32' data-out='61,70,96,108,71,89,87,61,56,56,83,75' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class='var-name'>Mileage (mpg)</td>
+            <td data-col='0'><span class='nb'>74</span></td>
+            <td data-col='1' data-v='21.2972972972973'>21.30</td>
+            <td data-col='2' data-v='20.0'>20</td>
+            <td data-col='3' data-v='12.0'>12</td>
+            <td data-col='4' data-v='41.0'>41</td>
+            <td data-col='5' data-v='5.785503209735141'>5.79 <span class='cv cv-med'>CV 27%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>41</span>
+                  <span>12</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#e2e8f0'/>
+                  <rect x='23' y='8' width='27' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='36' y1='3' x2='36' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='31' y1='3' x2='31' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='39,20,39,31,13,24,53,31,17,28,9,9,35,64,17,39,39,46,28,68,24,17,20,60,35,2,2,9,39,9,13,24,9,31,35,28,28,24,28,46,17,60,82,50,53,24,24,24,28,28,28,46,20,42,50,42,86,46,35,35,50,60,68,9,53,86,24,71,24,42,50,50,20' data-out='108' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g1",this)'>
+        <div class='grp-title'>Car origin = Domestic <span class='grp-badge'>N=52</span></div>
+        <span class='grp-chev' id='chev1'>&#9650;</span>
+      </div>
+      <div id='g1'>
+        <div class='tbl-wrap'><table class='st' id='tbl1'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(1,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(1,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(1,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(1,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(1,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(1,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>52</span></td>
+            <td data-col='1' data-v='6072.423076923077'>6,072.42</td>
+            <td data-col='2' data-v='4782.5'>4,782.50</td>
+            <td data-col='3' data-v='3291.0'>3,291</td>
+            <td data-col='4' data-v='15906.0'>15,906</td>
+            <td data-col='5' data-v='3097.104279086425'>3,097.10 <span class='cv cv-high'>CV 51%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>15,906</span>
+                  <span>3,291</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#e2e8f0'/>
+                  <rect x='9' y='8' width='18' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='25' y1='3' x2='25' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='15' y1='3' x2='15' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='9,14,6,15,40,23,12,18,9,2,22,12,17,5,8,8,8,24,28,11,10,7,20,26,12,27,2,48,18,14,15,9,10,13,12,12,29,8,23,16,18,14,12,9' data-out='61,70,96,108,71,89,87,61' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class='var-name'>Mileage (mpg)</td>
+            <td data-col='0'><span class='nb'>52</span></td>
+            <td data-col='1' data-v='19.826923076923077'>19.83</td>
+            <td data-col='2' data-v='19.0'>19</td>
+            <td data-col='3' data-v='12.0'>12</td>
+            <td data-col='4' data-v='34.0'>34</td>
+            <td data-col='5' data-v='4.743297247514701'>4.74 <span class='cv cv-med'>CV 24%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>34</span>
+                  <span>12</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#e2e8f0'/>
+                  <rect x='22' y='8' width='28' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='40' y1='3' x2='40' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='36' y1='3' x2='36' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='50,26,50,41,16,31,69,41,21,36,12,12,45,84,21,50,50,60,36,89,31,21,26,79,45,2,2,12,50,12,16,31,12,41,45,36,36,31,36,60,21,79,65,69,31,31,31,36,36,36,60' data-out='108' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class='grp'>
+      <div class='grp-hdr' onclick='toggleStatsBlock("g2",this)'>
+        <div class='grp-title'>Car origin = Foreign <span class='grp-badge'>N=22</span></div>
+        <span class='grp-chev' id='chev2'>&#9650;</span>
+      </div>
+      <div id='g2'>
+        <div class='tbl-wrap'><table class='st' id='tbl2'>
+          <thead><tr>
+            <th>Variable</th>
+            <th class='sc' data-col='0' onclick='doSort(2,1)'>N<span class='sort-arr'></span></th>
+            <th class='sc' data-col='1' onclick='doSort(2,2)'>Mean<span class='sort-arr'></span></th>
+            <th class='sc' data-col='2' onclick='doSort(2,3)'>Median<span class='sort-arr'></span></th>
+            <th class='sc' data-col='3' onclick='doSort(2,4)'>Min<span class='sort-arr'></span></th>
+            <th class='sc' data-col='4' onclick='doSort(2,5)'>Max<span class='sort-arr'></span></th>
+            <th class='sc' data-col='5' onclick='doSort(2,6)'>Std Dev<span class='sort-arr'></span></th>
+            <th class='dist-hdr' data-col='6'>Distribution</th>
+          </tr></thead>
+          <tbody>
+          <tr>
+            <td class='var-name'>Price</td>
+            <td data-col='0'><span class='nb'>22</span></td>
+            <td data-col='1' data-v='6384.681818181818'>6,384.68</td>
+            <td data-col='2' data-v='5759.0'>5,759</td>
+            <td data-col='3' data-v='3748.0'>3,748</td>
+            <td data-col='4' data-v='12990.0'>12,990</td>
+            <td data-col='5' data-v='2621.915083190759'>2,621.92 <span class='cv cv-high'>CV 41%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>12,990</span>
+                  <span>3,748</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#e2e8f0'/>
+                  <rect x='10' y='8' width='34' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='32' y1='3' x2='32' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='25' y1='3' x2='25' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='70,31,71,30,12,17,52,8,26,11,5,4,3,27,2,25,41,21,13,38' data-out='108,97' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class='var-name'>Mileage (mpg)</td>
+            <td data-col='0'><span class='nb'>22</span></td>
+            <td data-col='1' data-v='24.772727272727273'>24.77</td>
+            <td data-col='2' data-v='24.5'>24.50</td>
+            <td data-col='3' data-v='14.0'>14</td>
+            <td data-col='4' data-v='41.0'>41</td>
+            <td data-col='5' data-v='6.611186898567624'>6.61 <span class='cv cv-med'>CV 27%</span></td>
+            <td class='spark-cell' data-col='6'>
+              <div class='spark-wrap'>
+                <div class='spark-labels'>
+                  <span>41</span>
+                  <span>14</span>
+                </div>
+                <svg class='spark-svg' width='110' height='28' style='display:block;flex-shrink:0'>
+                  <rect x='2' y='12' width='106' height='4' rx='2' fill='#e2e8f0'/>
+                  <rect x='27' y='8' width='32' height='12' rx='2' fill='none' stroke='#3b82f6' stroke-width='1.5'/>
+                  <line x1='42' y1='3' x2='42' y2='25' stroke='#f59e0b' stroke-width='2' stroke-linecap='round'/>
+                  <line x1='45' y1='3' x2='45' y2='25' stroke='#10b981' stroke-width='2' stroke-linecap='round'/>
+                </svg>
+                <div class='spark-ph' data-in='14,37,45,37,84,41,29,29,45,57,65,2,49,84,18,69,18,37,45,45,14' data-out='108' data-cy='14'></div>
+              </div>
+            </td>
+          </tr>
+          </tbody>
+        </table></div>
+        <div data-col='6' class='stats-footer'>
+          <div class='sort-hint'>Click any column header to sort</div>
+          <div class='spark-legend'>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#f59e0b' stroke-width='2'/></svg> Mean</div>
+            <div class='leg-item'><svg width='14' height='2'><line x1='0' y1='1' x2='14' y2='1' stroke='#10b981' stroke-width='2'/></svg> Median</div>
+            <div class='leg-item'><svg width='12' height='10' style='flex-shrink:0'><rect x='1' y='1' width='10' height='8' rx='1.5' fill='none' stroke='#3b82f6' stroke-width='1.5'/></svg> IQR (25th-75th)</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#4e79a7;opacity:.6'></div> Observations</div>
+            <div class='leg-item'><div class='leg-dot' style='background:#e74c3c'></div> Outliers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+new Chart(document.getElementById('mainChart'), {
+  type:'scatter',
+  data:{datasets:[{label:'Car origin = Domestic',data:[{x:22.0,y:4099.0},{x:17.0,y:4749.0},{x:22.0,y:3799.0},{x:20.0,y:4816.0},{x:15.0,y:7827.0},{x:18.0,y:5788.0},{x:26.0,y:4453.0},{x:20.0,y:5189.0},{x:16.0,y:10372.0},{x:19.0,y:4082.0},{x:14.0,y:11385.0},{x:14.0,y:14500.0},{x:21.0,y:15906.0},{x:29.0,y:3299.0},{x:16.0,y:5705.0},{x:22.0,y:4504.0},{x:22.0,y:5104.0},{x:24.0,y:3667.0},{x:19.0,y:3955.0},{x:30.0,y:3984.0},{x:18.0,y:4010.0},{x:16.0,y:5886.0},{x:17.0,y:6342.0},{x:28.0,y:4389.0},{x:21.0,y:4187.0},{x:12.0,y:11497.0},{x:12.0,y:13594.0},{x:14.0,y:13466.0},{x:22.0,y:3829.0},{x:14.0,y:5379.0},{x:15.0,y:6165.0},{x:18.0,y:4516.0},{x:14.0,y:6303.0},{x:20.0,y:3291.0},{x:21.0,y:8814.0},{x:19.0,y:5172.0},{x:19.0,y:4733.0},{x:18.0,y:4890.0},{x:19.0,y:4181.0},{x:24.0,y:4195.0},{x:16.0,y:10371.0},{x:28.0,y:4647.0},{x:34.0,y:4425.0},{x:25.0,y:4482.0},{x:26.0,y:6486.0},{x:18.0,y:4060.0},{x:18.0,y:5798.0},{x:18.0,y:4934.0},{x:19.0,y:5222.0},{x:19.0,y:4723.0},{x:19.0,y:4424.0},{x:24.0,y:4172.0},],backgroundColor:'rgba(78,121,167,0.85)',pointRadius:4,pointHoverRadius:6.0,pointBorderWidth:1,pointRotation:0,},{label:'Car origin = Foreign',data:[{x:17.0,y:9690.0},{x:23.0,y:6295.0},{x:25.0,y:9735.0},{x:23.0,y:6229.0},{x:35.0,y:4589.0},{x:24.0,y:5079.0},{x:21.0,y:8129.0},{x:21.0,y:4296.0},{x:25.0,y:5799.0},{x:28.0,y:4499.0},{x:30.0,y:3995.0},{x:14.0,y:12990.0},{x:26.0,y:3895.0},{x:35.0,y:3798.0},{x:18.0,y:5899.0},{x:31.0,y:3748.0},{x:18.0,y:5719.0},{x:23.0,y:7140.0},{x:41.0,y:5397.0},{x:25.0,y:4697.0},{x:25.0,y:6850.0},{x:17.0,y:11995.0},],backgroundColor:'rgba(242,142,43,0.85)',pointRadius:4,pointHoverRadius:6.0,pointBorderWidth:1,pointRotation:0,},]},
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    animation:{duration:400},
+    plugins:{legend:{display:true,position:'top',labels:{color:'#333333'}},tooltip:{mode:'point',position:'nearest',callbacks:{title:function(items){return items.length?items[0].dataset.label:'';},label:function(ctx){return ['  Price:  '+parseFloat(ctx.parsed.y.toFixed(4)).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:4}),'  Mileage (mpg):  '+parseFloat(ctx.parsed.x.toFixed(4)).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:4})];}}}},
+    scales:{x:{type:'linear',ticks:{color:'#333333',maxRotation:0,minRotation:0},grid:{color:'rgba(0,0,0,0.15)',display:true},border:{color:'rgba(0,0,0,0.15)',display:true},title:{display:true,text:'Mileage (mpg)',color:'#333333'},},y:{type:'linear',ticks:{color:'#333333'},grid:{color:'rgba(0,0,0,0.15)',display:true},border:{color:'rgba(0,0,0,0.15)',display:true},title:{display:true,text:'Price',color:'#333333'},}}
+  }
+});
+
+// Stats panel JS (v1.5)
+function toggleStatsPanel(btn){var body=document.getElementById('statsBody');var chips=document.getElementById('chipsRow');var hiding=body.style.display!=='none';body.style.display=hiding?'none':'';if(chips)chips.style.display=hiding?'none':'';btn.innerHTML=hiding?'&#9660; Show':'&#9650; Hide';}
+function toggleStatsBlock(id,hdr){var body=document.getElementById(id);var chev=hdr.querySelector('.grp-chev');var hiding=body.style.display!=='none';body.style.display=hiding?'none':'';if(chev)chev.innerHTML=hiding?'&#9660;':'&#9650;';}
+var _statColVis=[true,true,true,true,true,true,true];
+function toggleStatCol(ci,btn){_statColVis[ci]=!_statColVis[ci];btn.classList.toggle('on',_statColVis[ci]);document.querySelectorAll('[data-col="'+ci+'"]').forEach(function(c){c.style.display=_statColVis[ci]?'':'none';});}
+function toggleAllStatCols(btn){var anyOn=_statColVis.some(function(v){return v;});_statColVis=_statColVis.map(function(){return !anyOn;});document.querySelectorAll('.chip').forEach(function(c,i){c.classList.toggle('on',!anyOn);});for(var ci=0;ci<7;ci++){document.querySelectorAll('[data-col="'+ci+'"]').forEach(function(c){c.style.display=(!anyOn)?'':'none';});}btn.textContent=anyOn?'Show all':'Hide all';}
+var _sortStates={};
+function doSort(tblIdx,col){var tbl=document.getElementById('tbl'+tblIdx);if(!tbl)return;var tbody=tbl.querySelector('tbody');var key=tblIdx+'-'+col;var asc=_sortStates[key]!==true;_sortStates[key]=asc;var rows=Array.from(tbody.querySelectorAll('tr'));rows.sort(function(a,b){var av=parseFloat(a.cells[col].getAttribute('data-v')||a.cells[col].textContent.replace(/[^0-9.-]/g,''));var bv=parseFloat(b.cells[col].getAttribute('data-v')||b.cells[col].textContent.replace(/[^0-9.-]/g,''));return asc?av-bv:bv-av;});rows.forEach(function(r){tbody.appendChild(r);});tbl.querySelectorAll('th').forEach(function(th,i){th.classList.remove('sorted');var arr=th.querySelector('.sort-arr');if(arr)arr.textContent='';if(i===col){th.classList.add('sorted');if(arr)arr.textContent=asc?' ^':' v';}});}
+(function(){
+if(!window.IntersectionObserver)return;
+var _sparkObs=new IntersectionObserver(function(entries){
+entries.forEach(function(e){
+if(!e.isIntersecting)return;
+var ph=e.target;
+_sparkObs.unobserve(ph);
+var svg=ph.previousElementSibling;
+if(!svg||svg.tagName.toLowerCase()!=='svg')return;
+var cy=ph.getAttribute('data-cy')||'14';
+var inPts=ph.getAttribute('data-in');
+if(inPts&&inPts.length>0){
+inPts.split(',').forEach(function(cx){
+var c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+c.setAttribute('cx',cx);c.setAttribute('cy',cy);
+c.setAttribute('r','2.2');c.setAttribute('fill','#4e79a7');
+c.setAttribute('opacity','.55');svg.appendChild(c);});}
+var outPts=ph.getAttribute('data-out');
+if(outPts&&outPts.length>0){
+outPts.split(',').forEach(function(cx){
+var c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+c.setAttribute('cx',cx);c.setAttribute('cy',cy);
+c.setAttribute('r','2.2');c.setAttribute('fill','#e74c3c');
+c.setAttribute('opacity','.8');svg.appendChild(c);});}
+});},{rootMargin:'200px'});
+document.querySelectorAll('.spark-ph').forEach(function(ph){
+_sparkObs.observe(ph);});
+if(window.MutationObserver){
+new MutationObserver(function(muts){
+muts.forEach(function(m){
+m.addedNodes.forEach(function(n){
+if(n.nodeType!==1)return;
+if(n.classList&&n.classList.contains('spark-ph'))_sparkObs.observe(n);
+n.querySelectorAll&&n.querySelectorAll('.spark-ph').forEach(function(ph){
+_sparkObs.observe(ph);});});});
+}).observe(document.getElementById('statsPanel')||document.body,
+{childList:true,subtree:true});}
+})();
+</script>
+</body>
+</html>

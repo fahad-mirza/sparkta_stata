@@ -167,8 +167,8 @@ sparkta price, type(line) over(rep78)              // line
 sparkta price, type(area) over(rep78)              // filled area
 sparkta price mpg, type(scatter) over(foreign)     // scatter coloured by group
 sparkta price mpg weight, type(bubble)             // bubble  (y x size)
-sparkta rep78, type(pie)                           // pie
-sparkta rep78, type(donut)                         // donut
+sparkta price, type(pie)   over(foreign)           // pie
+sparkta price, type(donut) over(foreign)           // donut
 ```
 
 ### Statistical charts
