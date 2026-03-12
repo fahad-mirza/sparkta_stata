@@ -1,5 +1,5 @@
 {smcl}
-{* sparkta.sthlp  v3.5.41  2026-03-12}{...}
+{* sparkta.sthlp  v3.5.42  2026-03-12}{...}
 {hline}
 help for {cmd:sparkta}
 {hline}

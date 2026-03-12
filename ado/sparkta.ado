@@ -1,8 +1,11 @@
-*! sparkta version 3.5.41
-*! v3.5.41: Reverted c(source) (not a real Stata constant -- was a hallucination).
+*! sparkta version 3.5.42
+*! v3.5.42: Bulletproof jar search: findfile sparkta.jar directly (Path 1),
+*!           store sysdir_PLUS/personal in locals before confirm file checks.
+*!           No Java recompile needed.
+*! v3.5.42: Reverted c(source) (not a real Stata constant -- was a hallucination).
 *!           findfile is the correct and well-documented primary lookup. Added missing
 *!           sysdir_personal forward-slash variant (Mac/Linux) and sysdir_PLUS/s/sparkta/
-*!           explicit fallback. HtmlGenerator.VERSION bumped to 3.5.41 for consistency.
+*!           explicit fallback. HtmlGenerator.VERSION bumped to 3.5.42 for consistency.
 *!           Java recompile required (VERSION constant change).
 *! v3.5.40: Removed hardcoded C:\ado\personal path. Added sysdir_PLUS subfolder and
 *!           Mac/Linux separator variants. Ado-only change.
@@ -247,8 +250,11 @@
 program define sparkta
     version 17
 
+    // Single version constant -- update this one line on every version bump
+    local sparkta_version "3.5.42"
+
     // Print version so user can confirm which ado is loaded
-    display as text "  [sparkta v3.5.41 | `c(sysdir_personal)']"
+    display as text "  [sparkta v`sparkta_version' | `c(sysdir_personal)']"
 
     syntax varlist [if] [in],           ///
         [TYPE(string)]                  ///  bar line scatter pie hbar stackedbar stackedarea area bubble donut cibar ciline stackedbar100 stackedhbar100
@@ -1086,7 +1092,7 @@ program define sparkta
     local nobs = r(N)
     // Pass the tempvar name so Java reads it via Data.getVarIndex()
     local tousename "`touse'"
-    display as text "Building sparkta v3.5.36 with `nobs' observations..."
+    display as text "Building sparkta v`sparkta_version' with `nobs' observations..."
     display as text "  (Stata personal dir: `c(sysdir_personal)')"
 
     // - Large dataset memory warning (v1.6.0) -
@@ -1130,79 +1136,75 @@ program define sparkta
         display as text ""
     }
 
-    // - Locate sparkta.jar (v3.5.41) -
+    // - Locate sparkta.jar (v3.5.42) -
     // Search order:
-    //   1. findfile "sparkta.ado" -- searches the adopath and returns the first
-    //      match; jar must be co-located with the ado (guaranteed by our pkg file).
-    //      This correctly handles ssc install (PLUS/s/sparkta/) and net install
-    //      (personal/) because the jar is listed in sparkta.pkg alongside the ado.
-    //   2. sysdir_personal variants -- net install personal, all separator styles
-    //   3. sysdir_PLUS/s/sparkta/ -- SSC explicit fallback
-    //   4. c(pwd) -- last resort: working directory / dev copy
+    //   1. findfile "sparkta.jar" -- direct jar search on adopath (most reliable)
+    //   2. findfile "sparkta.ado" -- find ado dir, look for jar alongside it
+    //   3. sysdir_PLUS/s/sparkta/ -- net install PLUS subfolder (explicit)
+    //   4. sysdir_personal -- manual copy to personal dir
+    //   5. c(pwd) -- dev / working directory fallback
     local jarpath ""
 
-    // --- Path 1: findfile -- primary (works for SSC, net install, and adopath) ---
-    // findfile searches the full adopath for sparkta.ado and returns its directory.
-    // Because sparkta.jar is listed in sparkta.pkg alongside sparkta.ado, it lands
-    // in the same folder. Stripping the filename gives us the correct jar directory.
-    capture findfile "sparkta.ado"
+    // Store sysdir values in locals first -- avoids backtick/quote issues in foreach
+    local _plus "`c(sysdir_PLUS)'"
+    local _pers "`c(sysdir_personal)'"
+    local _pwd  "`c(pwd)'"
+
+    // --- Path 1: findfile sparkta.jar directly ---
+    // Most reliable: findfile searches the full adopath for the jar itself.
+    // net install places sparkta.jar on the adopath so this finds it directly.
+    capture findfile "sparkta.jar"
     if !_rc {
-        local _ffdir = subinstr(r(fn), "sparkta.ado", "", .)
-        local _p1 `"`_ffdir'sparkta.jar"'
-        capture confirm file `"`_p1'"'
-        if !_rc local jarpath `"`_p1'"'
+        capture confirm file "`r(fn)'"
+        if !_rc local jarpath "`r(fn)'"
     }
 
-    // --- Paths 2a-2c: sysdir_personal (net install, all separator variants) ---
+    // --- Path 2: findfile sparkta.ado, look for jar in same directory ---
     if "`jarpath'" == "" {
-        foreach trypath in                                  ///
-            `"`c(sysdir_personal)'sparkta.jar"'           ///
-            `"`c(sysdir_personal)'\sparkta.jar"'         ///
-            `"`c(sysdir_personal)'/sparkta.jar"' {
-            capture confirm file `"`trypath'"'
-            if !_rc {
-                local jarpath `"`trypath'"'
-                continue, break
-            }
+        capture findfile "sparkta.ado"
+        if !_rc {
+            local _ffdir = subinstr("`r(fn)'", "sparkta.ado", "", .)
+            capture confirm file "`_ffdir'sparkta.jar"
+            if !_rc local jarpath "`_ffdir'sparkta.jar"
         }
     }
 
-    // --- Paths 3a-3b: sysdir_PLUS/s/sparkta/ (SSC explicit fallback) ---
+    // --- Path 3: sysdir_PLUS/s/sparkta/ (net install PLUS subfolder) ---
     if "`jarpath'" == "" {
-        foreach trypath in                                              ///
-            `"`c(sysdir_PLUS)'s\sparkta\sparkta.jar"'              ///
-            `"`c(sysdir_PLUS)'s/sparkta/sparkta.jar"' {
-            capture confirm file `"`trypath'"'
-            if !_rc {
-                local jarpath `"`trypath'"'
-                continue, break
-            }
-        }
+        capture confirm file "`_plus's\sparkta\sparkta.jar"
+        if !_rc local jarpath "`_plus's\sparkta\sparkta.jar"
+    }
+    if "`jarpath'" == "" {
+        capture confirm file "`_plus's/sparkta/sparkta.jar"
+        if !_rc local jarpath "`_plus's/sparkta/sparkta.jar"
     }
 
-    // --- Paths 4a-4b: c(pwd) -- working directory (dev / manual copy) ---
+    // --- Path 4: sysdir_personal (manual copy) ---
     if "`jarpath'" == "" {
-        foreach trypath in                          ///
-            `"`c(pwd)'\sparkta.jar"'             ///
-            `"`c(pwd)'/sparkta.jar"' {
-            capture confirm file `"`trypath'"'
-            if !_rc {
-                local jarpath `"`trypath'"'
-                continue, break
-            }
-        }
+        capture confirm file "`_pers'sparkta.jar"
+        if !_rc local jarpath "`_pers'sparkta.jar"
+    }
+
+    // --- Path 5: c(pwd) (dev / working directory) ---
+    if "`jarpath'" == "" {
+        capture confirm file "`_pwd'\sparkta.jar"
+        if !_rc local jarpath "`_pwd'\sparkta.jar"
+    }
+    if "`jarpath'" == "" {
+        capture confirm file "`_pwd'/sparkta.jar"
+        if !_rc local jarpath "`_pwd'/sparkta.jar"
     }
 
     if "`jarpath'" == "" {
         display as error "sparkta.jar not found. Searched:"
-        display as error "  Same folder as sparkta.ado (via findfile)"
-        display as error "  `c(sysdir_personal)'sparkta.jar"
-        display as error "  `c(sysdir_PLUS)'s\sparkta\sparkta.jar"
-        display as error "  `c(pwd)'\sparkta.jar"
+        display as error "  findfile sparkta.jar (adopath)"
+        display as error "  findfile sparkta.ado -> same directory"
+        display as error "  `_plus's\sparkta\sparkta.jar"
+        display as error "  `_pers'sparkta.jar"
+        display as error "  `_pwd'\sparkta.jar"
         display as error ""
-        display as error "Fix: sparkta.jar must be in the same folder as sparkta.ado."
-        display as error "Your Stata personal folder: `c(sysdir_personal)'"
-        display as error "Reinstall: ssc install sparkta"
+        display as error "Fix: reinstall sparkta so sparkta.jar is on the adopath."
+        display as error "  net install sparkta, from(https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/) replace"
         exit 198
     }
 
