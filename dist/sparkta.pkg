@@ -1,0 +1,19 @@
+v 3
+d sparkta - Interactive self-contained HTML charts from Stata
+d Author: Fahad Mirza
+d Distribution-Date: 20260312
+d URL: https://github.com/fahad-mirza/sparkta_stata
+d
+d sparkta generates interactive, self-contained HTML charts and dashboards
+d from Stata using a Java backend and Chart.js 4. One command produces a
+d fully interactive .html file that opens in any browser with no server,
+d no Python, and no R required. Supports 18 chart types including CI bars,
+d violin plots, histograms, scatter, and stacked charts. Includes live
+d filter dropdowns, summary statistics panels, and full offline mode.
+d
+d Requires: Stata 17 or later, Java 8 or later
+d
+f sparkta.ado
+f sparkta.sthlp
+f sparkta_check.ado
+f sparkta.jar
