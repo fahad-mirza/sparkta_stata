@@ -104,22 +104,26 @@ with a clear, actionable error if any are missing. There is no silent CDN fallba
 
 ## Installation
 
-```stata
-* From SSC (recommended)
-ssc install sparkta
-
-* Verify the installation
-sparkta_check
-```
+**Option 1 -- from GitHub** (available now):
 
 ```stata
-* From GitHub (latest development version)
 net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/")
 ```
 
-`ssc install sparkta` places `sparkta.jar` alongside the `.ado` file automatically.
-Run `sparkta_check` after install -- it tells you exactly where each file landed
-and confirms the Java plugin is reachable.
+**Option 2 -- from SSC** (once listed on SSC):
+
+```stata
+ssc install sparkta
+```
+
+**Verify the installation:**
+
+```stata
+sparkta_check
+```
+
+Both methods place `sparkta.jar` alongside the `.ado` file automatically.
+`sparkta_check` confirms exactly where each file landed and that the Java plugin is reachable.
 
 **Requirements:** Stata 17+ with Java 8+ (bundled with most Stata installations since version 16).
 
