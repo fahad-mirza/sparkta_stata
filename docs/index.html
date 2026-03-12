@@ -230,8 +230,9 @@
   .chart-frame-wrap iframe {
     display: block;
     width: 100%;
-    height: 480px;
+    height: 700px;
     border: none;
+    transition: height 0.3s ease;
   }
 
   /* ---- Privacy callout ---- */
@@ -388,9 +389,10 @@
     <span class="kw">title</span>("Mean Price <span class="kw">by</span> Repair Record")</pre>
   </div>
   <div class="chart-frame-wrap">
-    <iframe src="charts/C1_cibar.html" width="100%" height="480"
+    <iframe src="charts/C1_cibar.html" width="100%" height="700"
             frameborder="0" scrolling="auto"
-            loading="lazy" allowtransparency="true"></iframe>
+            loading="lazy" allowtransparency="true"
+            onload="autoH(this)"></iframe>
   </div>
 </div>
 
@@ -404,9 +406,10 @@
     <span class="kw">title</span>("Price Distribution <span class="kw">by</span> Repair Record")</pre>
   </div>
   <div class="chart-frame-wrap">
-    <iframe src="charts/E2_violin.html" width="100%" height="480"
+    <iframe src="charts/E2_violin.html" width="100%" height="700"
             frameborder="0" scrolling="auto"
-            loading="lazy" allowtransparency="true"></iframe>
+            loading="lazy" allowtransparency="true"
+            onload="autoH(this)"></iframe>
   </div>
 </div>
 
@@ -420,9 +423,10 @@
     <span class="kw">title</span>("Price <span class="kw">by</span> Repair Record")</pre>
   </div>
   <div class="chart-frame-wrap">
-    <iframe src="charts/G2_filter2.html" width="100%" height="480"
+    <iframe src="charts/G2_filter2.html" width="100%" height="700"
             frameborder="0" scrolling="auto"
-            loading="lazy" allowtransparency="true"></iframe>
+            loading="lazy" allowtransparency="true"
+            onload="autoH(this)"></iframe>
   </div>
 </div>
 
@@ -437,9 +441,10 @@
     <span class="kw">yband</span>(4000 8000) <span class="kw">ybandcolor</span>(rgba(52,152,219,0.12))</pre>
   </div>
   <div class="chart-frame-wrap">
-    <iframe src="charts/K4_yline_yband.html" width="100%" height="480"
+    <iframe src="charts/K4_yline_yband.html" width="100%" height="700"
             frameborder="0" scrolling="auto"
-            loading="lazy" allowtransparency="true"></iframe>
+            loading="lazy" allowtransparency="true"
+            onload="autoH(this)"></iframe>
   </div>
 </div>
 
@@ -453,9 +458,10 @@
     <span class="kw">title</span>("Price vs MPG <span class="kw">by</span> Origin")</pre>
   </div>
   <div class="chart-frame-wrap">
-    <iframe src="charts/A8_scatter_over.html" width="100%" height="480"
+    <iframe src="charts/A8_scatter_over.html" width="100%" height="700"
             frameborder="0" scrolling="auto"
-            loading="lazy" allowtransparency="true"></iframe>
+            loading="lazy" allowtransparency="true"
+            onload="autoH(this)"></iframe>
   </div>
 </div>
 
@@ -469,9 +475,10 @@
     <span class="kw">title</span>("Wage Composition <span class="kw">by</span> Race and Education")</pre>
   </div>
   <div class="chart-frame-wrap">
-    <iframe src="charts/B3_stackedbar100.html" width="100%" height="480"
+    <iframe src="charts/B3_stackedbar100.html" width="100%" height="700"
             frameborder="0" scrolling="auto"
-            loading="lazy" allowtransparency="true"></iframe>
+            loading="lazy" allowtransparency="true"
+            onload="autoH(this)"></iframe>
   </div>
 </div>
 
@@ -485,9 +492,10 @@
     <span class="kw">title</span>("Price <span class="kw">by</span> Repair Record")</pre>
   </div>
   <div class="chart-frame-wrap">
-    <iframe src="charts/F1_bar_by.html" width="100%" height="480"
+    <iframe src="charts/F1_bar_by.html" width="100%" height="700"
             frameborder="0" scrolling="auto"
-            loading="lazy" allowtransparency="true"></iframe>
+            loading="lazy" allowtransparency="true"
+            onload="autoH(this)"></iframe>
   </div>
 </div>
 
@@ -501,9 +509,10 @@
     <span class="kw">title</span>("Price <span class="kw">by</span> Repair Record")</pre>
   </div>
   <div class="chart-frame-wrap">
-    <iframe src="charts/I6_theme_dark_neon.html" width="100%" height="480"
+    <iframe src="charts/I6_theme_dark_neon.html" width="100%" height="700"
             frameborder="0" scrolling="auto"
-            loading="lazy" allowtransparency="true"></iframe>
+            loading="lazy" allowtransparency="true"
+            onload="autoH(this)"></iframe>
   </div>
 </div>
 
@@ -561,5 +570,19 @@
   </p>
 </footer>
 
+
+<script>
+function autoH(fr) {
+  try {
+    var h = fr.contentWindow.document.documentElement.scrollHeight
+           || fr.contentWindow.document.body.scrollHeight;
+    if (h && h > 200) {
+      fr.style.height = (h + 32) + 'px';
+    }
+  } catch(e) {
+    // cross-origin fallback -- keep default height
+  }
+}
+</script>
 </body>
 </html>
