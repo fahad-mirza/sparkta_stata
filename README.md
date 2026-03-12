@@ -110,10 +110,10 @@ with a clear, actionable error if any are missing. There is no silent CDN fallba
 net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/")
 ```
 
-**Option 2 -- from SSC** (once listed on SSC):
+**Option 2 -- from SSC** (once listed on SSC - COMING SOON):
 
 ```stata
-ssc install sparkta
+ssc install sparkta, replace
 ```
 
 **Verify the installation:**
