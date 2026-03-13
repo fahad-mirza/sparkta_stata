@@ -1707,6 +1707,7 @@ bandwidth). Inline legend and custom tooltip.{p_end}
 {bf:Fahad Mirza} | Author and Developer
 
 {pmore}
+Email: fm.109@hotmail.com{break}
 {browse "https://www.linkedin.com/in/fahad-mirza/":LinkedIn}{space 3}
 {browse "https://medium.com/@fahad-mirza":Medium Blog}{space 3}
 {browse "https://github.com/fahad-mirza/":GitHub}
@@ -1725,7 +1726,15 @@ feature development.
 {bf:sparkta} v3.5.42{break}
 Chart rendering: Chart.js 4.4 ({browse "https://cdn.jsdelivr.net":cdn.jsdelivr.net}){break}
 Java bridge: Stata Java Plugin Interface (JPI){break}
-Requires: Stata 17+ and {cmd:sparkta.jar}
+Requires: Stata 17+ and Java 8 or later
+
+{pmore}
+{bf:Note on sparkta.jar:} {cmd:sparkta} ships with a pre-compiled Java plugin
+({cmd:sparkta.jar}) that is installed automatically alongside the .ado file.
+Users who install via {cmd:ssc install sparkta} or {cmd:net install sparkta}
+receive the jar with no additional steps. The jar bundles all JavaScript
+libraries required for chart rendering so that offline mode works without
+any internet connection or CDN access.
 
 {title:Also see}
 
