@@ -6,7 +6,7 @@
 One command. Zero dependencies. No Python. No R. No server.
 
 [![Stata 17+](https://img.shields.io/badge/Stata-17%2B-1a6fa0?style=flat-square)](https://www.stata.com)
-[![Version](https://img.shields.io/badge/version-3.5.42-4a9eff?style=flat-square)](#)
+[![Version](https://img.shields.io/badge/version-3.5.96-4a9eff?style=flat-square)](#)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](#)
 [![Chart.js](https://img.shields.io/badge/Chart.js-4.4-f97316?style=flat-square)](https://www.chartjs.org)
 [![SSC](https://img.shields.io/badge/SSC-ssc%20install%20sparkta-8b5cf6?style=flat-square)](#installation)
@@ -24,106 +24,141 @@ sparkta price, type(cibar) over(rep78) title("Mean Price by Repair Record")
 
 ---
 
+## What is new in v3.5.96
+
+> **Major update.** If you installed sparkta previously, this version brings
+> substantial new features. Update with:
+> ```stata
+> net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/") replace
+> ```
+
+### New features since last GitHub release
+
+| Feature | Description |
+|:---|:---|
+| **Live filter dropdowns** | `filters(varlist)` adds interactive dropdowns. Viewers filter the chart live -- no server, no page reload. Any number of variables. |
+| **Live stats panel update** | The N, Mean, Median, SD, Min, Max, CV table now updates instantly when a filter changes, showing statistics for only the filtered rows. |
+| **Dual-handle range sliders** | `sliders(varlist)` adds min/max range sliders for any numeric variable. Drag to filter a continuous range interactively. |
+| **by() panels with filters** | Filter changes update all `by()` panels simultaneously and independently. |
+| **Scatter fit lines** | `fit(lfit\|qfit\|lowess\|exp\|log\|power\|ma)` overlays a fitted line. `fitci` adds a shaded confidence band. |
+| **Per-group fit lines** | `fit()` with `over()` draws a separate fitted line per group in each group colour. |
+| **Marker labels on scatter** | `mlabel(varname)` labels scatter points with any variable. `mlabpos()` sets clock-position. |
+| **Reference annotations** | `yline()` `xline()` `yband()` `xband()` for reference lines and shaded bands. `apoint()` `alabeltext()` `aellipse()` for annotated points and ellipses. All support colours and text. |
+| **Named colour palettes** | `theme(cblind1\|tab1\|tab2\|viridis\|neon\|...)` and compound themes `dark_viridis`, `light_tab2` etc. |
+| **Legend and label overrides** | `leglabels()` renames legend entries. `relabel()` renames over-group labels on both axis and legend. `xticks()` `yticks()` for custom tick positions. |
+| **Gradient fills** | `gradient` on bar and area charts. `gradcolors()` for per-series control. |
+| **Secondary y-axis** | `y2(varlist)` plots variables on a right-hand axis with independent scale. |
+| **Stacked horizontal bar** | `type(stackedhbar)` and `type(stackedhbar100)` complete the stacked chart family. |
+| **Performance** | 500k obs x 100 groups: generation time 0.5s (was 5.5s). File size for 500-group charts: ~2-3 MB (was ~40 MB). O(N) group indexing, lazy sparkline rendering, bulk JNI reads. |
+
+### Filter syntax change
+
+The old `filter()` and `filter2()` options still work. The new `filters(varlist)` replaces them with a single option that accepts any number of variables:
+
+```stata
+* Old (still accepted)
+sparkta price, over(rep78) filter(foreign)
+
+* New -- unlimited filters in one option
+sparkta price, over(rep78) filters(foreign rep78)
+
+* With by() panels
+sparkta price, over(rep78) by(foreign) filters(rep78)
+
+* With range sliders
+sparkta price mpg, type(scatter) sliders(mpg)
+```
+
+---
+
 ## What sparkta produces
 
-Every `sparkta` command produces a single `.html` file that:
+Every `sparkta` command writes a single `.html` file that:
 
-- Opens **instantly** in any browser -- no install, no plugins, no internet needed by the viewer
+- Opens **instantly** in any browser -- no install, no plugins, no internet needed
 - Has **interactive tooltips**, hover highlights, and animated rendering
-- Includes **live dropdown filters** that slice the data without any server
-- Carries a **collapsible statistics panel** (N, Mean, Median, SD, Min, Max, CV) with distribution sparklines matching `summarize, detail` exactly
-- Can be **emailed, shared on a USB drive, or archived** -- it is entirely self-contained
+- Includes **live dropdown filters** and **range sliders** that slice data without a server
+- Carries a **collapsible statistics panel** (N, Mean, Median, SD, Min, Max, CV)
+  with distribution sparklines that **update live when filters change**
+- Can be **emailed, shared on USB, or archived** -- entirely self-contained
 
 ---
 
 ## Why not just use Python or R?
-
-This is the honest comparison.
 
 | | Stata `graph` | Python / R | **sparkta** |
 |:---|:---:|:---:|:---:|
 | Stata-native syntax | yes | no | **yes** |
 | Interactive tooltips | no | yes | **yes** |
 | Live filter dropdowns | no | needs server | **yes, self-contained** |
-| Output is a single shareable file | no | no | **yes** |
+| Live stats panel update | no | no | **yes** |
+| Range sliders | no | needs server | **yes, self-contained** |
+| Single shareable file | no | no | **yes** |
 | Viewer needs zero software | yes | no | **yes** |
-| Offline / air-gapped use | yes | no | **yes** |
+| Offline / air-gapped | yes | no | **yes** |
 | Data stays on your machine | yes | no | **yes** |
 | CI whiskers matching `ci means` | no | no | **yes** |
 | Stats panel matching `summarize` | no | no | **yes** |
 | Runs inside your existing do-file | yes | no | **yes** |
 
-Python and R produce interactive charts -- but only if your viewer installs the right
-libraries, or if you run a Shiny or Dash server. The output is never truly self-contained.
-sparkta produces a single `.html` file that anyone can open, anywhere, forever.
+---
 
-### Performance
+## Performance
 
-Chart generation runs entirely inside Stata via the Java Plugin Interface.
-There is no export step, no subprocess, no round-trip.
+Generation runs entirely inside Stata via the Java Plugin Interface.
 
 | Dataset size | Generation time | HTML open time |
 |:---|:---:|:---:|
 | ~500 obs | < 0.2 s | instant |
 | ~10,000 obs | ~0.4 s | instant |
 | ~100,000 obs | ~0.8 s | instant |
-| ~500,000 obs | 1.0 -- 1.5 s | instant |
+| ~500,000 obs | ~1.0 s | instant |
 
-The HTML file renders immediately. Even 500-group charts stay under 3 MB thanks
-to lazy sparkline rendering -- group statistics panels load as you scroll, not all at once.
+Even 500-group charts stay under 3 MB thanks to lazy sparkline rendering.
 
 ---
 
-## Data privacy and institutional use
+## Data privacy
 
-For researchers working with sensitive data, sparkta provides something no
-cloud or browser-based tool can match: **your data never leaves Stata**.
-
-- All processing runs on your local machine via the Stata Java Plugin Interface
-- The output HTML has no data-fetching code, no callbacks, no external requests
-- No telemetry of any kind
-
-The `offline` option goes further: it embeds all JavaScript inside the HTML so
-the file makes **zero external network requests** when opened in a browser.
+All processing runs locally via the Stata Java Plugin Interface. The output HTML
+has no data-fetching code, no callbacks, no external requests. The `offline` option
+bundles all JavaScript inside the file (~280 KB) for zero network requests when opened.
 
 ```stata
-* Fully air-gapped -- all JS bundled inside the HTML (~280 KB)
 sparkta price, type(cibar) over(rep78) offline export("secure/chart.html")
 ```
 
-This is appropriate for:
-- IRB-restricted and clinical trial data
-- Financial and proprietary records
-- Institutional networks that block external CDN requests
-- Permanent archival -- the file renders identically in any browser, years from now
-
-sparkta also checks for all required JS libraries at startup and **fails immediately**
-with a clear, actionable error if any are missing. There is no silent CDN fallback.
+Suitable for IRB-restricted data, financial records, institutional networks that
+block CDN requests, and permanent archival.
 
 ---
 
 ## Installation
 
-**Option 1 -- from GitHub** (available now):
+**From GitHub** (available now):
 
 ```stata
 net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/")
 ```
 
-**Option 2 -- from SSC** (once listed on SSC):
+**From SSC** (once listed):
 
 ```stata
 ssc install sparkta
 ```
 
-**Verify the installation:**
+**Update an existing installation:**
 
 ```stata
-sparkta_check
+net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/") replace
 ```
 
-Both methods place `sparkta.jar` alongside the `.ado` file automatically.
-`sparkta_check` confirms exactly where each file landed and that the Java plugin is reachable.
+**Verify:**
+
+```stata
+sysuse auto, clear
+sparkta price, over(foreign)
+```
 
 **Requirements:** Stata 17+ with Java 8+ (bundled with most Stata installations since version 16).
 
@@ -134,91 +169,83 @@ Both methods place `sparkta.jar` alongside the `.ado` file automatically.
 ```stata
 sysuse auto, clear
 
-* The simplest call -- one variable, default bar chart
+* Simplest possible call
 sparkta price
 
-* Group by a categorical variable
+* Group by a variable
 sparkta price, over(rep78)
 
-* CI bars -- t-distribution intervals matching ci means exactly
-sparkta price, type(cibar) over(rep78)
+* CI bars with live filter
+sparkta price, type(cibar) over(rep78) filters(foreign)
 
-* Violin plot with animated KDE density
+* Scatter with lowess fit line
+sparkta price mpg, type(scatter) fit(lowess) over(foreign)
+
+* Violin plot
 sparkta price, type(violin) over(rep78)
 
-* Interactive filter dropdown -- filters data live, no server needed
-sparkta price, over(rep78) filter(foreign)
-
-* Save to a file instead of auto-opening browser
+* Save to a file
 sparkta price, type(cibar) over(rep78) export("~/Desktop/chart.html")
 
-* Fully offline -- embeds all JS, zero network requests when opened
+* Fully offline -- zero network requests when opened
 sparkta price, over(rep78) offline export("~/secure/chart.html")
 ```
 
 ---
 
-## Chart types (18 total)
+## Chart types (20+)
 
-### Core charts
+### Bar family
 
 ```stata
 sysuse auto, clear
-
-sparkta price, type(bar) over(rep78)               // grouped bar
-sparkta price, type(hbar) over(rep78)              // horizontal bar
-sparkta price, type(line) over(rep78)              // line
-sparkta price, type(area) over(rep78)              // filled area
-sparkta price mpg, type(scatter) over(foreign)     // scatter coloured by group
-sparkta price mpg weight, type(bubble)             // bubble  (y x size)
-sparkta price, type(pie)   over(foreign)           // pie
-sparkta price, type(donut) over(foreign)           // donut
+sparkta price, type(bar)          over(rep78)   // grouped bar
+sparkta price, type(hbar)         over(rep78)   // horizontal bar
+sparkta price, type(stackedbar)   over(rep78)   // stacked
+sparkta price, type(stackedhbar)  over(rep78)   // stacked horizontal
+sparkta price, type(stackedbar100)  over(rep78) // 100 pct stacked
+sparkta price, type(stackedhbar100) over(rep78) // 100 pct stacked horizontal
 ```
 
-### Statistical charts
-
-These are unique to sparkta -- no other Stata visualization package produces them.
+### Line and area
 
 ```stata
-* CI bars -- standard error from t-distribution, matches Stata ci means
-sparkta price, type(cibar) over(rep78)
-sparkta price, type(cibar) over(rep78) cilevel(90)
-sparkta price, type(cibar) over(rep78) stat(median)
+sparkta price, type(line)        over(rep78)
+sparkta price, type(stackedline) over(rep78)
+sparkta price, type(area)        over(rep78)
+sparkta price, type(stackedarea) over(rep78)
+```
 
-* CI line with shaded confidence band
-sparkta price, type(ciline) over(rep78)
+### Scatter and bubble
 
-* Histogram -- auto Sturges bins or user-specified, three display modes
-sparkta price, type(histogram)
+```stata
+sparkta price mpg,        type(scatter) over(foreign)
+sparkta price mpg weight, type(bubble)              // y x size
+```
+
+### Pie and donut
+
+```stata
+sparkta price, type(pie)   over(foreign)
+sparkta price, type(donut) over(foreign) cutout(65)
+```
+
+### Statistical (unique to sparkta)
+
+```stata
+sparkta price, type(cibar)  over(rep78)             // CI bar, t-distribution
+sparkta price, type(ciline) over(rep78)             // CI line with shaded band
+sparkta price, type(histogram)                      // auto Sturges bins
 sparkta price, type(histogram) bins(20) histtype(density)
-sparkta price, type(histogram) histtype(fraction)
 ```
 
-### Distribution charts
+### Distribution
 
 ```stata
-* Box and whisker -- Tukey fences, outlier dots, IQR box
-sparkta price, type(boxplot) over(rep78)
-sparkta price, type(hbox)    over(rep78)           // horizontal
-sparkta price, type(boxplot) over(rep78) whiskerfence(3)  // 3x IQR fence
-
-* Violin -- animated KDE density + IQR box + whiskers
-sparkta price, type(violin)  over(rep78)
-sparkta price, type(hviolin) over(rep78)           // horizontal
-sparkta price, type(violin)  over(rep78) bandwidth(1500)
-```
-
-### Stacked charts
-
-```stata
-sysuse nlsw88, clear
-
-sparkta wage, over(race) type(stackedbar)
-sparkta wage, over(race) type(stackedhbar)
-sparkta wage, over(race) type(stackedbar100)       // composition view -- bars sum to 100%
-sparkta wage, over(race) type(stackedhbar100)
-sparkta price weight length, over(rep78) type(stackedline)
-sparkta price weight length, over(rep78) type(stackedarea)
+sparkta price, type(boxplot)  over(rep78)           // Tukey fences, outlier dots
+sparkta price, type(hbox)     over(rep78)           // horizontal
+sparkta price, type(violin)   over(rep78)           // KDE density + IQR box
+sparkta price, type(hviolin)  over(rep78)           // horizontal
 ```
 
 ---
@@ -228,60 +255,75 @@ sparkta price weight length, over(rep78) type(stackedarea)
 ```stata
 sysuse auto, clear
 
-* over() -- one coloured series per group, all on one chart
+* over() -- one coloured series per group, one chart
 sparkta price, over(rep78)
 
-* by() -- separate panel per group value, rendered side by side
+* by() -- separate panel per group value
 sparkta price, over(rep78) by(foreign)
 
-* filter() -- interactive dropdown in the chart, filters data live
-sparkta price, over(rep78) filter(foreign)
+* filters() -- live interactive dropdowns
+sparkta price, over(rep78) filters(foreign)
+sparkta price, over(rep78) filters(foreign rep78)
 
-* Two independent dropdowns -- each filters the chart separately
-sparkta price, over(rep78) filter(foreign) filter2(headroom)
+* sliders() -- dual-handle range sliders
+sparkta price mpg, type(scatter) sliders(mpg)
 
-* String variables work exactly the same way
-sysuse nlsw88, clear
-sparkta wage, over(industry) filter(occupation)
+* Combined
+sparkta price, over(rep78) by(foreign) filters(rep78) sliders(price)
+```
+
+---
+
+## Scatter fit lines
+
+```stata
+sysuse auto, clear
+
+sparkta price mpg, type(scatter) fit(lfit)    // linear regression
+sparkta price mpg, type(scatter) fit(qfit)    // quadratic
+sparkta price mpg, type(scatter) fit(lowess)  // LOWESS smooth
+sparkta price mpg, type(scatter) fit(exp)     // exponential
+sparkta price mpg, type(scatter) fit(log)     // logarithmic
+sparkta price mpg, type(scatter) fit(power)   // power
+sparkta price mpg, type(scatter) fit(ma)      // moving average
+
+* With shaded confidence band (lfit and qfit only)
+sparkta price mpg, type(scatter) fit(lfit) fitci
+
+* Per-group fit lines
+sparkta price mpg, type(scatter) over(foreign) fit(lowess)
 ```
 
 ---
 
 ## Reference annotations
 
-Draw lines, bands, labelled points, and ellipses on any chart.
-
 ```stata
 sysuse auto, clear
 
-* Horizontal reference line with label and custom color
+* Horizontal reference line with label and colour
 sparkta price, over(rep78) ///
-    yline(6000) ylinelabel("Avg list price") ylinecolor(#e74c3c)
+    yline(6000) ylinelabel(Average) ylinecolor(#e74c3c)
 
-* Multiple reference lines at different thresholds
-sparkta price, over(rep78) yline(4000 6000 9000)
+* Multiple reference lines
+sparkta price, over(rep78) yline(4000|6000|9000)
 
-* Shaded reference band
+* Shaded horizontal band
 sparkta price, over(rep78) ///
     yband(4500 7500) ybandcolor(rgba(52,152,219,0.15))
 
-* Lines and bands together
-sparkta price, over(rep78) ///
-    yline(6000) ylinelabel("Target")          ///
-    yband(4500 7500) ybandcolor(rgba(52,152,219,0.12))
-
-* Vertical line on scatter (x-axis)
+* Vertical line on scatter
 sparkta price mpg, type(scatter) ///
-    xline(25) xlinelabel("Fuel threshold") xlinecolor(#e74c3c)
+    xline(25) xlinelabel(Fuel threshold) xlinecolor(#e74c3c)
 
-* Annotated point -- Stata scattieri-style  y|x  syntax
+* Annotated point with label
 sparkta price mpg, type(scatter) ///
-    apoint(12000|5) apointcolor(#e74c3c) apointsize(10) ///
-    alabeltext("Outlier") alabelpos(15)
+    apoint(12000 5) apointcolor(#e74c3c) apointsize(10) ///
+    alabeltext(Outlier) alabelpos(12000 5 15) alabelfs(12)
 
-* Ellipse highlight over a cluster
+* Ellipse over a cluster
 sparkta price mpg, type(scatter) ///
-    aellipse(10000 14000|15 25) aellipsecolor(rgba(231,76,60,0.15))
+    aellipse(10000 14000 15 25) aellipsecolor(rgba(231,76,60,0.15))
 ```
 
 ---
@@ -292,85 +334,69 @@ sparkta price mpg, type(scatter) ///
 sysuse auto, clear
 
 sparkta price, over(rep78) theme(dark)             // dark background
-sparkta price, over(rep78) theme(light)            // light background
 sparkta price, over(rep78) theme(cblind1)          // Okabe-Ito colorblind-safe
-sparkta price, over(rep78) theme(tab1)             // Tableau 10 palette
+sparkta price, over(rep78) theme(tab1)             // Tableau 10
 sparkta price, over(rep78) theme(tab2)             // ColorBrewer Set1
 sparkta price, over(rep78) theme(viridis)          // perceptually uniform
-sparkta price, over(rep78) theme(neon)             // bright saturated, best on dark
+sparkta price, over(rep78) theme(neon)             // bright, best on dark bg
+sparkta price, over(rep78) theme(swift_red)        // warm earth tones
 
 * Compound: background + palette in one option
 sparkta price, over(rep78) theme(dark_viridis)
 sparkta price, over(rep78) theme(dark_neon)
 sparkta price, over(rep78) theme(light_tab2)
 
-* Manual color list always overrides any theme
-sparkta price, over(rep78) colors(#e74c3c #3498db #2ecc71 #f39c12 #9b59b6)
+* Manual colour list always overrides any theme
+sparkta price, over(rep78) colors("#e74c3c #3498db #2ecc71 #f39c12 #9b59b6")
 ```
 
 ---
 
 ## Styling
 
-All color options accept hex, `rgb()`, `rgba()`, or CSS named colors.
-All size options accept a number in pt or a Stata size keyword (`small`, `medium`, `large`).
+All colour options accept hex `#rrggbb`, `rgb()`, `rgba()`, or CSS named colours.
 
 ```stata
 sysuse auto, clear
 
-* Title and axis typography
-sparkta price, over(rep78)                         ///
-    titlesize(26) titlecolor(#2c3e50)              ///
-    xtitlesize(13) xtitlecolor(#7f8c8d)            ///
-    ylabsize(11)   ylabcolor(#95a5a6)
+* Title typography
+sparkta price, over(rep78) ///
+    titlesize(24) titlecolor(#2c3e50) ///
+    subtitle("1978 Automobile Data") subtitlecolor(#7f8c8d) ///
+    note("Source: Stata built-in dataset")
+
+* Axis styling
+sparkta price, over(rep78) ///
+    xtitlesize(13) xtitlecolor(#555) ///
+    xlabsize(11)   xlabcolor(#777)
 
 * Tooltip appearance
-sparkta price, over(rep78)                         ///
-    tooltipbg(rgba(0,0,0,0.9))                     ///
-    tooltipborder(#3498db)                         ///
-    tooltipfontsize(13) tooltippadding(10)
+sparkta price, over(rep78) ///
+    tooltipbg(rgba(0,0,0,0.9)) tooltipborder(#3498db) tooltipfontsize(13)
+
+* Bar appearance
+sparkta price, over(rep78) barwidth(0.6) borderradius(4) opacity(0.85)
 
 * Line dash patterns
-sparkta price weight, type(line) over(foreign)     ///
-    lpattern(dash) linewidth(2) nopoints
+sparkta price mpg, type(line) over(foreign) lpattern(dash) linewidth(2)
 
-* Gradient fill on area charts
+* Gradient fill
 sparkta price, type(area) over(rep78) gradient
 
-* PNG download button embedded in the chart header
+* PNG download button embedded in chart header
 sparkta price, type(cibar) over(rep78) download
-
-* Note and subtitle
-sparkta price, over(rep78)                         ///
-    subtitle("Stata auto dataset, 74 automobiles") ///
-    note("Source: Stata built-in dataset, 1978")
-```
-
----
-
-## Secondary y-axis
-
-```stata
-sysuse auto, clear
-
-* price on left y-axis, mpg on right y-axis, same chart
-sparkta price mpg, type(line) over(foreign) ///
-    y2(mpg) y2title("Fuel economy (MPG)") ytitle("Price (USD)")
 ```
 
 ---
 
 ## Summary statistics panel
 
-Every chart includes a collapsible statistics panel computed entirely inside Stata.
+Every chart includes a collapsible statistics panel computed inside Stata:
 
-- **Matches `summarize, detail` exactly** -- same N, Mean, Median, SD, Min, Max, CV
-- Per-group breakdown with an IQR sparkline distribution for each group
-- Updates live when filter dropdowns change
-- `nostats` suppresses the panel entirely
-
-The panel is computed before the chart renders. The numbers are always consistent
-with your Stata results window, regardless of filter or display settings.
+- Matches `summarize, detail` exactly (N, Mean, Median, SD, Min, Max, CV)
+- Per-group rows with IQR sparkline distributions
+- **Updates live when filter dropdowns or sliders change**
+- `nostats` suppresses it entirely
 
 ---
 
@@ -383,18 +409,25 @@ help sparkta
 | Group | Options |
 |:---|:---|
 | Chart type | `type()` |
-| Grouping | `over()` `by()` `filter()` `filter2()` |
+| Grouping | `over()` `by()` `filters()` `sliders()` |
 | Statistics | `stat()` `cilevel()` `histtype()` `bins()` |
-| Axes | `yrange()` `xrange()` `ytitle()` `xtitle()` `xlabels()` `ylabels()` `yreverse` `xreverse` `ygrace()` `noticks` `xticks()` `yticks()` |
-| Annotations | `yline()` `xline()` `yband()` `xband()` `ylinelabel()` `xlinelabel()` `apoint()` `alabeltext()` `aellipse()` |
-| Line / point | `lpattern()` `linewidth()` `nopoints` `smooth` `pointsize()` `pointhoversize()` |
-| Typography | `titlesize()` `titlecolor()` `subtitlesize()` `xtitlesize()` `xlabsize()` `xlabcolor()` `tooltipbg()` `tooltipfontsize()` `notesize()` |
-| Legend | `legend()` `legtitle()` `leglabels()` `legsize()` `nolegend` `relabel()` |
-| Theme | `theme()` `colors()` `bgcolor()` `plotcolor()` `gradient` |
+| Axes | `yrange()` `xrange()` `ytitle()` `xtitle()` `ytype()` `xtype()` `yreverse` `xreverse` `ygrace()` `noticks` `xticks()` `yticks()` `ystepsize()` `ytickcount()` |
+| Fit lines | `fit()` `fitci` |
+| Marker labels | `mlabel()` `mlabpos()` `mlabvposition()` |
+| Annotations | `yline()` `xline()` `yband()` `xband()` `ylinelabel()` `xlinelabel()` `apoint()` `alabeltext()` `alabelpos()` `alabelfs()` `alabelgap()` `aellipse()` |
+| Line / point | `lpattern()` `lpatterns()` `linewidth()` `nopoints` `smooth()` `stepped()` `spanmissing` `pointsize()` `pointstyle()` `pointhoversize()` |
+| Typography | `titlesize()` `titlecolor()` `subtitlesize()` `subtitlecolor()` `xtitlesize()` `xtitlecolor()` `xlabsize()` `xlabcolor()` `tooltipbg()` `tooltipborder()` `tooltipfontsize()` `tooltippadding()` `notesize()` |
+| Legend | `legend()` `legtitle()` `legsize()` `legbgcolor()` `leglabels()` `nolegend` `relabel()` |
+| Theme | `theme()` `colors()` `bgcolor()` `plotcolor()` `gridcolor()` `gridopacity()` `gradient` `gradcolors()` |
 | Export | `export()` `offline` `download` |
+| Bar | `barwidth()` `bargroupwidth()` `borderradius()` `opacity()` `datalabels` |
+| Pie / donut | `cutout()` `rotation()` `circumference()` `sliceborder()` `pielabels` |
 | Box / violin | `whiskerfence()` `bandwidth()` `mediancolor()` `meancolor()` |
 | Secondary axis | `y2()` `y2title()` `y2range()` |
-| Labelling | `title()` `subtitle()` `note()` `caption()` `xlabels()` `ylabels()` |
+| Labels | `title()` `subtitle()` `note()` `caption()` `xlabels()` `ylabels()` |
+| Data | `nomissing` `sortgroups()` `novaluelabels` `nostats` |
+| Animation | `animate()` `animduration()` `animdelay()` `easing()` |
+| Layout | `aspect()` `padding()` `layout()` |
 
 ---
 
@@ -404,21 +437,24 @@ help sparkta
 ado/
   sparkta.ado            Stata command
   sparkta.sthlp          Help file  (help sparkta)
-  sparkta_check.ado      Post-install verifier
   sparkta.jar            Pre-compiled Java plugin
+  sparkta.pkg            SSC package descriptor
+  stata.toc              SSC table of contents
+dist/
+  sparkta.jar            Pre-compiled jar (also copied to ado/)
 examples/
   basic_charts.do        Bar, line, scatter, area, pie, donut
   stat_charts.do         CI bar, CI line, histogram
   boxviolin.do           Boxplot, violin, whiskerfence, bandwidth
   offline_mode.do        Air-gapped workflow
 docs/
-  index.html             Live chart gallery (GitHub Pages)
   INSTALL.md
   CHANGELOG.md
 java/
   src/                   Java source (developers only)
   build.bat / build.sh
   fetch_js_libs.bat / fetch_js_libs.sh
+  check_build.py
 ```
 
 ---
@@ -430,20 +466,17 @@ The pre-compiled `ado/sparkta.jar` is ready to use. To rebuild from source:
 ```
 cd java/
 
-# Step 1 -- download bundled JS libraries (once, before first build)
+# Step 1: download bundled JS libraries (once, before first build)
 fetch_js_libs.bat        (Windows)
 fetch_js_libs.sh         (Mac / Linux)
 
-# Step 2 -- compile
+# Step 2: compile
 build.bat                (Windows)
 build.sh                 (Mac / Linux)
 ```
 
-**Order matters.** JS libraries must be downloaded before compilation so they
-are bundled inside the jar for offline use. Skipping Step 1 causes `offline`
-charts to fail at render time with a clear pre-flight error message.
-
-Requirements: Java 8+ JDK, Stata 17+
+**Order matters.** JS libraries must be fetched before compiling so they
+are bundled inside the jar for offline use. Build target: Java 11 (`--release 11`).
 
 ---
 
@@ -451,12 +484,9 @@ Requirements: Java 8+ JDK, Stata 17+
 
 | Platform | Status |
 |:---|:---|
-| Windows (Stata 17-19, Java 8-21) | Fully tested |
-| Mac (Intel / Apple Silicon) | Jar is platform-independent; browser auto-open uses `open` |
-| Linux | Jar is platform-independent; browser auto-open uses `xdg-open` |
-
-Chart generation and HTML export work on all platforms.
-If you verify Mac or Linux, please open a GitHub issue with your Stata version and OS.
+| Windows (Stata 17+, Java 11-21) | Fully tested |
+| Mac (Intel / Apple Silicon) | Jar is platform-independent; browser auto-open via `open` |
+| Linux | Jar is platform-independent; browser auto-open via `xdg-open` |
 
 ---
 
@@ -466,7 +496,7 @@ If you verify Mac or Linux, please open a GitHub issue with your Stata version a
 [LinkedIn](https://www.linkedin.com/in/fahad-mirza/) | [GitHub](https://github.com/fahad-mirza/sparkta_stata)
 
 **Claude** (Anthropic) -- Co-developer  
-Algorithm design, Java rendering engine, Chart.js integration, statistical methods, debugging.
+Algorithm design, Java rendering engine, Chart.js integration, statistical methods, filter engine, debugging.
 
 ---
 
