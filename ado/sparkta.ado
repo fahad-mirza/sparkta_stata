@@ -1,4 +1,105 @@
-*! sparkta version 3.5.42
+*! sparkta version 3.5.96
+*! v3.5.58: mlabpos(#) clock position for scatter labels; marker name in tooltip.
+*!          Args renumbered: mlabpos=154, fit=155, fitci=156. Java recompile required.
+*!          fitci CI band for lfit/qfit. Args 152-155 added. Java recompile required.
+*!          nomissing is a no-op for bar/line/area/scatter/histogram/boxplot/violin
+*!          because missing outcome values are already silently excluded from all
+*!          aggregation. Its only meaningful role is cibar/ciline where the
+*!          error-bars plugin cannot handle null data points. Updated synopt
+*!          one-liner and Options block accordingly. No code change, no recompile.
+*! F-1h: Fix autoSkip:false not applied to y category axis on hbar/hbox/hviolin.
+*!        Root cause: both buildAxisConfig() and buildBoxCategoryAxisConfig()
+*!        had "if (isX)" / "if (isCatX)" guards on autoSkip:false.
+*!        For hbar the category axis is y (not x), so all category labels
+*!        were still being dropped by Chart.js autoSkip default.
+*!        Fix: remove the x-axis guard -- autoSkip:false applies to ALL
+*!        category axes regardless of orientation.
+*!        Rotation is still x-only (y-axis labels are always horizontal).
+*!        Java recompile required (ChartRenderer.java).
+*! F-1g: Extend rotation to all chart types.
+*! F-1g: Extend smart x-axis rotation + autoSkip:false to all chart types.
+*!        ciBar:   nCat from over() uniqueValues, passed to buildAxisConfig
+*!        ciLine:  nCat from groups list, passed to buildAxisConfig
+*!        histogram: nBins+1 (bin edge labels), passed to buildHistXScaleCat
+*!        boxPlot/hbox: nCat to buildBoxCategoryAxisConfig (new nCategories param)
+*!        violin/hviolin: same as boxPlot
+*!        buildBoxCategoryAxisConfig: rewritten with rotation + autoSkip:false
+*!          (x-axis only; y-axis for hbox/hviolin never needs rotation)
+*!        buildHistXScaleCat: overload with nBins param
+*!        scatter/bubble: numeric x-axis, no change (not categorical)
+*!        Java recompile required (ChartRenderer.java).
+*! F-1f: Smart x-axis rotation for bar charts.
+*! F-1f: Smart x-axis label rotation + autoSkip:false for bar charts.
+*!        Previously: maxRotation:0 forced labels horizontal always AND
+*!        Chart.js autoSkip:true silently dropped labels when crowded.
+*!        Fix: buildAxisConfig() gains nCategories parameter.
+*!        Auto-rotation: <=8 cats=0deg, 9-20=45deg, >20=90deg.
+*!        autoSkip:false on category x-axis ensures ALL labels shown.
+*!        User xtickangle() still overrides auto-rotation.
+*!        hbar: nCat=0 (category axis is y, not x -- no x rotation).
+*!        Java recompile required (ChartRenderer.java changed).
+*! F-1e: Fix pie/donut showmissing slice order + gray color.
+*! F-1e: Fix pie/donut showmissing: missing slice now last + gray.
+*!        Mode 2+3: uniqueValues/uniqueGroupKeys now pass o.showmissingOver
+*!        so (Missing) appends at END matching Stata bar chart behaviour.
+*!        Null key lookup fixed: null maps to MISSING_SENTINEL when
+*!        showmissingOver=true (was always mapping to empty string).
+*!        Missing slice gets gray rgba(160,160,160,0.65) like bar charts.
+*!        Also fixed: test_pie_modes.do P10 used bare showmissing flag
+*!        instead of over(rep78, showmissing) suboption.
+*!        Java recompile required (ChartRenderer.java changed).
+*! F-1d: Fix pie Mode 3 varlist(default=none).
+*! F-1d: Fix pie Mode 3 -- syntax [varlist] -> [varlist(default=none)].
+*!        Root cause: Stata syntax [varlist] with no vars typed expands to
+*!        ALL dataset variables (not empty). With auto dataset that is 12 vars,
+*!        so nvar=12 fired the "cannot combine multi-var with over()" guard.
+*!        Fix: varlist(default=none) makes varlist truly empty when unspecified.
+*!        Also fixed: sparkta_version display local was hardcoded 3.5.42.
+*!        Ado-only fix, no Java recompile needed.
+*! F-1c: pie/donut three-mode support.
+*! F-1c: pie/donut three-mode support matching Stata graph pie.
+*!        Mode 1: sparkta price mpg, type(pie)            multi-var slices
+*!        Mode 2: sparkta price, type(pie) over(rep78)    one var + over()
+*!        Mode 3: sparkta, type(pie) over(rep78)          frequency counts
+*!        ado: syntax varlist -> [varlist] (optional). Pie validation rewritten.
+*!        markout guarded for empty varlist. ChartRenderer.pie() rewritten.
+*!        Also: all slider tests S1-S8 confirmed working (v3.5.48-F1a).
+*!        Java recompile required (ChartRenderer.java changed).
+*! F-1b: showmissing over() bar order fix in engine (DataEmbedder).
+*! F-1b: Fix showmissing over() bar order and color.
+*!        embedCatVar() was using buildCategoryList() which put (Missing) at
+*!        index 0 in _sc/_si. DatasetBuilder renders missing at the END.
+*!        Fix: use DataSet.uniqueValues(showMissing=true) in embedCatVar() so
+*!        _si indices and _sc label order match the chart's x-axis exactly.
+*!        overLabels in _smeta fixed to use showmissingOver flag.
+*! F-1a: sliders(varlist) -- dual-handle numeric range filter UI.
+*!        Stata syntax: sliders(price mpg) -- any numeric variable.
+*!        Engine: filterRows() extended to apply {lo,hi} range per slider var.
+*!        No new CDN libs -- slider UI is pure HTML/CSS/JS (offline-safe).
+*!        Arg 151: pipe-sep slider varlist. hasAnyFilter() activates engine.
+*! F-0e: Fix blank chart after filter change when over() is a numeric variable.
+*!        DataEmbedder was only embedding over()/by() into _si/_sc for string
+*!        vars; numeric over() was in _sd only. Engine aggregate() reads _si
+*!        for row->group mapping -- if _si[groupVar] is undefined every bucket
+*!        is empty -> null data -> blank chart.  Fix: always embed over()/by()
+*!        into _si/_sc regardless of numeric/string type.  Java-only fix.
+*! F-0d: Remove stray closing brace left over from F-0b/F-0c edit
+*!        of the filters() block. Ado-only fix, no Java change.
+*! F-0c: Remove filter()/filter2() from syntax block to eliminate
+*!        Stata abbreviation conflict with filters().
+*!        filters() is now the sole filter option.
+*!        Back-compat: filter()/filter2() accepted via manual parse
+*!        with migration hint in error message. Ado-only change.
+*! F-0b: filters() option -- unlimited filter variables.
+*!        filters(v1 v2 v3 ...) replaces filter()/filter2().
+*!        Old filter()/filter2() still accepted for back-compat.
+*!        Java wiring: arg 76 now carries pipe-sep varlist.
+*!        Ado-only change, no Java recompile needed.
+*! F-0: Row-level filter engine. Replaces combinatorial _dashData
+*!       pre-computation with DataEmbedder (_sd/_si/_sc/_smeta) +
+*!       sparkta_engine.js browser aggregation. Unlimited filter vars.
+*!       Cardinality check added (max 500 unique values per filter var).
+*!       Java recompile required.
 *! v3.5.42: Bulletproof jar search: findfile sparkta.jar directly (Path 1),
 *!           store sysdir_PLUS/personal in locals before confirm file checks.
 *!           No Java recompile needed.
@@ -13,7 +114,6 @@
 *!           wherever Stata installed the ado (SSC PLUS/s/sparkta/, net install personal/,
 *!           or any adopath location). Added sysdir_PLUS/s/sparkta/ fallback and Mac/Linux
 *!           forward-slash sysdir_personal variants. Removed hardcoded C:\ado\personal path.
-*!           sparkta_check.ado updated to match. Ado-only, no Java recompile needed.
 *! v3.5.36 Fix: leglabels() generateLabels callback now emitted in colorByCategory mode
 *!         (bar + over() + single var). Root cause: _leglabelsOnXAxis=true was
 *!         suppressing generateLabels. New _leglabelsColorByCategory flag allows it
@@ -36,7 +136,7 @@
 *!   19 new options: yline, xline, ylinecolor, xlinecolor, ylinelabel, xlinelabel,
 *!   yband, xband, ybandcolor, xbandcolor (lines/bands, args 127-136);
 *!   apoint, apointcolor, apointsize (points, args 140-142);
-*!   alabelpos, alabeltext, alabelfontsize (labels, args 143-145);
+*!   alabelpos, alabeltext, alabelfs (labels, args 143-145);
 *!   aellipse, aellipsecolor, aellipseborder (ellipses, args 146-148).
 *!   CDN lib 5: chartjs-plugin-annotation@3.0.1 (auto-registers).
 *!   buildAnnotationConfig(allowX) single chokepoint in ChartRenderer.
@@ -242,7 +342,6 @@
 *!          Pie/donut: slice % with raw sum. tooltipformat() respected everywhere.
 *! v3.5.38: sthlp fix -- xticks() Options detail block was missing its opening phang/opt line;
 *!           block started mid-sentence. Sthlp-only change, no recompile needed.
-*! v2.0.9: sparkta_check moved to sparkta_check.ado; "Dashboard ready" -> "Sparkta ready"
 *! v2.0.8: renamed from dashboard to sparkta across all files
 *! v2.0.7: fetch_js_libs.bat rewritten -- all 3 files attempt regardless of
 *!          individual failures, no goto, per-file result, URL shown, pause always
@@ -251,12 +350,12 @@ program define sparkta
     version 17
 
     // Single version constant -- update this one line on every version bump
-    local sparkta_version "3.5.42"
+    local sparkta_version "3.5.96"
 
     // Print version so user can confirm which ado is loaded
     display as text "  [sparkta v`sparkta_version']"
 
-    syntax varlist [if] [in],           ///
+    syntax [varlist(default=none)] [if] [in],          ///
         [TYPE(string)]                  ///  bar line scatter pie hbar stackedbar stackedarea area bubble donut cibar ciline stackedbar100 stackedhbar100
         [TITLE(string)]                 ///  main chart title
         [SUBTitle(string)]              ///  subtitle below title
@@ -272,12 +371,12 @@ program define sparkta
         [YSTARt(string)]                ///  ystart(zero) forces y-axis to start at 0
         [XTYpe(string)]                 ///  x-axis scale: linear (default) | log | category | time
         [YTYpe(string)]                 ///  y-axis scale: linear (default) | log
-        [XTICKCount(string)]            ///  number of x-axis ticks
+        [XTICKCOunt(string)]            ///  number of x-axis ticks
         [YTICKCount(string)]            ///  number of y-axis ticks
         [XTICKangle(string)]            ///  x-axis label rotation degrees e.g. xtickangle(45)
-        [YTICKangle(string)]            ///  y-axis label rotation degrees
-        [XLABels(string)]               ///  custom x-axis tick labels, pipe-separated: xlabels(Low|Med|High)
-        [YLABels(string)]               ///  custom y-axis tick labels, pipe-separated: ylabels(Bad|OK|Good)
+        [YTICKANgle(string)]            ///  y-axis label rotation degrees
+        [XLABELs(string)]               ///  custom x-axis tick labels, pipe-separated: xlabels(Low|Med|High)
+        [YLABELs(string)]               ///  custom y-axis tick labels, pipe-separated: ylabels(Bad|OK|Good)
         [XSTEPsize(string)]             ///  x-axis tick interval e.g. xstepsize(10)
         [YSTEPsize(string)]             ///  y-axis tick interval
         [XGRIDlines(string)]            ///  on (default) | off
@@ -287,8 +386,13 @@ program define sparkta
         /// - Grouping / layout -
         [OVER(string)]                  ///  group variable (same chart) [, showmissing]
         [BY(string)]                    ///  panel variable (separate charts) [, showmissing]
-        [FILTEr(string)]                ///  interactive filter dropdown 1 [, showmissing]
-        [FILTER2(string)]               ///  interactive filter dropdown 2 [, showmissing]
+        [FILTERs(string)]               ///  unlimited filters: space-sep varlist e.g. filters(rep78 foreign)
+        [SLIDers(string)]               ///  dual-handle range sliders: space-sep numeric varlist e.g. sliders(price mpg) (F-1)
+        [MLABEl(string)]                ///  scatter marker labels: mlabel(varname) or mlabel(varname, all) to force all labels
+        [MLABPOs(string)]               ///  label minute-clock position 0-59 (0=center,15=right,30=below,45=left); same convention as alabelpos()
+        [MLABVPOsition(string)]         ///  per-obs minute-clock position variable (0-59 per row); mirrors Stata mlabvposition()
+        [FIT(string)]                   ///  scatter fit line: lfit qfit lowess exp log power ma
+        [FITCi]                         ///  add CI band to fit line (lfit and qfit only)
         [LAYOUT(string)]                ///  vertical | horizontal | grid
         /// - Chart behaviour -
         [HORizontal]                    ///  horizontal bar chart
@@ -299,7 +403,7 @@ program define sparkta
         [STEPped(string)]               ///  step line: before | after | middle
         /// - Point / line appearance -
         [POINTSIze(string)]             ///  point radius px (default 4)
-        [POINTStyle(string)]            ///  circle cross dash line rect rectRounded star triangle
+        [POINTSTyle(string)]            ///  circle cross dash line rect rectRounded star triangle
         [POINTBorderwidth(string)]      ///  point border width px (default 1)
         [POINTRotation(string)]         ///  point rotation degrees (default 0)
         [LINEWidth(string)]             ///  line/border width px (default 2)
@@ -323,7 +427,7 @@ program define sparkta
         [LEGEND(string)]                ///  top (default) | bottom | left | right | none
         [LEGTitle(string)]           ///  text heading above legend entries
         [LEGSize(string)]            ///  legend label font size px
-        [LEGBoxheight(string)]       ///  legend color box height px
+        [LEGBOXheight(string)]       ///  legend color box height px
         /// - Colors & styling -
         [COLORS(string)]                ///  space-separated series colors
         [BGCOLOR(string)]               ///  page background color
@@ -361,14 +465,14 @@ program define sparkta
         [MEANColor(string)]             ///  mean dot color (default: same as mediancolor) (v2.4.10)
         [BANDWidth(string)]             ///  KDE bandwidth for violin (default: Silverman auto) (v2.5.0)
         /// - Phase 1-A: font / color styling (v2.6.0) -
-        [TITLESize(string)]             ///  title font size in pt (e.g. titlesize(24))
-        [TITLEColor(string)]            ///  title color (hex, rgb, or CSS name)
-        [SUBTITLESize(string)]          ///  subtitle font size in pt
-        [SUBTITLEColor(string)]         ///  subtitle color
-        [XTITLESize(string)]            ///  x-axis title font size in pt
-        [XTITLEColor(string)]           ///  x-axis title color
-        [YTITLESize(string)]            ///  y-axis title font size in pt
-        [YTITLEColor(string)]           ///  y-axis title color
+        [TITLESIze(string)]             ///  title font size in pt (e.g. titlesize(24))
+        [TITLECOlor(string)]            ///  title color (hex, rgb, or CSS name)
+        [SUBTITLESIze(string)]          ///  subtitle font size in pt
+        [SUBTITLECOlor(string)]         ///  subtitle color
+        [XTITLESIze(string)]            ///  x-axis title font size in pt
+        [XTITLECOlor(string)]           ///  x-axis title color
+        [YTITLESIze(string)]            ///  y-axis title font size in pt
+        [YTITLECOlor(string)]           ///  y-axis title color
         [XLABSize(string)]              ///  x tick label font size in pt
         [XLABColor(string)]             ///  x tick label color
         [YLABSize(string)]              ///  y tick label font size in pt
@@ -376,7 +480,7 @@ program define sparkta
         [LEGColor(string)]              ///  legend text color
         [LEGBGColor(string)]            ///  legend background color
         /// - Phase 1-B: tooltip styling (v2.6.0) -
-        [TOOLTIPBg(string)]             ///  tooltip background color (e.g. rgba(0,0,0,0.9))
+        [TOOLTIPBG(string)]             ///  tooltip background color (e.g. rgba(0,0,0,0.9))
         [TOOLTIPBOrder(string)]         ///  tooltip border color
         [TOOLTIPFONtsize(string)]       ///  tooltip font size in pt
         [TOOLTIPPADding(string)]        ///  tooltip padding in px
@@ -385,8 +489,8 @@ program define sparkta
         /// - Phase 1-C: axis utilities (v3.0.3) -
         [YREVerse]                          ///  reverse y-axis direction (top to bottom)
         [XREVerse]                          ///  reverse x-axis direction (right to left)
-        [NOTicks]                           ///  hide axis tick marks (labels remain visible)
-        [YGRace(string)]                    ///  y-axis grace padding above/below data: "5%%" or "10"
+        [NOTICKs]                           ///  hide axis tick marks (labels remain visible)
+        [YGRAce(string)]                    ///  y-axis grace padding above/below data: "5%%" or "10"
         [ANIMDUration(string)]              ///  animation duration in ms e.g. animduration(800)
         /// - Phase 1-D: line/point style (v3.1.0) -
         [LPATTErn(string)]                  ///  line dash pattern for all series: solid | dash | dot | dashdot
@@ -395,9 +499,9 @@ program define sparkta
         [NOLEGend]                          ///  suppress legend (alias for legend(none)) (v3.5.34)
         [POINTHoversize(string)]            ///  point radius on hover px (default: pointsize + 2)
         /// - Phase 1-E: note size + gradient (v3.2.0) -
-        [NOTESize(string)]                  ///  font size for note/caption text e.g. notesize(1rem) or notesize(14px)
+        [NOTESIze(string)]                  ///  font size for note/caption text e.g. notesize(1rem) or notesize(14px)
         [GRADient]                          ///  gradient fill (auto palette colors)
-        [GRADColors(string)]                ///  gradient colors: "s|e" all series, or "s0|e0:s1|e1:..." per-series
+        [GRADCOlors(string)]                ///  gradient colors: "s|e" all series, or "s0|e0:s1|e1:..." per-series
         /// - Phase 2-C: legend/tick overrides (v3.4.0) -
         [LEGLabels(string)]                 ///  rename legend entries: leglabels(Label1|Label2|...) pipe-separated, in dataset order
         [RELabel(string)]                   ///  rename over() group labels on x-axis AND legend: relabel(A|B|C) -- Stata over(var,relabel()) equivalent (v3.5.34)
@@ -412,16 +516,16 @@ program define sparkta
         [XLINELabel(string)]                ///  labels per xline, pipe-sep: xlinelabel(Cutoff)
         [YBand(string)]                     ///  horizontal bands: yband(20 40) or yband(20 40|60 80) "lo hi" per entry
         [XBand(string)]                     ///  vertical bands: xband(1 3) "lo hi" per entry (ignored on categorical x)
-        [YBANDColor(string)]                ///  fill colors per yband, pipe-sep: ybandcolor(rgba(0,200,0,0.1))
-        [XBANDColor(string)]                ///  fill colors per xband, pipe-sep: xbandcolor(rgba(0,0,200,0.1))
+        [YBANDCOlor(string)]                ///  fill colors per yband, pipe-sep: ybandcolor(rgba(0,200,0,0.1))
+        [XBANDCOlor(string)]                ///  fill colors per xband, pipe-sep: xbandcolor(rgba(0,0,200,0.1))
         [APoint(string)]                    ///  annotation points: apoint(y1 x1 y2 x2 ...) space-sep y x pairs
-        [APOINTColor(string)]               ///  colors per apoint, pipe-sep: apointcolor(red|blue)
-        [APOINTSize(string)]                ///  radius px for all apoints: apointsize(10)
+        [APOINTCOlor(string)]               ///  colors per apoint, pipe-sep: apointcolor(red|blue)
+        [APOINTSIze(string)]                ///  radius px for all apoints: apointsize(10)
         [ALABELPos(string)]                 ///  label positions: alabelpos(y1 x1 pos|y2 x2 pos) pipe-sep; pos=minute clock (0=center,15=right,30=below,45=left)
         [ALABELText(string)]                ///  label texts: alabeltext(Cluster A|Cluster B) pipe-sep
-        [ALABELFontSize(string)]            ///  font size px for annotation labels: alabelfontsize(12)
+        [ALABELFs(string)]            ///  font size px for annotation labels: alabelfs(12)
         [ALABELGap(string)]                 ///  label offset distance px from point: alabelgap(15)
-        [AEllipse(string)]                  ///  ellipses: aellipse(ymin xmin ymax xmax|...) 4 values per ellipse
+        [AELlipse(string)]                  ///  ellipses: aellipse(ymin xmin ymax xmax|...) 4 values per ellipse
         [AELLIPSEColor(string)]             ///  fill colors per ellipse, pipe-sep: aellipsecolor(rgba(0,0,200,0.1))
         [AELLIPSEBorder(string)]            //   border colors per ellipse, pipe-sep: aellipseborder(navy)
 
@@ -456,11 +560,10 @@ program define sparkta
     // Parse each with local syntax to extract varname and flag separately.
     local sm_over    "0"
     local sm_by      "0"
-    local sm_filter  "0"
-    local sm_filter2 "0"
+    local sm_filters "0"  // single showmissing flag for filters()
     // v1.9.1: parse over/by/filter/filter2 strings for optional , showmissing
     // Uses tokenize so we never need compound quotes inside function calls.
-    foreach slot in over by filter filter2 {
+    foreach slot in over by {
         local _raw : copy local `slot'
         if "`_raw'" != "" {
             // Strip optional comma so "rep78, showmissing" and "rep78 showmissing" both work
@@ -486,6 +589,184 @@ program define sparkta
             local `slot' "`_varpart'"  // replace string with clean varname
         }
     }
+    // - filters() -- unlimited filter variables (F-0b) -
+    // Accepts a space-separated varlist optionally ending in , showmissing.
+    // Each varname is validated and stored pipe-separated in `_filters_list'.
+    local _filters_list ""
+    if "`filters'" != "" {
+        // Strip optional trailing , showmissing
+        local _fraw = subinstr("`filters'", ",", " ", .)
+        local _fraw = itrim("`_fraw'")
+        // Check for showmissing keyword at end
+        local _lastw = word("`_fraw'", wordcount("`_fraw'"))
+        if lower("`_lastw'") == "showmissing" | lower("`_lastw'") == "sm" {
+            local sm_filters "1"
+            local _fraw = substr("`_fraw'", 1, length("`_fraw'") - length("`_lastw'") - 1)
+            local _fraw = itrim("`_fraw'")
+        }
+        // Validate each varname and build pipe list
+        local _nfv = wordcount("`_fraw'")
+        if `_nfv' == 0 {
+            display as error "filters(): no variable names found"
+            exit 198
+        }
+        if `_nfv' > 10 {
+            display as error "filters(): maximum 10 filter variables"
+            exit 198
+        }
+        forvalues _fi = 1/`_nfv' {
+            local _fv = word("`_fraw'", `_fi')
+            capture confirm variable `_fv'
+            if _rc != 0 {
+                display as error "filters(): variable not found: `_fv'"
+                exit 198
+            }
+            // Cardinality check (same 500-cat ceiling as filter()/filter2())
+            quietly levelsof `_fv', local(_flevels)
+            local _nlevels : word count `_flevels'
+            if `_nlevels' > 500 {
+                display as error "filters(): variable `_fv' has `_nlevels' unique values (max 500)"
+                exit 198
+            }
+            if "`_filters_list'" == "" local _filters_list "`_fv'"
+            else                        local _filters_list "`_filters_list'|`_fv'"
+        }
+    }
+
+    // - sliders() -- dual-handle numeric range sliders (F-1) -
+    // Accepts a space-separated varlist of NUMERIC variables only.
+    // Stored pipe-separated in `_sliders_list' for Java arg 151.
+    local _sliders_list ""
+    if "`sliders'" != "" {
+        local _sraw = itrim("`sliders'")
+        local _nsv = wordcount("`_sraw'")
+        if `_nsv' == 0 {
+            display as error "sliders(): no variable names found"
+            exit 198
+        }
+        if `_nsv' > 10 {
+            display as error "sliders(): maximum 10 slider variables"
+            exit 198
+        }
+        forvalues _si = 1/`_nsv' {
+            local _sv = word("`_sraw'", `_si')
+            capture confirm numeric variable `_sv'
+            if _rc != 0 {
+                display as error "sliders(): variable not found or not numeric: `_sv'"
+                display as error "  sliders() only accepts numeric variables"
+                exit 198
+            }
+            if "`_sliders_list'" == "" local _sliders_list "`_sv'"
+            else                       local _sliders_list "`_sliders_list'|`_sv'"
+        }
+    }
+
+    // -- mlabel(): scatter marker labels ----------------------------------------
+    // Syntax: mlabel(varname) or mlabel(varname, all)
+    // Parses varname and optional ", all" suboption (same pattern as over(,showmissing)).
+    // _mlabel_var: the label variable name (empty if not specified)
+    // _mlabel_all: 1 if ", all" suboption given (show all labels regardless of N)
+    local _mlabel_var ""
+    local _mlabel_all "0"
+    if "`mlabel'" != "" {
+        // Strip optional comma so "varname, all" and "varname all" both work
+        local _mltmp = itrim(subinstr("`mlabel'", ",", " ", .))
+        local _mlabel_var = word("`_mltmp'", 1)
+        local _mlword2    = lower(word("`_mltmp'", 2))
+        if "`_mlword2'" == "all" local _mlabel_all "1"
+        else if "`_mlword2'" != "" {
+            display as error "mlabel(): unrecognised suboption: `_mlword2'"
+            display as error "  Valid suboption: all"
+            exit 198
+        }
+        // Validate that the label variable exists
+        capture confirm variable `_mlabel_var'
+        if _rc != 0 {
+            display as error "mlabel(): variable not found: `_mlabel_var'"
+            exit 198
+        }
+        // Only meaningful for scatter/bubble
+        if "`type'" != "scatter" & "`type'" != "bubble" {
+            display as error "mlabel() is only supported for type(scatter) and type(bubble)"
+            exit 198
+        }
+    }
+
+    // -- mlabpos(): label minute-clock position for all scatter marker labels -----
+    // Accepts integer 0-59 matching internal minute-clock convention (same as alabelpos).
+    // 0=center, 15=right, 30=below, 45=left, approaching 60=above.
+    // Default: 45 (above, matching alabelpos default of 15 rotated to top).
+    // Mirrors Stata mlabposition() but uses 0-59 for consistency with alabelpos().
+    local _mlabpos ""
+    if "`mlabpos'" != "" {
+        capture confirm integer number `mlabpos'
+        if _rc != 0 {
+            display as error "mlabpos(): must be an integer between 0 and 59"
+            exit 198
+        }
+        if `mlabpos' < 0 | `mlabpos' > 59 {
+            display as error "mlabpos(): must be between 0 and 59 (minute-clock position)"
+            display as error "  0=center, 15=right, 30=below, 45=left, 60/0=above"
+            exit 198
+        }
+        local _mlabpos "`mlabpos'"
+    }
+
+    // -- mlabvposition(): per-observation minute-clock position variable ---------
+    // Syntax: mlabvposition(varname) -- numeric variable with values 0-59 per row.
+    // Each point gets its label at the minute-clock position from this variable.
+    // 0=center, 15=right, 30=below, 45=left. Requires mlabel() to be set.
+    local _mlabvpos ""
+    if "`mlabvposition'" != "" {
+        if "`mlabel'" == "" {
+            display as error "mlabvposition() requires mlabel() to also be specified"
+            exit 198
+        }
+        if "`type'" != "scatter" & "`type'" != "bubble" {
+            display as error "mlabvposition() is only supported for type(scatter) and type(bubble)"
+            exit 198
+        }
+        capture confirm numeric variable `mlabvposition'
+        if _rc != 0 {
+            display as error "mlabvposition(): variable not found or not numeric: `mlabvposition'"
+            exit 198
+        }
+        local _mlabvpos "`mlabvposition'"
+    }
+
+    // -- fit(): scatter fit line -------------------------------------------------
+    // fitci adds CI band (lfit and qfit only).
+    local _fit ""
+    if "`fit'" != "" {
+        local _fit = lower(itrim("`fit'"))
+        local _valid_fits "lfit qfit lowess exp log power ma"
+        local _fit_ok 0
+        foreach _vf of local _valid_fits {
+            if "`_fit'" == "`_vf'" local _fit_ok 1
+        }
+        if `_fit_ok' == 0 {
+            display as error "fit(): unrecognised fit type: `_fit'"
+            display as error "  Valid types: lfit qfit lowess exp log power ma"
+            exit 198
+        }
+        if "`type'" != "scatter" & "`type'" != "bubble" {
+            display as error "fit() is only supported for type(scatter) and type(bubble)"
+            exit 198
+        }
+        // fitci only valid with lfit or qfit
+        if "`fitci'" != "" & "`_fit'" != "lfit" & "`_fit'" != "qfit" {
+            display as error "fitci is only supported with fit(lfit) and fit(qfit)"
+            exit 198
+        }
+
+    }
+    else if "`fitci'" != "" {
+        display as error "fitci requires fit(lfit) or fit(qfit) to also be specified"
+        exit 198
+    }
+    local _fitci "0"
+    if "`fitci'" != "" local _fitci "1"
+
     // over()+by() are allowed together for all chart types except pie/donut.
     // For pie/donut, over() defines slices so by() panels would just repeat
     // the same slices -- no useful meaning. All other types: over() groups
@@ -688,7 +969,7 @@ program define sparkta
             }
         }
     }
-    // apointsize/alabelfontsize: must be positive numbers if supplied
+    // apointsize/alabelfs: must be positive numbers if supplied
     // Use real() for validation -- confirm number can fail on string-typed options (v3.5.2)
     if `"`apointsize'"' != "" {
         local _apsz = real(`"`apointsize'"')
@@ -697,10 +978,10 @@ program define sparkta
             exit 198
         }
     }
-    if `"`alabelfontsize'"' != "" {
-        local _alfs = real(`"`alabelfontsize'"')
+    if `"`alabelfs'"' != "" {
+        local _alfs = real(`"`alabelfs'"')
         if missing(`_alfs') | `_alfs' <= 0 {
-            di as err "alabelfontsize(): must be a positive number (px), e.g. alabelfontsize(12)"
+            di as err "alabelfs(): must be a positive number (px), e.g. alabelfs(12)"
             exit 198
         }
     }
@@ -789,13 +1070,10 @@ program define sparkta
         exit 198
     }
 
-    // - filter / filter2 -
-    // filter() and filter2() varnames and showmissing already parsed above.
-    // filter2() requires filter() to also be specified.
-    if "`filter2'" != "" & "`filter'" == "" {
-        display as error "filter2() requires filter() to also be specified"
-        exit 198
-    }
+    // - filter / filter2 / filters -
+    // Validation and cardinality checks are handled above in the filters() block.
+    // _filters_list now holds the canonical pipe-separated list of filter varnames.
+    // (filter()/filter2() back-compat merges into _filters_list above.)
 
     // - layout -
     if "`layout'" == "" local layout "vertical"
@@ -937,15 +1215,23 @@ program define sparkta
         exit 198
     }
 
-    // - pie/donut validation -
+    // - pie/donut validation -- three modes matching Stata graph pie -
+    // Mode 1: sparkta v1 v2 v3, type(pie)            multi-var, no over()
+    // Mode 2: sparkta price, type(pie) over(rep78)    one var + over()
+    // Mode 3: sparkta, type(pie) over(rep78)          no var, freq counts
     local nvar : word count `varlist'
     if ("`type'" == "pie" | "`type'" == "donut") {
-        if `nvar' != 1 {
-            display as error "Pie/donut requires exactly 1 variable e.g. sparkta price, type(donut) over(rep78)"
+        if `nvar' == 0 & "`over'" == "" {
+            display as error "pie/donut requires variables or over(). Three modes:"
+            display as error "  Mode 1 (var totals):  sparkta price mpg, type(pie)"
+            display as error "  Mode 2 (group sums):  sparkta price, type(pie) over(rep78)"
+            display as error "  Mode 3 (frequencies): sparkta, type(pie) over(rep78)"
             exit 198
         }
-        if "`over'" == "" {
-            display as error "Pie/donut requires over() e.g. sparkta price, type(donut) over(rep78)"
+        if `nvar' > 1 & "`over'" != "" {
+            display as error "pie/donut: cannot combine multiple variables with over()."
+            display as error "  Multi-var (no over): sparkta price mpg, type(pie)"
+            display as error "  One var + over:      sparkta price, type(pie) over(rep78)"
             exit 198
         }
     }
@@ -1061,7 +1347,8 @@ program define sparkta
     // v1.8.8: markout excludes obs with missing values in grouping/filter vars.
     // v1.9.1: skip markout for variables with showmissing set -- those obs
     //         are intentionally kept and labelled as "(Missing)" in the chart.
-    markout `touse' `varlist'
+    // F-1c: varlist may be empty (pie Mode 3: no vars, over() = freq count)
+    if "`varlist'" != "" markout `touse' `varlist'
     // v3.5.9: use strok for string grouping/filter vars so markout only drops
     // obs with empty-string values, not ALL obs (Stata default for string vars).
     if "`over'"    != "" & "`sm_over'"    == "0" {
@@ -1074,15 +1361,23 @@ program define sparkta
         if substr("`_btyp'", 1, 3) == "str" markout `touse' `by', strok
         else                                 markout `touse' `by'
     }
-    if "`filter'"  != "" & "`sm_filter'"  == "0" {
-        local _ftyp : type `filter'
-        if substr("`_ftyp'", 1, 3) == "str" markout `touse' `filter', strok
-        else                                 markout `touse' `filter'
+    // F-0b: markout for all filter vars in _filters_list (pipe-separated)
+    if "`_filters_list'" != "" & "`sm_filters'" == "0" {
+        local _nfl = wordcount(subinstr("`_filters_list'", "|", " ", .))
+        forvalues _mfi = 1/`_nfl' {
+            local _mfv = word(subinstr("`_filters_list'", "|", " ", .), `_mfi')
+            local _mftyp : type `_mfv'
+            if substr("`_mftyp'", 1, 3) == "str" markout `touse' `_mfv', strok
+            else                                   markout `touse' `_mfv'
+        }
     }
-    if "`filter2'" != "" & "`sm_filter2'" == "0" {
-        local _f2typ : type `filter2'
-        if substr("`_f2typ'", 1, 3) == "str" markout `touse' `filter2', strok
-        else                                  markout `touse' `filter2'
+    // F-1: markout for slider vars (always numeric, plain markout)
+    if "`_sliders_list'" != "" {
+        local _nsl = wordcount(subinstr("`_sliders_list'", "|", " ", .))
+        forvalues _msi = 1/`_nsl' {
+            local _msv = word(subinstr("`_sliders_list'", "|", " ", .), `_msi')
+            markout `touse' `_msv'
+        }
     }
     quietly count if `touse'
     if r(N) == 0 {
@@ -1133,6 +1428,357 @@ program define sparkta
         display as text "    Stata 19+   (default 4096 MB): unlikely to need change"
         display as text "  Restart Stata after changing. Check with: query java"
         display as text ""
+    }
+
+    // - Stata-computed fit lines (v3.5.96) -----------------------------------
+    // Computes fitted values using native Stata commands before calling Java.
+    // Supports fit() alone (no over) and fit() with over() (per-group lines).
+    //
+    // Architecture:
+    //   lfit/qfit : regress + predict xb + predict stdp for CI
+    //   lowess    : lowess command directly (includes 3 bisquare robust iters)
+    //   exp       : regress ln(y) on x, back-transform
+    //   log       : regress y on ln(x)
+    //   power     : regress ln(y) on ln(x), back-transform
+    //   ma        : Java FitComputer (deterministic, no Stata command needed)
+    //
+    // Output encoding:
+    //   No over():  "x1,y1|x2,y2|..."  (plain pipe-sep, backward compat)
+    //   With over(): "Domestic=x,y|..~Foreign=x,y|.."
+    //                Group key = value label (or raw value if no label).
+    //                Tilde (~) separates groups; equals (=) separates key from pts.
+    //                Java parseFitGroups() detects tilde to select path.
+    //
+    // Adaptive thinning: with G groups, _maxpts per group = max(200, 4000/G)
+    //   so total arg string stays under Stata's ~64KB local macro limit.
+    //
+    // fitci with over() is blocked at validation (deferred feature).
+    // -------------------------------------------------------------------------
+    local _fitLineData  ""
+    local _fitCiUpper   ""
+    local _fitCiLower   ""
+
+    if "`_fit'" != "" & "`_fit'" != "ma" {
+
+        local _yvar : word 1 of `varlist'
+        local _xvar : word 2 of `varlist'
+
+        // Determine if over() is active for per-group fits
+        local _fit_has_over 0
+        if "`over'" != "" local _fit_has_over 1
+
+        // Adaptive thinning: cap per-group points so total stays under ~50KB.
+        // No over() or single group: _maxpts = 4000 (unchanged from v3.5.96).
+        local _maxpts 4000
+        if `_fit_has_over' {
+            quietly levelsof `over' if `touse', local(_over_vals)
+            local _ngroups = wordcount(`"`_over_vals'"')
+            if `_ngroups' > 1 {
+                local _maxpts = max(200, int(4000 / `_ngroups'))
+            }
+        }
+
+        // Single helper macro: builds "x,y|x,y|..." string from _fv
+        // into local `_out_pts'. Used in both the over() and no-over() paths.
+        // Reads: `_fv' (fitted values tempvar), `_xvar', `_maxpts', current data.
+        // Writes: `_out_pts' (pipe-separated string), may be empty on failure.
+
+        preserve
+
+        quietly keep if `touse'
+
+        if `_fit_has_over' {
+            // -------------------------------------------------------------------
+            // Per-group path: iterate over unique values of over() variable.
+            // tempfile resets data between groups (no nested preserve/restore).
+            // -------------------------------------------------------------------
+            local _otyp : type `over'
+            local _over_is_str = (substr("`_otyp'", 1, 3) == "str")
+
+            // Save full touse subset once -- reload for each group
+            tempfile _fit_base
+            quietly save `_fit_base'
+
+            foreach _oval in `_over_vals' {
+
+                // Reload full touse subset for this group
+                quietly use `_fit_base', clear
+
+                // Subset to this group and get its display label for the key
+                if `_over_is_str' {
+                    quietly keep if `over' == "`_oval'"
+                    local _okey "`_oval'"
+                }
+                else {
+                    quietly keep if `over' == `_oval'
+                    // Value label becomes the key -- matches DataSet.uniqueValues() in Java
+                    local _okey : label (`over') `_oval'
+                    // If no value label defined, key is the raw numeric string
+                    if "`_okey'" == "" local _okey "`_oval'"
+                }
+
+                quietly count
+                if r(N) < 3 continue        // skip groups too small for fit
+
+                tempvar _fv _se _ci_u _ci_l _lny _lnx
+
+                // -- lfit ------------------------------------------------------
+                if "`_fit'" == "lfit" {
+                    quietly regress `_yvar' `_xvar'
+                    quietly predict double `_fv', xb
+                    if "`_fitci'" == "1" {
+                        quietly predict double `_se', stdp
+                        local _tcrit = invttail(e(df_r), 0.025)
+                        quietly gen double `_ci_u' = `_fv' + `_tcrit' * `_se'
+                        quietly gen double `_ci_l' = `_fv' - `_tcrit' * `_se'
+                    }
+                }
+                // -- qfit ------------------------------------------------------
+                else if "`_fit'" == "qfit" {
+                    quietly regress `_yvar' c.`_xvar'##c.`_xvar'
+                    quietly predict double `_fv', xb
+                    if "`_fitci'" == "1" {
+                        quietly predict double `_se', stdp
+                        local _tcrit = invttail(e(df_r), 0.025)
+                        quietly gen double `_ci_u' = `_fv' + `_tcrit' * `_se'
+                        quietly gen double `_ci_l' = `_fv' - `_tcrit' * `_se'
+                    }
+                }
+                // -- lowess ----------------------------------------------------
+                else if "`_fit'" == "lowess" {
+                    quietly lowess `_yvar' `_xvar', generate(`_fv') nograph
+                    quietly recast double `_fv'
+                }
+                // -- exp -------------------------------------------------------
+                else if "`_fit'" == "exp" {
+                    quietly gen double `_lny' = ln(`_yvar') if `_yvar' > 0
+                    quietly count if `_lny' != .
+                    if r(N) >= 3 {
+                        quietly regress `_lny' `_xvar'
+                        quietly gen double `_fv' = exp(_b[_cons] + _b[`_xvar'] * `_xvar') ///
+                            if `_yvar' > 0
+                    }
+                }
+                // -- log -------------------------------------------------------
+                else if "`_fit'" == "log" {
+                    quietly gen double `_lnx' = ln(`_xvar') if `_xvar' > 0
+                    quietly count if `_lnx' != .
+                    if r(N) >= 3 {
+                        quietly regress `_yvar' `_lnx'
+                        quietly predict double `_fv' if `_xvar' > 0, xb
+                    }
+                }
+                // -- power -----------------------------------------------------
+                else if "`_fit'" == "power" {
+                    quietly gen double `_lny' = ln(`_yvar') if `_yvar' > 0 & `_xvar' > 0
+                    quietly gen double `_lnx' = ln(`_xvar') if `_yvar' > 0 & `_xvar' > 0
+                    quietly count if `_lny' != .
+                    if r(N) >= 3 {
+                        quietly regress `_lny' `_lnx'
+                        quietly gen double `_fv' = exp(_b[_cons]) * ///
+                            (`_xvar'^_b[`_lnx']) if `_yvar' > 0 & `_xvar' > 0
+                    }
+                }
+
+                // Build this group's "x,y|x,y|..." string into _out_pts
+                local _out_pts ""
+                capture confirm variable `_fv'
+                if !_rc {
+                    quietly sort `_xvar', stable
+                    quietly count if `_fv' != .
+                    local _nvalid = r(N)
+                    local _step 1
+                    if `_nvalid' > `_maxpts' {
+                        local _step = floor(`_nvalid' / `_maxpts')
+                        if `_step' < 1 local _step 1
+                    }
+                    local _cnt 0
+                    forvalues _i = 1/`=_N' {
+                        if `_fv'[`_i'] == . continue
+                        local _cnt = `_cnt' + 1
+                        if mod(`_cnt' - 1, `_step') != 0 continue
+                        local _xi = `_xvar'[`_i']
+                        local _yi = `_fv'[`_i']
+                        if "`_out_pts'" == "" local _out_pts "`_xi',`_yi'"
+                        else                  local _out_pts "`_out_pts'|`_xi',`_yi'"
+                    }
+                }
+
+                // Append fit line to master string with group key
+                if "`_out_pts'" != "" {
+                    if "`_fitLineData'" == "" local _fitLineData "`_okey'=`_out_pts'"
+                    else                      local _fitLineData "`_fitLineData'~`_okey'=`_out_pts'"
+                }
+
+                // CI bands per group (lfit/qfit + fitci only)
+                // Same "GroupLabel=x,y|..~GroupLabel2=..." encoding as fitLineData.
+                // Dataset layout with over()+fitci: stride=3 per group.
+                //   dsets[G + gi*3 + 0] = ciUpper_gi
+                //   dsets[G + gi*3 + 1] = ciLower_gi
+                //   dsets[G + gi*3 + 2] = fitLine_gi
+                if "`_fitci'" == "1" {
+                    capture confirm variable `_ci_u'
+                    if !_rc {
+                        local _out_ci_u ""
+                        local _out_ci_l ""
+                        local _cnt 0
+                        forvalues _i = 1/`=_N' {
+                            if `_ci_u'[`_i'] == . | `_ci_l'[`_i'] == . continue
+                            local _cnt = `_cnt' + 1
+                            if mod(`_cnt' - 1, `_step') != 0 continue
+                            local _xi = `_xvar'[`_i']
+                            local _ui = `_ci_u'[`_i']
+                            local _li = `_ci_l'[`_i']
+                            if "`_out_ci_u'" == "" {
+                                local _out_ci_u "`_xi',`_ui'"
+                                local _out_ci_l "`_xi',`_li'"
+                            }
+                            else {
+                                local _out_ci_u "`_out_ci_u'|`_xi',`_ui'"
+                                local _out_ci_l "`_out_ci_l'|`_xi',`_li'"
+                            }
+                        }
+                        if "`_out_ci_u'" != "" {
+                            if "`_fitCiUpper'" == "" {
+                                local _fitCiUpper "`_okey'=`_out_ci_u'"
+                                local _fitCiLower "`_okey'=`_out_ci_l'"
+                            }
+                            else {
+                                local _fitCiUpper "`_fitCiUpper'~`_okey'=`_out_ci_u'"
+                                local _fitCiLower "`_fitCiLower'~`_okey'=`_out_ci_l'"
+                            }
+                        }
+                    }
+                }
+            }
+            // end foreach _oval
+
+        }
+        else {
+            // -------------------------------------------------------------------
+            // No over(): single fit on full touse subset (unchanged from v3.5.96)
+            // -------------------------------------------------------------------
+            quietly count
+            local _nfit = r(N)
+
+            if `_nfit' >= 3 {
+
+                tempvar _fv _se _ci_u _ci_l _lny _lnx
+
+                // -- lfit ------------------------------------------------------
+                if "`_fit'" == "lfit" {
+                    quietly regress `_yvar' `_xvar'
+                    quietly predict double `_fv', xb
+                    if "`_fitci'" == "1" {
+                        quietly predict double `_se', stdp
+                        local _tcrit = invttail(e(df_r), 0.025)
+                        quietly gen double `_ci_u' = `_fv' + `_tcrit' * `_se'
+                        quietly gen double `_ci_l' = `_fv' - `_tcrit' * `_se'
+                    }
+                }
+                // -- qfit ------------------------------------------------------
+                else if "`_fit'" == "qfit" {
+                    quietly regress `_yvar' c.`_xvar'##c.`_xvar'
+                    quietly predict double `_fv', xb
+                    if "`_fitci'" == "1" {
+                        quietly predict double `_se', stdp
+                        local _tcrit = invttail(e(df_r), 0.025)
+                        quietly gen double `_ci_u' = `_fv' + `_tcrit' * `_se'
+                        quietly gen double `_ci_l' = `_fv' - `_tcrit' * `_se'
+                    }
+                }
+                // -- lowess ----------------------------------------------------
+                // recast double: lowess generate() stores float by default;
+                // recast promotes in-place so local reads full precision. (v3.5.96)
+                else if "`_fit'" == "lowess" {
+                    quietly lowess `_yvar' `_xvar', generate(`_fv') nograph
+                    quietly recast double `_fv'
+                }
+                // -- exp -------------------------------------------------------
+                else if "`_fit'" == "exp" {
+                    quietly gen double `_lny' = ln(`_yvar') if `_yvar' > 0
+                    quietly count if `_lny' != .
+                    if r(N) >= 3 {
+                        quietly regress `_lny' `_xvar'
+                        quietly gen double `_fv' = exp(_b[_cons] + _b[`_xvar'] * `_xvar') ///
+                            if `_yvar' > 0
+                    }
+                }
+                // -- log -------------------------------------------------------
+                else if "`_fit'" == "log" {
+                    quietly gen double `_lnx' = ln(`_xvar') if `_xvar' > 0
+                    quietly count if `_lnx' != .
+                    if r(N) >= 3 {
+                        quietly regress `_yvar' `_lnx'
+                        quietly predict double `_fv' if `_xvar' > 0, xb
+                    }
+                }
+                // -- power -----------------------------------------------------
+                else if "`_fit'" == "power" {
+                    quietly gen double `_lny' = ln(`_yvar') if `_yvar' > 0 & `_xvar' > 0
+                    quietly gen double `_lnx' = ln(`_xvar') if `_yvar' > 0 & `_xvar' > 0
+                    quietly count if `_lny' != .
+                    if r(N) >= 3 {
+                        quietly regress `_lny' `_lnx'
+                        quietly gen double `_fv' = exp(_b[_cons]) * ///
+                            (`_xvar'^_b[`_lnx']) if `_yvar' > 0 & `_xvar' > 0
+                    }
+                }
+
+                // Build output string (plain format, no group key)
+                capture confirm variable `_fv'
+                if !_rc {
+                    quietly sort `_xvar', stable
+                    quietly count if `_fv' != .
+                    local _nvalid = r(N)
+                    local _step 1
+                    if `_nvalid' > `_maxpts' {
+                        local _step = floor(`_nvalid' / `_maxpts')
+                        if `_step' < 1 local _step 1
+                    }
+                    local _fitLineData ""
+                    local _cnt 0
+                    forvalues _i = 1/`=_N' {
+                        if `_fv'[`_i'] == . continue
+                        local _cnt = `_cnt' + 1
+                        if mod(`_cnt' - 1, `_step') != 0 continue
+                        local _xi = `_xvar'[`_i']
+                        local _yi = `_fv'[`_i']
+                        if "`_fitLineData'" == "" local _fitLineData "`_xi',`_yi'"
+                        else                      local _fitLineData "`_fitLineData'|`_xi',`_yi'"
+                    }
+
+                    // CI bands (lfit/qfit only, no over())
+                    if "`_fitci'" == "1" {
+                        capture confirm variable `_ci_u'
+                        if !_rc {
+                            local _fitCiUpper ""
+                            local _fitCiLower ""
+                            local _cnt 0
+                            forvalues _i = 1/`=_N' {
+                                if `_ci_u'[`_i'] == . | `_ci_l'[`_i'] == . continue
+                                local _cnt = `_cnt' + 1
+                                if mod(`_cnt' - 1, `_step') != 0 continue
+                                local _xi = `_xvar'[`_i']
+                                local _ui = `_ci_u'[`_i']
+                                local _li = `_ci_l'[`_i']
+                                if "`_fitCiUpper'" == "" {
+                                    local _fitCiUpper "`_xi',`_ui'"
+                                    local _fitCiLower "`_xi',`_li'"
+                                }
+                                else {
+                                    local _fitCiUpper "`_fitCiUpper'|`_xi',`_ui'"
+                                    local _fitCiLower "`_fitCiLower'|`_xi',`_li'"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // end if/else _fit_has_over
+
+        restore
     }
 
     // - Locate sparkta.jar (v3.5.42) -
@@ -1286,8 +1932,8 @@ program define sparkta
              `"`is_novaluelabels'"'        ///  73 suppress value labels
              `"`xlabels'"'                 ///  74 custom x-axis tick labels
              `"`ylabels'"'                 ///  75 custom y-axis tick labels
-             `"`filter'"'                  ///  76 filter variable 1
-             `"`filter2'"'                 ///  77 filter variable 2
+             `"`_filters_list'"'           ///  76 pipe-sep filter varlist (F-0b)
+             ""                             ///  77 reserved (was filter2, now empty)
              `"`is_nostats'"'              ///  78 suppress stats panel (v1.5)
              `"`cilevel'"'                 ///  79 CI level for cibar/ciline (v1.7)
              `"`cibandopacity'"'           ///  80 ciline band opacity 0-1 (v1.7.2)
@@ -1295,8 +1941,8 @@ program define sparkta
              `"`histtype'"'               ///  82 histogram y-axis: density|frequency|fraction (v1.8.0)
              `"`sm_over'"'                ///  83 showmissing for over() (v1.9.1)
              `"`sm_by'"'                  ///  84 showmissing for by() (v1.9.1)
-             `"`sm_filter'"'              ///  85 showmissing for filter() (v1.9.1)
-             `"`sm_filter2'"' ///  86 showmissing for filter2() (v1.9.1)
+             `"`sm_filters'"'             ///  85 showmissing for filters (F-0b)
+             ""                             ///  86 reserved (was sm_filter2)
              `"`areaopacity'"'   ///  87 area fill opacity 0-1 (v2.0.1)
              `"`is_offline'"'   ///  88 offline: embed JS inline (v2.0.2)
              `"`is_stack100'"' ///  89 100% stacked bar (v2.2.0)
@@ -1355,14 +2001,23 @@ program define sparkta
              `"`apointsize'"'     ///  142 apoint radius px (v3.5.0)
              `"`alabelpos'"'      ///  143 label positions "y x pos" pipe-sep pos=minute clock (v3.5.0/v3.5.2)
              `"`alabeltext'"'     ///  144 label texts pipe-sep (v3.5.0)
-             `"`alabelfontsize'"' ///  145 label font size px (v3.5.0)
+             `"`alabelfs'"' ///  145 label font size px (v3.5.0)
              `"`aellipse'"'       ///  146 ellipses "ymin xmin ymax xmax" pipe-sep (v3.5.0)
              `"`aellipsecolor'"'  ///  147 ellipse fill colors pipe-sep (v3.5.0)
              `"`aellipseborder'"' ///  148 ellipse border colors pipe-sep (v3.5.0)
              `"`alabelgap'"'      ///  149 label offset distance px (v3.5.2)
-             `"`_rlbl'"')        //  150 relabel over() groups on x-axis AND legend pipe-sep (v3.5.34)
+             `"`_rlbl'"'          ///  150 relabel over() groups on x-axis AND legend pipe-sep (v3.5.34)
+             `"`_sliders_list'"'           ///  151 pipe-sep slider varlist: dual-handle numeric range (F-1)
+             `"`_mlabel_var'"'             ///  152 mlabel varname: scatter marker label variable
+             `"`_mlabel_all'"'             ///  153 mlabelall: 1=show all labels regardless of N
+             `"`_mlabpos'"'               ///  154 mlabpos: minute-clock 0-59 for all labels
+             `"`_mlabvpos'"'              ///  155 mlabvpos: per-obs minute-clock position variable
+             `"`_fit'"'                    ///  156 fit type: lfit|qfit|lowess|exp|log|power|ma
+             `"`_fitci'"'                  ///  157 fitci: 1=add CI band to lfit/qfit
+             `"`_fitLineData'"'            ///  158 Stata-computed fit line: "x,y|x,y|..." sorted by x
+             `"`_fitCiUpper'"'             ///  159 Stata-computed CI upper: "x,y|x,y|..."
+             `"`_fitCiLower'"')                 //   157 fitci: 1=add CI band to lfit/qfit
 
 end
 
-// sparkta_check is in sparkta_check.ado
 // Stata finds it automatically when that file is in the ado path.

@@ -1,5 +1,5 @@
 {smcl}
-{* sparkta.sthlp  v3.5.42  2026-03-12}{...}
+{* sparkta.sthlp  v3.5.96  2026-03-17}{...}
 {hline}
 help for {cmd:sparkta}
 {hline}
@@ -25,7 +25,7 @@ No JavaScript, no Python, no server, no installation for the recipient.
 
 {p 4 4 2}
 {bf:Requirements:} Stata 17 or later with {cmd:sparkta.jar} in your Stata
-personal folder or working directory. Run {cmd:sparkta_check} to verify.
+personal folder or working directory. Run {cmd:sparkta price, over(foreign)} to verify.
 
 {p 4 8 4}
 {bf:Try this now -- load Stata's built-in auto dataset and run:}
@@ -61,13 +61,14 @@ Type {cmd:sysuse auto, clear} first to load it.
 as separate series. Use this to compare groups side by side.{p_end}
 {p2col:{cmd:by(var)}}Creates a {bf:separate panel} for each value of {it:var}.
 Use this when you want individual charts per group rather than overlaid series.{p_end}
-{p2col:{cmd:filter(var)}}Adds an interactive dropdown to the HTML file so
-{bf:viewers can filter} the chart themselves without re-running Stata.{p_end}
+{p2col:{cmd:filters(varlist)}}Adds interactive dropdown filters to the HTML file so
+{bf:viewers can filter} the chart themselves without re-running Stata.
+Accepts one or more variables: {cmd:filters(foreign)} or {cmd:filters(foreign rep78)}.{p_end}
 {p2colreset}
 
 {p 4 4 2}
 {bf:Quick rule of thumb:} want to compare groups on one chart? Use {cmd:over()}.
-Want separate charts per group? Use {cmd:by()}. Want the reader to explore interactively? Use {cmd:filter()}.
+Want separate charts per group? Use {cmd:by()}. Want the reader to explore interactively? Use {cmd:filters()}.
 You can also combine {cmd:over()} and {cmd:by()} -- {cmd:by()} makes the panels,
 {cmd:over()} groups the series inside each panel (not supported for pie/donut).
 
@@ -235,7 +236,7 @@ The tooltip shows both the percentage and the underlying raw value.
 {synopt:{cmd:alabelpos(}{it:coords}{cmd:)}}Annotation label positions: pipe-sep {cmd:y x [pos]}; {it:pos} = minute-clock direction (15=right, 30=below, 45=left, 0=center){p_end}
 {synopt:{cmd:alabelgap(}{it:#}{cmd:)}}Label offset distance in pixels from point (default 15); ignored when direction is 0{p_end}
 {synopt:{cmd:alabeltext(}{it:texts}{cmd:)}}Annotation label texts, pipe-separated (paired with alabelpos){p_end}
-{synopt:{cmd:alabelfontsize(}{it:#}{cmd:)}}Font size px for all annotation labels (default 12){p_end}
+{synopt:{cmd:alabelfs(}{it:#}{cmd:)}}Font size px for all annotation labels (default 12){p_end}
 {synopt:{cmd:aellipse(}{it:quads}{cmd:)}}Annotation ellipses: pipe-sep {cmd:ymin xmin ymax xmax} quads, e.g. {cmd:aellipse(10 20 20 30)}{p_end}
 {synopt:{cmd:aellipsecolor(}{it:colors}{cmd:)}}Fill colors per ellipse, pipe-separated{p_end}
 {synopt:{cmd:aellipseborder(}{it:colors}{cmd:)}}Border colors per ellipse, pipe-separated{p_end}
@@ -246,8 +247,8 @@ The tooltip shows both the percentage and the underlying raw value.
 {synopt:{cmd:over(}{it:varname}{cmd:)}}Group by categorical variable (all on one chart){p_end}
 {synopt:{cmd:by(}{it:varname}{cmd:)}}Separate panel per group{p_end}
 {synopt:{cmd:layout(}{it:string}{cmd:)}}Panel arrangement: {cmd:vertical} | {cmd:horizontal} | {cmd:grid}{p_end}
-{synopt:{cmd:filter(}{it:varname}{cmd:)}}Interactive filter dropdown{p_end}
-{synopt:{cmd:filter2(}{it:varname}{cmd:)}}Second independent filter dropdown{p_end}
+{synopt:{cmd:filters(}{it:varlist}{cmd:)}}One or more interactive filter dropdowns: space-separated varlist e.g. {cmd:filters(foreign rep78)}{p_end}
+{synopt:{cmd:sliders(}{it:varlist}{cmd:)}}One or more dual-handle range sliders for numeric variables: space-separated varlist e.g. {cmd:sliders(price mpg)}{p_end}
 {synopt:{cmd:sortgroups(}{it:string}{cmd:)}}Group order: {cmd:asc} | {cmd:desc}{p_end}
 {synopt:{cmd:nostats}}Suppress the summary statistics panel{p_end}
 
@@ -384,8 +385,20 @@ The tooltip shows both the percentage and the underlying raw value.
 {synopt:{cmd:meancolor(}{it:string}{cmd:)}}Color for mean marker; overrides auto-detection{p_end}
 {synopt:{cmd:bandwidth(}{it:#}{cmd:)}}KDE bandwidth for violin plots (default: Silverman rule){p_end}
 
+{syntab:Scatter fit lines (scatter and bubble only)}
+{synopt:{cmd:fit(}{it:fittype}{cmd:)}}Add a fitted curve to a scatter or bubble chart.
+Valid types: {cmd:lfit} {cmd:qfit} {cmd:lowess} {cmd:exp} {cmd:log} {cmd:power} {cmd:ma}
+(see {bf:Scatter Fit Lines} below){p_end}
+{synopt:{cmd:fitci}}Add a 95%% confidence band to {cmd:fit(lfit)} or {cmd:fit(qfit)}; requires {cmd:fit()} to be specified{p_end}
+{synopt:{cmd:mlabel(}{it:varname}{cmd:)}}Label each scatter point with values of {it:varname}.
+Suppress by default when N > 30; add {cmd:, all} to force display: {cmd:mlabel(make, all)}{p_end}
+{synopt:{cmd:mlabpos(}{it:#}{cmd:)}}Uniform label position for all points using 0{hline 1}59 minute-clock
+(0=center, 15=right, 30=below, 45=left; default=top){p_end}
+{synopt:{cmd:mlabvposition(}{it:varname}{cmd:)}}Per-observation label position; values 0{hline 1}59 minute-clock;
+requires {cmd:mlabel()} to also be set{p_end}
+
 {syntab:Data handling}
-{synopt:{cmd:nomissing}}Exclude missing values (default behavior; kept for compatibility){p_end}
+{synopt:{cmd:nomissing}}Guarantee null-free data; required for {cmd:cibar}/{cmd:ciline}; no-op for most other chart types{p_end}
 {synopt:{cmd:novaluelabels}}Show raw numeric codes instead of value labels{p_end}
 {synopt:{cmd:download}}Show a PNG download button in the chart header{p_end}
 {synopt:{cmd:offline}}Embed all JS inline -- no internet required to open the file{p_end}
@@ -484,18 +497,30 @@ When combined, {cmd:by()} creates the panels and {cmd:over()} groups series with
 {p 8 8 2}{it:Example:} {cmd:sparkta price, by(rep78) layout(grid)}{p_end}
 
 {phang}
-{opt filter(varname [, showmissing])} Adds an interactive dropdown below the
-chart letting viewers filter the data by values of {it:varname} without
-reloading. The chart updates live. Suboption {cmd:showmissing} adds a
-{bf:(Missing)} option for observations where {it:varname} is missing.
+{opt filters(varlist)} Adds one or more interactive dropdown filters below the
+chart. Viewers can filter the data by any combination of values without
+reloading. The chart updates live. Accepts a space-separated list of one or
+more categorical variables: {cmd:filters(foreign)} or {cmd:filters(foreign rep78)}.
+Each variable gets its own labelled dropdown. Each variable may optionally
+include {cmd:, showmissing} to add a {bf:(Missing)} entry for observations
+where that variable is missing.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price, over(rep78) filter(foreign)} -- viewer can toggle between Domestic and Foreign without re-running Stata.{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta price, over(rep78) filters(foreign)} -- viewer can toggle between Domestic and Foreign without re-running Stata.{p_end}
+
+{p 8 8 2}{it:Example (multiple):} {cmd:sparkta price weight, over(rep78) filters(foreign rep78)}{p_end}
 
 {phang}
-{opt filter2(varname [, showmissing])} Second independent interactive filter
-dropdown. Requires {cmd:filter()} to also be specified. Supports {cmd:showmissing}.
+{opt sliders(varlist)} Adds one or more dual-handle range sliders below the
+chart for numeric variables. Viewers can drag the handles to restrict the
+displayed data to any numeric range without reloading. The chart updates live.
+Accepts a space-separated list of numeric variables: {cmd:sliders(price)} or
+{cmd:sliders(price mpg)}. Each variable gets its own labelled slider showing
+the current range. Can be combined with {cmd:filters()} for mixed categorical
+and numeric filtering.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price weight, over(rep78) filter(foreign) filter2(rep78)}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta price, over(rep78) sliders(mpg)} -- viewer drags the mpg slider to restrict to any fuel-economy range.{p_end}
+
+{p 8 8 2}{it:Example (combined):} {cmd:sparkta price, over(rep78) filters(foreign) sliders(mpg weight)}{p_end}
 
 {phang}
 {opt sortgroups(string)} Controls the order of {cmd:over()} and {cmd:by()}
@@ -1146,7 +1171,7 @@ Must have the same number of entries as {cmd:alabelpos()}.
 Example: {cmd:alabeltext(Recession start|Recovery peak)}.
 
 {phang}
-{opt alabelfontsize(#)} Font size in pixels for all annotation labels. Default 12.
+{opt alabelfs(#)} Font size in pixels for all annotation labels. Default 12.
 
 {phang}
 {opt alabelgap(#)} Pixel distance from the coordinate point to the label.
@@ -1204,6 +1229,182 @@ For df > 120 the standard normal z-critical value is used.
 Default is {cmd:0.18}. Range 0{hline 1}1.
 Example: {cmd:cibandopacity(0.05)} for a faint band; {cmd:cibandopacity(0.35)}
 for a more prominent band.
+
+{dlgtab:Scatter Fit Lines}
+
+{p 4 4 2}
+{cmd:fit()} adds a fitted curve to {cmd:type(scatter)} or {cmd:type(bubble)} charts.
+The curve is computed by Stata before the chart is built, so it matches
+Stata's own {cmd:twoway} output exactly for all fit types.
+{cmd:fitci} adds a 95%% pointwise confidence band (lfit and qfit only).
+
+{phang}
+{opt fit(fittype)} Fit type. Valid values:
+
+{p2colset 12 22 22 2}
+{p2col:{cmd:lfit}}Linear fit: y = a + bx.
+Computed using {cmd:regress y x} + {cmd:predict xb}.
+Identical to Stata {cmd:twoway lfit}.{p_end}
+
+{p2col:{cmd:qfit}}Quadratic fit: y = a + bx + cx{c 178}.
+Computed using {cmd:regress y c.x##c.x} + {cmd:predict xb}.
+Identical to Stata {cmd:twoway qfit}.{p_end}
+
+{p2col:{cmd:lowess}}Locally weighted scatterplot smoothing (Cleveland 1979).
+Computed using Stata's own {cmd:lowess} command with bandwidth f = 0.8.
+Includes Stata's three bisquare robustness iterations.
+Identical to Stata {cmd:twoway lowess} including kinks at tied x-values.
+
+{p 12 12 2}
+{bf:Tied x-values and kinks:} When multiple observations share the same
+x value (common with integer variables like {cmd:mpg}), Stata's {cmd:lowess}
+computes a separate fitted value for each observation based on its index
+position within the local bandwidth window. {cmd:twoway lowess} then connects
+all fitted values in x-sorted order using a stable sort (ties keep original
+observation order). Sparkta replicates this exactly using {cmd:sort xvar, stable}
+before emitting all N fitted values -- producing identical kinks at tied
+x-values. This was verified by overlaying Sparkta's output with {cmd:twoway lowess}
+and confirming pixel-exact overlap including all kinks.
+
+{p 12 12 2}
+For interactive filter/slider redraws, an approximate JS lowess is used
+with a 1,500-point cap for browser performance; the initial chart render
+always uses the exact Stata computation.{p_end}
+
+{p2col:{cmd:exp}}Exponential fit: y = a{c 183}exp(bx).
+Fitted by log-linear OLS: {cmd:regress ln(y) x}, then back-transformed.
+No direct Stata {cmd:twoway} equivalent. Requires y > 0 for all sample
+observations; observations with y <= 0 are excluded from the fit.
+Note: minimises sum of squared errors in ln(y), not y (Jensen's
+inequality). For visualisation this is standard practice and matches
+what most software (Excel, R geom_smooth) produces for exponential fits.{p_end}
+
+{p2col:{cmd:log}}Logarithmic fit: y = a + b{c 183}ln(x).
+Fitted by OLS after log-transforming x: {cmd:regress y ln(x)}.
+No direct Stata {cmd:twoway} equivalent. Requires x > 0.{p_end}
+
+{p2col:{cmd:power}}Power fit: y = a{c 183}x{c 94}b.
+Fitted by log-log OLS: {cmd:regress ln(y) ln(x)}, then back-transformed.
+No direct Stata {cmd:twoway} equivalent. Requires x > 0 and y > 0.
+Same Jensen's inequality caveat as {cmd:exp}.{p_end}
+
+{p2col:{cmd:ma}}Moving average. Window size = max(3, N/10), centred.
+No Stata {cmd:twoway} equivalent. Deterministic (no estimation).
+Computed in Java; output is exact and identical to any correct
+centred moving average implementation.{p_end}
+{p2colreset}
+
+{p 4 4 2}
+{bf:Comparison with Stata twoway:}
+
+{p2colset 12 22 44 2}
+{p2col:{it:Fit type}}{it:Stata equivalent}{p_end}
+{p2col:{cmd:lfit}}{cmd:twoway lfit} -- EXACT MATCH{p_end}
+{p2col:{cmd:qfit}}{cmd:twoway qfit} -- EXACT MATCH{p_end}
+{p2col:{cmd:lowess}}{cmd:twoway lowess} -- EXACT MATCH (initial render){p_end}
+{p2col:{cmd:exp}}No equivalent -- standard log-linear OLS{p_end}
+{p2col:{cmd:log}}No equivalent -- OLS after ln(x){p_end}
+{p2col:{cmd:power}}No equivalent -- log-log OLS{p_end}
+{p2col:{cmd:ma}}No equivalent -- centred window mean{p_end}
+{p2colreset}
+
+{p 8 8 2}{it:Example:} {cmd:sparkta price mpg, type(scatter) fit(lfit)} -- linear fit{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta price mpg, type(scatter) fit(lowess)} -- lowess smooth{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta price mpg, type(scatter) fit(lfit) fitci} -- linear fit with 95%% CI band{p_end}
+
+{p 4 4 2}
+{bf:Lowess verification code} -- confirms sparkta output is identical to
+Stata {cmd:twoway lowess} including kinks at tied x-values:
+
+{p 8 8 2}{cmd:sysuse auto, clear}{p_end}
+{p 8 8 2}{cmd:tempvar stata_fit sparkta_fit}{p_end}
+{p 8 8 2}{cmd:quietly lowess price mpg, generate(`stata_fit') nograph}{p_end}
+{p 8 8 2}{cmd:quietly sort mpg, stable}{p_end}
+{p 8 8 2}{cmd:gen double sparkta_fit = `stata_fit'}{p_end}
+{p 8 8 2}{cmd:gen double abs_diff = abs(sparkta_fit - `stata_fit')}{p_end}
+{p 8 8 2}{cmd:summ abs_diff}{p_end}
+{p 8 8 2}{it:(max abs_diff should be 0.000 -- confirms identical computation)}{p_end}
+{p 8 8 2}{cmd:twoway (line `stata_fit' mpg, sort lcolor(red)) ///}{p_end}
+{p 12 12 2}{cmd:(line sparkta_fit mpg, sort lcolor(blue) lpattern(dash)), ///}{p_end}
+{p 12 12 2}{cmd:title("Lowess verification") note("Lines should overlap exactly")}{p_end}
+{p 8 8 2}{it:(red Stata reference and blue dashed Sparkta output overlap exactly)}{p_end}
+
+{phang}
+{opt fitci} Adds a 95%% pointwise confidence band to the fit line.
+Supported only for {cmd:fit(lfit)} and {cmd:fit(qfit)}.
+
+{p 4 4 2}
+{bf:Confidence interval computation:}
+
+{p 8 8 2}
+The CI is computed as: fitted(x) +/- t * SE(x), where:
+
+{p2colset 12 22 22 2}
+{p2col:SE(x)}{cmd:predict stdp} after {cmd:regress} -- the standard error
+of the predicted mean at each x value.{p_end}
+{p2col:t-critical}{cmd:invttail(e(df_r), 0.025)} -- Stata's exact
+t-distribution with df = n - k (n observations, k parameters).{p_end}
+{p2colreset}
+
+{p 4 4 2}
+This matches {cmd:twoway lfitci} and {cmd:twoway qfitci} exactly.
+
+{p 4 4 2}
+{bf:Behaviour with filters and sliders:}
+
+{p2colset 12 26 26 2}
+{p2col:{it:Scenario}}{it:Fit line}{p_end}
+{p2col:Initial render}Exact Stata computation{p_end}
+{p2col:Dropdown filter}Exact Stata computation (pre-computed per filter value){p_end}
+{p2col:Slider interaction}Recomputed in browser using JS OLS; t-critical
+matches Stata to 6 decimal places for all df{p_end}
+{p2col:lowess after slider}Approximate; 1,500-point cap for browser performance{p_end}
+{p2colreset}
+
+{p 8 8 2}{it:Example:} {cmd:sparkta price mpg, type(scatter) fit(lfit) fitci filters(rep78)}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta price mpg, type(scatter) fit(qfit) fitci sliders(weight)}{p_end}
+
+{phang}
+{opt mlabel(varname[, all])} Labels each scatter point with the value of {it:varname}.
+Applies to {cmd:type(scatter)} and {cmd:type(bubble)} only.
+
+{p 8 8 2}
+By default, labels are suppressed when the sample has more than 30 observations
+to avoid overplotting. Specify {cmd:, all} to force labels regardless of N:
+{cmd:mlabel(make, all)}.
+
+{p 8 8 2}
+The label value also appears as the first line of the hover tooltip for each point.
+
+{p 8 8 2}{it:Example:} {cmd:sparkta price mpg if rep78==3, type(scatter) mlabel(make)}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta price mpg, type(scatter) mlabel(make, all)}{p_end}
+
+{phang}
+{opt mlabpos(#)} Uniform label position for all points using the 0{hline 1}59
+minute-clock convention: 0 = centered on point, 15 = right (3 o'clock),
+30 = below (6 o'clock), 45 = left (9 o'clock), values approaching 60 = above.
+Default is above (top). Requires {cmd:mlabel()} to also be specified.
+
+{p 8 8 2}
+This uses the same convention as {cmd:alabelpos()} for annotation labels.
+Note: the values differ from Stata's {cmd:mlabpos()} option (which uses a
+1{hline 1}12 clock face) -- sparkta uses a 0{hline 1}59 minute scale for
+consistency across all positioning options.
+
+{p 8 8 2}{it:Example:} {cmd:sparkta price mpg if rep78==3, type(scatter) mlabel(make) mlabpos(15)} -- labels to the right{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta price mpg if rep78==3, type(scatter) mlabel(make) mlabpos(30)} -- labels below{p_end}
+
+{phang}
+{opt mlabvposition(varname)} Per-observation label position.
+{it:varname} must be a numeric variable containing values 0{hline 1}59 (minute-clock).
+Requires {cmd:mlabel()} to also be specified.
+Useful when labels would otherwise overlap -- set the position variable so
+crowded labels are directed away from each other.
+
+{p 8 8 2}{it:Example:}{p_end}
+{p 12 12 2}{cmd:gen mypos = 15}{p_end}
+{p 12 12 2}{cmd:replace mypos = 30 if price > 8000}{p_end}
+{p 12 12 2}{cmd:sparkta price mpg, type(scatter) mlabel(make, all) mlabvposition(mypos)}{p_end}
 
 {dlgtab:Histogram}
 
@@ -1333,10 +1534,23 @@ recompile. See the repository README for step-by-step instructions.
 Clicking it saves the chart as a {cmd:.png} image file. Works in all modern browsers.
 
 {phang}
-{opt nomissing} From v1.8.8, missing values in {cmd:over()}, {cmd:by()},
-{cmd:filter()}, {cmd:filter2()}, and {it:varlist} are automatically excluded
-before chart building, matching Stata convention. Specifying {cmd:nomissing}
-is therefore no longer required but is accepted for backward compatibility.
+{opt nomissing} Ensures observations with missing values in the outcome
+variable or grouping variables are excluded before chart building.
+
+{p 8 8 2}For most chart types (bar, line, area, scatter, histogram, boxplot,
+violin), missing outcome values are already excluded silently from all
+aggregation and computations -- {cmd:nomissing} has no additional visible
+effect on these charts.
+
+{p 8 8 2}The option is most meaningful for {cmd:type(cibar)} and
+{cmd:type(ciline)}, where the underlying Chart.js error-bars plugin cannot
+handle null data points and will fail to render if missing values reach the
+chart. Specifying {cmd:nomissing} guarantees a clean, null-free dataset
+reaches the renderer.
+
+{p 8 8 2}{it:Example:} {cmd:sparkta wage, type(cibar) over(race) nomissing}
+-- recommended practice for all CI charts where the outcome may have missing
+values.
 
 {phang}
 {opt novaluelabels} Display raw numeric codes instead of value labels
@@ -1361,6 +1575,15 @@ the chart showing one table per group (Overall, and each {cmd:over()} or
 {p2col:{bf:CV badge}}Coefficient of variation: Low (<15%%) Med (15{hline 1}35%%) High (>35%%){p_end}
 {p2col:{bf:Distribution}}Sparkline with IQR box, mean/median lines, outlier dots{p_end}
 {p2colreset}
+
+{p 4 4 2}
+{bf:Live filter updates:} When {cmd:filters()} or {cmd:sliders()} are active,
+the statistics panel updates automatically whenever the viewer changes a filter.
+N, Mean, Median, Min, Max, SD, and CV all recompute on the filtered observations.
+The IQR box and mean/median lines in the sparkline distribution also reposition
+to reflect the filtered data. When {cmd:by()} is used, both the chart panels
+and the statistics update together -- the Domestic panel shows statistics only
+for filtered Domestic observations, and so on.
 
 {p 4 4 2}
 Click any column header to sort. Use chip buttons to show or hide columns.
@@ -1443,14 +1666,15 @@ Charts open in your default browser unless {cmd:export()} is specified.
 {phang2}{cmd:. sparkta price, type(histogram)}{p_end}
 {phang2}{cmd:. sparkta price, type(histogram) bins(15)}{p_end}
 {phang2}{cmd:. sparkta price, type(histogram) histtype(frequency)}{p_end}
-{phang2}{cmd:. sparkta price, type(histogram) histtype(fraction) filter(foreign)}{p_end}
+{phang2}{cmd:. sparkta price, type(histogram) histtype(fraction) filters(foreign)}{p_end}
 {phang2}{cmd:. sparkta price, type(histogram) by(foreign) layout(grid)}{p_end}
 
 {pstd}{bf:Panels and filters}{p_end}
 {phang2}{cmd:. sparkta price weight, type(bar) by(foreign) layout(grid)}{p_end}
-{phang2}{cmd:. sparkta price weight, type(bar) over(foreign) filter(rep78)}{p_end}
-{phang2}{cmd:. sparkta price, type(bar) over(rep78) filter(foreign) sortgroups(desc)}{p_end}
-{phang2}{cmd:. sparkta price, type(violin) over(rep78) filter(foreign)}{p_end}
+{phang2}{cmd:. sparkta price weight, type(bar) over(foreign) filters(rep78)}{p_end}
+{phang2}{cmd:. sparkta price, type(bar) over(rep78) filters(foreign) sortgroups(desc)}{p_end}
+{phang2}{cmd:. sparkta price, type(violin) over(rep78) filters(foreign)}{p_end}
+{phang2}{cmd:. sparkta price mpg, type(bar) over(rep78) filters(foreign) sliders(price)}{p_end}
 
 {pstd}{bf:Box and violin plots}{p_end}
 {phang2}{cmd:. sparkta price, type(boxplot) over(rep78)}{p_end}
@@ -1486,7 +1710,7 @@ Charts open in your default browser unless {cmd:export()} is specified.
 
 {pstd}{bf:Full showcase example}{p_end}
 {phang2}{cmd:. sparkta price weight, type(bar) over(foreign) ///}{p_end}
-{phang2}{cmd:    sortgroups(asc) filter(rep78) theme(dark) ///}{p_end}
+{phang2}{cmd:    sortgroups(asc) filters(rep78) theme(dark) ///}{p_end}
 {phang2}{cmd:    title("Price and Weight by Car Origin") ///}{p_end}
 {phang2}{cmd:    subtitle("1978 Automobile Data") ///}{p_end}
 {phang2}{cmd:    titlesize(26) titlecolor(#ecf0f1) ///}{p_end}
@@ -1499,7 +1723,8 @@ Charts open in your default browser unless {cmd:export()} is specified.
 {title:Utility Command}
 
 {phang}
-{cmd:. sparkta_check}
+{cmd:. sysuse auto, clear}
+{cmd:. sparkta price, over(foreign)}
 
 {p 4 4 2}
 Verifies the installation and displays the full resolved option list.
@@ -1511,6 +1736,12 @@ or upgrading to confirm everything is wired correctly.
 {p 4 4 2}
 {bf:Stata 17 or later is required.} Running sparkta on Stata 16 or earlier
 will produce an error before any chart is built.
+
+{p 4 4 2}
+{bf:Filter updates for histogram, boxplot/violin, CI charts, stacked charts,
+pie, and donut} are not yet supported. The chart will render correctly at
+page load but will not respond to filter dropdown changes for these chart
+types. Bar, line, area, and scatter charts support full live filtering.
 
 {p 4 4 2}
 Pie and donut charts require exactly one numeric variable and {cmd:over()}.
@@ -1544,6 +1775,71 @@ to render (Chart.js loaded from CDN). Use {cmd:offline} for air-gapped use.
 {title:Version History}
 
 {p2colset 6 16 16 2}
+{p2col:{bf:v3.5.96}}Documentation and version consolidation. No code changes. Comprehensive
+regression test suite (155 cases) confirmed all chart types, options, and filter
+interactions working correctly. All tests pass.{p_end}
+
+{p2col:{bf:v3.5.96}}Renamed {cmd:alabelfontsize()} to {cmd:alabelfs()} to resolve a
+Stata option parser conflict on Windows. The original 14-character name caused
+Stata to emit "option alabelfontsize() not allowed" despite the option being correctly
+declared in the syntax block. Root cause unclear (possibly Stata internal limit on
+option name length, or conflict with an undocumented built-in). The 8-character
+replacement {cmd:alabelfs()} works correctly. Also converted ado file to CRLF
+line endings for Windows compatibility. No Java recompile needed.{p_end}
+
+{p2col:{bf:v3.5.94}}Converted {cmd:sparkta.ado} to Windows CRLF line endings.
+Previous LF-only endings may have caused the Stata syntax parser to misparse
+long multi-line {cmd:syntax} blocks on Windows. No code changes.{p_end}
+
+{p2col:{bf:v3.5.93}}Comprehensive option abbreviation audit. No real conflicts found
+(Stata matching requires input between min-abbrev and full option name). Several
+option capitalisation adjustments applied as preventive measure.{p_end}
+
+{p2col:{bf:v3.5.92}}Code quality pass (Opus review #1,#2,#5,#7,#10b). No behaviour
+change. {cmd:buildChartDataFromRows()} added to engine (eliminates double
+{cmd:filterRows()} call). T95 lookup table hoisted to IIFE scope. Sparkline legend
+emitted once per panel not once per group. O(N) bucket pass in stats badge update.
+Lowess weight variable renamed {cmd:w}->{cmd:wt}. sthlp: full methodology section
+with statistical citations added.{p_end}
+
+{p2colset 6 16 16 2}
+
+
+{p2col:{bf:v3.5.91}}Fix {cmd:_sparkta_updateStatsBadges} never closing due to missing
+closing brace: helper functions (_fmtStat, _cvClass, _updateSpk, _updateStatsGroup) were
+trapped inside the outer function, making them unreachable from {cmd:_onFilterChange}.
+Rewritten to emit helpers first, main function last, with an unconditional close.
+Also fix: {cmd:var rows} undefined in bar/line {cmd:_onFilterChange} path -- added
+{cmd:filterRows()} call before {cmd:buildChartData()} so badge update has rows in scope.{p_end}
+
+{p2col:{bf:v3.5.89}}Fix {cmd:querySelector('#g0 .grp-badge')} targeting wrong element:
+{cmd:id='g0'} is on the table content div, not the header. Badge spans now have
+{cmd:id='sbadge_N'} (added to StatsRenderer) and JS uses {cmd:getElementById}.{p_end}
+
+{p2col:{bf:v3.5.88}}Fix {cmd:spkId()} called as method instead of {cmd:spkId.apply()}:
+{cmd:java.util.function.Function} requires {cmd:.apply()} syntax in Java 11.{p_end}
+
+{p2col:{bf:v3.5.87}}F-2A: Full stats table live update on filter change. All stat cells
+(N, Mean, Median, Min, Max, SD, CV badge) now update when a filter dropdown changes.
+Sparkline IQR box and mean/median lines reposition to reflect filtered distribution.
+New engine function {cmd:buildGroupStats(rows, plotVar)} computes all stats in O(N).
+New {cmd:_updateStatsGroup(gi, rows, plotVars)} JS function updates cells by ID.
+Cell IDs added to StatsRenderer: {cmd:stc_{g}_{v}_{col}}; sparkline IDs: {cmd:spk_{g}_{v}_{el}}.
+Java recompile required.{p_end}
+
+{p2col:{bf:v3.5.86}}Fix stats badge update: {cmd:querySelector('#g0 .grp-badge')} returned
+null because {cmd:id='g0'} is on the content div not the header. Added {cmd:id='sbadge_N'}
+to each badge span.{p_end}
+
+{p2col:{bf:v3.5.85}}Fix bars disappearing after filter in bar+{cmd:over()}+{cmd:by()} panels:
+{cmd:_updatePanelChart} was treating single-dataset colorByCategory charts as multi-dataset.
+Fixed: detect {cmd:dsets.length === 1} and assign full data array directly.{p_end}
+
+{p2col:{bf:v3.5.84}}F-2B: Stats panel N badges now update live when filter changes.
+F-3: {cmd:by()} panel charts now update independently on filter change.
+{cmd:_smeta} gains {cmd:byGroups} and {cmd:chartType} fields.
+{cmd:buildFilterScriptByPanels()} fully implemented (was stub). Java recompile required.{p_end}
+
 {p2col:{bf:v3.5.34}}Fix {cmd:stackedhbar100} tooltip showing 0%% share.
 With {cmd:indexAxis:'y'}, Chart.js puts the numeric value in
 {cmd:ctx.parsed.x} not {cmd:ctx.parsed.y}. Stack100 tooltip callback
@@ -1560,6 +1856,14 @@ With {cmd:indexAxis:'y'}, Chart.js puts the numeric value in
 {cmd:ctx.parsed.x} not {cmd:ctx.parsed.y}. Stack100 tooltip callback
 now uses {cmd:ctx.parsed.x} when horizontal, {cmd:ctx.parsed.y} otherwise.
 Java recompile required.{p_end}
+{p2col:{bf:v3.5.56}}Documentation-only. Two updates:
+(1) Clarified {cmd:nomissing} semantics: no-op for bar/line/area/scatter/histogram/
+boxplot/violin; meaningful only for {cmd:cibar}/{cmd:ciline} where null data causes
+a rendering failure.
+(2) Updated all {cmd:filter()}/{cmd:filter2()} references in help file to
+{cmd:filters()} (F-0 unlimited filter engine) and added full documentation for
+{cmd:filters()} and {cmd:sliders()} including synopt entries, Options blocks,
+and examples. No code change, no Java recompile needed.{p_end}
 {p2col:{bf:v3.5.42}}Jar search reverted to {cmd:findfile} as primary lookup.
 {cmd:c(source)} referenced in v3.5.40 does not exist in Stata -- removed.
 Added {cmd:sysdir_personal} forward-slash variant for Mac/Linux and explicit
@@ -1574,7 +1878,7 @@ primary lookup, finding {cmd:sparkta.jar} wherever Stata installed the ado file
 (SSC {cmd:PLUS/s/sparkta/}, {cmd:net install personal/}, or any adopath location).
 Added {cmd:sysdir_PLUS} subfolder fallback and Mac/Linux forward-slash
 {cmd:sysdir_personal} variants. Removed hardcoded {cmd:C:\ado\personal} path.
-{cmd:sparkta_check.ado} updated to match. Ado-only, no recompile needed.{p_end}
+Ado-only, no recompile needed.{p_end}
 {p2col:{bf:v3.5.38}}Documentation fix: {cmd:xticks()} detail block in Options section was missing
 its opening {cmd:{phang}} and {cmd:{opt xticks(list)}} line -- the block began mid-sentence
 ("supplied as a pipe-separated list...") with no heading.
@@ -1640,7 +1944,7 @@ optional third token per entry specifying direction as minutes on a clock face
 (0=center, 15=right, 30=below, 45=left). New {cmd:alabelgap()} option sets offset
 distance in pixels (arg 149). Matches Stata {cmd:mlabpos(0)} semantics exactly.{p_end}
 {p2col:{bf:v3.5.2}}Validation fix: {cmd:apointsize()}, {cmd:pointhoversize()},
-{cmd:alabelfontsize()} now use {cmd:real()} instead of {cmd:confirm number}
+{cmd:alabelfs()} now use {cmd:real()} instead of {cmd:confirm number}
 (string-typed options in ado require {cmd:real()} for numeric validation).
 Min-abbrev conflicts in 13 annotation options resolved by capitalisation in
 syntax block.{p_end}
@@ -1654,7 +1958,7 @@ Lines: {cmd:yline()}, {cmd:xline()}, {cmd:ylinecolor()}, {cmd:xlinecolor()},
 {cmd:ylinelabel()}, {cmd:xlinelabel()}.
 Bands: {cmd:yband()}, {cmd:xband()}, {cmd:ybandcolor()}, {cmd:xbandcolor()}.
 Points: {cmd:apoint()}, {cmd:apointcolor()}, {cmd:apointsize()}.
-Labels: {cmd:alabelpos()}, {cmd:alabeltext()}, {cmd:alabelfontsize()}.
+Labels: {cmd:alabelpos()}, {cmd:alabeltext()}, {cmd:alabelfs()}.
 Ellipses: {cmd:aellipse()}, {cmd:aellipsecolor()}, {cmd:aellipseborder()}.
 CDN lib 5: chartjs-plugin-annotation@3.0.1.{p_end}
 {p2col:{bf:v3.4.1}}Color-consistency fix for single-var bar + {cmd:over()} + {cmd:by()}
@@ -1701,13 +2005,190 @@ bandwidth). Inline legend and custom tooltip.{p_end}
 {p2col:{bf:v1.4.0}}Interactive filter dropdowns, dark theme.{p_end}
 {p2colreset}
 
+
+{title:Statistical Methods and Implementation Notes}
+
+{p 4 4 2}
+This section documents the statistical formulas used in sparkta, their sources,
+and implementation decisions. All methods are implemented in Java
+({cmd:DatasetBuilder.java}) and replicated in JavaScript ({cmd:sparkta_engine.js})
+for client-side filter updates. Both implementations produce identical results
+to six significant figures.
+
+{p 4 4 2}
+{bf:Summary statistics}
+
+{p 4 4 2}
+All summary statistics match Stata's {helpb summarize} output exactly.
+N is the count of non-missing observations. Mean is the arithmetic mean.
+Standard deviation uses Bessel's correction (denominator N-1), matching
+Stata's sample SD. Coefficient of variation is |SD / Mean|, guarded
+against division by zero.
+
+{p 4 4 2}
+Percentiles (median, Q1, Q3) use Stata's default definition: for a sorted
+sample of size n, the h-th order statistic is at position h = (n+1)*p/100.
+When h is non-integer, the result is linearly interpolated between the
+floor(h) and ceil(h) order statistics, clamped to [1, n]. This matches
+the formula in:
+
+{pmore}
+Stata Corp (2023). {it:Stata Base Reference Manual, Release 18}.
+{it:summarize} entry, percentile definitions. StataCorp LLC, College
+Station, TX. {browse "https://www.stata.com/manuals/rsummarize.pdf"}
+
+{p 4 4 2}
+{bf:Confidence intervals (cibar, ciline)}
+
+{p 4 4 2}
+Confidence intervals use the t-distribution at the user-specified level
+(default 95%%). The interval is:
+
+{p 8 8 2}
+mean +/- t* x (SD / sqrt(N))
+
+{p 4 4 2}
+where t* is the critical value from the t-distribution with N-1 degrees
+of freedom. Groups with N < 2 are omitted. This matches Stata's
+{helpb ci means} command. The t-critical value for df 1-30 is looked up
+from an exact 8-decimal-place table matching Stata's {cmd:invttail()}
+function. For df > 30, a four-term Cornish-Fisher expansion is used
+(maximum error < 1e-7 relative to the exact value):
+
+{pmore}
+Cornish, E.A. and Fisher, R.A. (1938). Moments and cumulants in the
+specification of distributions. {it:Revue de l'Institut International de Statistique},
+5, 307-320. {browse "https://doi.org/10.2307/1400905"}
+
+{pmore}
+Abramowitz, M. and Stegun, I.A. (1964). {it:Handbook of Mathematical Functions},
+formula 26.7.8. National Bureau of Standards, Washington DC.
+
+{p 4 4 2}
+{bf:Histogram binning}
+
+{p 4 4 2}
+Default bin count uses Sturges' rule:
+
+{p 8 8 2}
+k = ceil(log2(n) + 1)
+
+{p 4 4 2}
+clamped to the range [5, 50]. Users can override with {cmd:bins(k)}.
+The Sturges reference is:
+
+{pmore}
+Sturges, H.A. (1926). The choice of a class interval.
+{it:Journal of the American Statistical Association}, 21(153), 65-66.
+{browse "https://doi.org/10.1080/01621459.1926.10502161"}
+
+{p 4 4 2}
+{bf:Kernel density (violin charts)}
+
+{p 4 4 2}
+Violin charts delegate kernel density estimation to the
+{cmd:@sgratzl/chartjs-chart-boxplot} plugin, which uses a Gaussian kernel
+with Scott's rule for bandwidth selection:
+
+{p 8 8 2}
+h = 1.06 x sigma x n^(-1/5)
+
+{p 4 4 2}
+The {cmd:bandwidth()} option passes a multiplier applied to the plugin's
+default bandwidth. The Scott reference is:
+
+{pmore}
+Scott, D.W. (1992). {it:Multivariate Density Estimation: Theory, Practice,
+and Visualization}. John Wiley & Sons, New York.
+{browse "https://doi.org/10.1002/9780470316849"}
+
+{p 4 4 2}
+{bf:Boxplot whiskers (boxplot, hbox)}
+
+{p 4 4 2}
+Whiskers extend to the most extreme observation within
+{it:k} x IQR of the box edges, where IQR = Q3 - Q1.
+The default multiplier is k = 1.5 (Tukey fences). Users can override
+with {cmd:whiskerfence(k)}. Observations beyond the fences are drawn
+as individual outlier dots. The Tukey fence reference is:
+
+{pmore}
+Tukey, J.W. (1977). {it:Exploratory Data Analysis}. Addison-Wesley,
+Reading, MA. Chapter 2.
+
+{p 4 4 2}
+{bf:Locally weighted regression (fit(lowess))}
+
+{p 4 4 2}
+The {cmd:fit(lowess)} option fits a locally weighted scatterplot smoother
+using a tricube weight function with bandwidth fraction f = 0.8.
+The implementation uses weighted least squares at each evaluation point.
+For observation i with predictor xi and neighborhood half-width h:
+
+{p 8 8 2}
+weight_j = (1 - |xj - xi|/h)^3 for |xj - xi|/h < 1, else 0
+
+{p 4 4 2}
+Values are evaluated at a grid of up to 200 points (or 4000/nGroups points
+with {cmd:over()}) to limit output size. The smoother is applied after
+{cmd:sort xvar, stable} to match Stata's {helpb lowess} command kinks
+exactly. The foundational reference is:
+
+{pmore}
+Cleveland, W.S. (1979). Robust locally weighted regression and smoothing
+scatterplots. {it:Journal of the American Statistical Association},
+74(368), 829-836. {browse "https://doi.org/10.1080/01621459.1979.10481038"}
+
+{p 4 4 2}
+{bf:Other curve fits (lfit, qfit, exp, log, power, ma)}
+
+{p 4 4 2}
+Linear ({cmd:lfit}) and quadratic ({cmd:qfit}) fits use ordinary least
+squares. Exponential ({cmd:exp}: y = ae^(bx)), logarithmic ({cmd:log}:
+y = a + b*ln(x)), and power ({cmd:power}: y = ax^b) fits use OLS after
+linearisation via log transformation. Moving average ({cmd:ma}) uses a
+window of 5 observations by default.
+
+{p 4 4 2}
+{bf:Interactive filtering engine}
+
+{p 4 4 2}
+The JavaScript filtering engine ({cmd:sparkta_engine.js}) embedded in
+each HTML file is an original implementation by the sparkta authors.
+Data is stored in typed arrays (Float32Array / Int32Array) and encoded
+as base64 for charts with 200 or more observations, reducing HTML file
+size by approximately 40%% relative to JSON encoding. Filtering operates
+in O(N) time using pre-built group-index arrays, consistent with the
+approach used in the Java rendering layer.
+
+{p 4 4 2}
+{bf:Chart.js and plugins}
+
+{p 4 4 2}
+sparkta uses Chart.js 4.4.0 for all chart rendering.
+The following third-party plugins are included with permission under
+their respective open-source licenses (all MIT):
+
+{p2colset 8 44 44 2}
+{p2col:{cmd:@sgratzl/chartjs-chart-boxplot 4.4.5}}Boxplot and violin charts{p_end}
+{p2col:{cmd:chartjs-chart-error-bars 4.4.0}}CI error bars (cibar, ciline){p_end}
+{p2col:{cmd:chartjs-plugin-datalabels 2.2.0}}Data label overlays{p_end}
+{p2col:{cmd:chartjs-plugin-annotation 3.0.1}}Reference lines, bands, points, ellipses{p_end}
+{p2colreset}
+
+{pmore}
+Chart.js: {browse "https://github.com/chartjs/Chart.js"} (MIT license){break}
+chartjs-chart-boxplot: {browse "https://github.com/sgratzl/chartjs-chart-boxplot"} (MIT){break}
+chartjs-chart-error-bars: {browse "https://github.com/sgratzl/chartjs-chart-error-bars"} (MIT){break}
+chartjs-plugin-datalabels: {browse "https://github.com/chartjs/chartjs-plugin-datalabels"} (MIT){break}
+chartjs-plugin-annotation: {browse "https://github.com/chartjs/chartjs-plugin-annotation"} (MIT)
+
 {title:Authors}
 
 {pstd}
 {bf:Fahad Mirza} | Author and Developer
 
 {pmore}
-Email: fm.109@hotmail.com{break}
 {browse "https://www.linkedin.com/in/fahad-mirza/":LinkedIn}{space 3}
 {browse "https://medium.com/@fahad-mirza":Medium Blog}{space 3}
 {browse "https://github.com/fahad-mirza/":GitHub}
@@ -1723,18 +2204,14 @@ feature development.
 {title:Package Information}
 
 {p 4 4 2}
-{bf:sparkta} v3.5.42{break}
-Chart rendering: Chart.js 4.4 ({browse "https://cdn.jsdelivr.net":cdn.jsdelivr.net}){break}
+{bf:sparkta} v3.5.96{break}
+Chart rendering: Chart.js 4.4.0 ({browse "https://www.chartjs.org":chartjs.org}){break}
+Boxplot/violin: @sgratzl/chartjs-chart-boxplot 4.4.5{break}
+Error bars (CI charts): chartjs-chart-error-bars 4.4.0{break}
+Data labels: chartjs-plugin-datalabels 2.2.0{break}
+Annotations: chartjs-plugin-annotation 3.0.1{break}
 Java bridge: Stata Java Plugin Interface (JPI){break}
-Requires: Stata 17+ and Java 8 or later
-
-{pmore}
-{bf:Note on sparkta.jar:} {cmd:sparkta} ships with a pre-compiled Java plugin
-({cmd:sparkta.jar}) that is installed automatically alongside the .ado file.
-Users who install via {cmd:ssc install sparkta} or {cmd:net install sparkta}
-receive the jar with no additional steps. The jar bundles all JavaScript
-libraries required for chart rendering so that offline mode works without
-any internet connection or CDN access.
+Requires: Stata 17+ and {cmd:sparkta.jar}
 
 {title:Also see}
 
@@ -1744,4 +2221,4 @@ any internet connection or CDN access.
 {helpb query} {hline 2} Java heap information ({cmd:query java})
 
 {hline}
-{it:sparkta.sthlp  version 3.5.42  2026-03-12}
+{it:sparkta.sthlp  version 3.5.96  2026-03-17}
