@@ -294,6 +294,52 @@ public class DataEmbedder {
         }
         // F-3/F-2: chart type so JS filter knows scatter vs bar/line path.
         sb.append(",\n  chartType: ").append(jsStr(o.type));
+        // CI level for cibar/ciline filter rebuild (90|95|99, default 95)
+        int ciLvl = 95;
+        try { ciLvl = Integer.parseInt(o.stats.cilevel.trim()); } catch (Exception ignore) {}
+        sb.append(",\n  cilevel: ").append(ciLvl);
+        // Histogram bin edges for filter recount (null for non-histogram charts)
+        if (o.type.equals("histogram") && data.hasAnyFilter()) {
+            // Embed bin edges as numeric array: [lo0, lo1, ..., loN-1, hiN-1]
+            // JS filter recount: for each filtered row value, binary-search into edges.
+            java.util.List<Double> hVals = new java.util.ArrayList<>();
+            java.util.List<Variable> hNv = data.getNumericVariables();
+            if (!hNv.isEmpty()) {
+                for (Object v : hNv.get(0).getValues()) {
+                    if (v instanceof Number) hVals.add(((Number)v).doubleValue());
+                }
+                java.util.Collections.sort(hVals);
+            }
+            int hBins = 0;
+            if (!hVals.isEmpty()) {
+                hBins = (int) Math.max(5, Math.min(50, Math.ceil(Math.log(hVals.size()) / Math.log(2) + 1)));
+                if (!o.stats.bins.isEmpty()) {
+                    try { hBins = Math.max(2, Integer.parseInt(o.stats.bins.trim())); }
+                    catch (Exception ignore2) {}
+                }
+            }
+            sb.append(",\n  histType: ").append(jsStr(o.stats.histtype.isEmpty() ? "density" : o.stats.histtype));
+            sb.append(",\n  histN: ").append(hVals.size());
+            if (!hVals.isEmpty() && hBins > 0) {
+                double hMin = hVals.get(0);
+                double hMax = hVals.get(hVals.size()-1);
+                double hW   = (hMax == hMin) ? 1.0 : (hMax - hMin) / hBins;
+                sb.append(",\n  histBinWidth: ").append(String.format("%.10f", hW));
+                sb.append(",\n  histBins: [");
+                for (int hb = 0; hb < hBins; hb++) {
+                    if (hb > 0) sb.append(",");
+                    sb.append(String.format("%.10f", hMin + hb * hW));
+                }
+                sb.append(",").append(String.format("%.10f", hMax));
+                sb.append("]");
+            } else {
+                sb.append(",\n  histBinWidth: 1");
+                sb.append(",\n  histBins: null");
+            }
+        } else {
+            sb.append(",\n  histType: null");
+            sb.append(",\n  histBins: null");
+        }
         sb.append("\n};\n");
 
         return sb.toString();

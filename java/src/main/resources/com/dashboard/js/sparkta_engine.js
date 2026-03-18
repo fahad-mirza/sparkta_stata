@@ -692,6 +692,22 @@
     }
 
     /* -----------------------------------------------------------------------
+     * getValues(rows, plotVar)
+     * Returns a number[] of non-null values for the given rows and variable.
+     * Used by histogram filter to recount observations into bins.
+     * ----------------------------------------------------------------------- */
+    function getValues(rows, plotVar) {
+        var col = _sdGet(plotVar);
+        if (!col) return [];
+        var vals = [];
+        for (var i = 0; i < rows.length; i++) {
+            var v = _sdVal(col, rows[i]);
+            if (v !== null) vals.push(v);
+        }
+        return vals;
+    }
+
+    /* -----------------------------------------------------------------------
      * Public API
      * ----------------------------------------------------------------------- */
     w._sAgg = {

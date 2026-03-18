@@ -1,5 +1,5 @@
 {smcl}
-{* sparkta.sthlp  v3.5.96  2026-03-17}{...}
+{* sparkta.sthlp  v3.5.108  2026-03-18}{...}
 {hline}
 help for {cmd:sparkta}
 {hline}
@@ -1775,11 +1775,11 @@ to render (Chart.js loaded from CDN). Use {cmd:offline} for air-gapped use.
 {title:Version History}
 
 {p2colset 6 16 16 2}
-{p2col:{bf:v3.5.96}}Documentation and version consolidation. No code changes. Comprehensive
+{p2col:{bf:v3.5.108}}Documentation and version consolidation. No code changes. Comprehensive
 regression test suite (155 cases) confirmed all chart types, options, and filter
 interactions working correctly. All tests pass.{p_end}
 
-{p2col:{bf:v3.5.96}}Renamed {cmd:alabelfontsize()} to {cmd:alabelfs()} to resolve a
+{p2col:{bf:v3.5.108}}Renamed {cmd:alabelfontsize()} to {cmd:alabelfs()} to resolve a
 Stata option parser conflict on Windows. The original 14-character name caused
 Stata to emit "option alabelfontsize() not allowed" despite the option being correctly
 declared in the syntax block. Root cause unclear (possibly Stata internal limit on
@@ -2204,7 +2204,7 @@ feature development.
 {title:Package Information}
 
 {p 4 4 2}
-{bf:sparkta} v3.5.96{break}
+{bf:sparkta} v3.5.108{break}
 Chart rendering: Chart.js 4.4.0 ({browse "https://www.chartjs.org":chartjs.org}){break}
 Boxplot/violin: @sgratzl/chartjs-chart-boxplot 4.4.5{break}
 Error bars (CI charts): chartjs-chart-error-bars 4.4.0{break}
@@ -2221,4 +2221,4 @@ Requires: Stata 17+ and {cmd:sparkta.jar}
 {helpb query} {hline 2} Java heap information ({cmd:query java})
 
 {hline}
-{it:sparkta.sthlp  version 3.5.96  2026-03-17}
+{it:sparkta.sthlp  version 3.5.107  2026-03-18}

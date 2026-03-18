@@ -6,7 +6,7 @@
 One command. Zero dependencies. No Python. No R. No server.
 
 [![Stata 17+](https://img.shields.io/badge/Stata-17%2B-1a6fa0?style=flat-square)](https://www.stata.com)
-[![Version](https://img.shields.io/badge/version-3.5.96-4a9eff?style=flat-square)](#)
+[![Version](https://img.shields.io/badge/version-3.5.108-4a9eff?style=flat-square)](#)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](#)
 [![Chart.js](https://img.shields.io/badge/Chart.js-4.4-f97316?style=flat-square)](https://www.chartjs.org)
 [![SSC](https://img.shields.io/badge/SSC-ssc%20install%20sparkta-8b5cf6?style=flat-square)](#installation)
@@ -24,7 +24,7 @@ sparkta price, type(cibar) over(rep78) title("Mean Price by Repair Record")
 
 ---
 
-## What is new in v3.5.96
+## What is new in v3.5.108
 
 > **Major update.** If you installed sparkta previously, this version brings
 > substantial new features. Update with:

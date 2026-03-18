@@ -296,17 +296,214 @@ class FilterRenderer {
             sb.append("  if (nc) nc.textContent = rows.length + ' obs';\n");
             sb.append("  _sparkta_updateStatsBadges(rows);\n");
         } else {
-            // Filter once; pass rows to buildChartDataFromRows (avoids double filter, #1).
-            sb.append("  var rows = _sAgg.filterRows(catState, sldState);\n");
-            sb.append("  var result = _sAgg.buildChartDataFromRows(rows);\n");
-            sb.append("  if (!_mainChart) return;\n");
-            sb.append("  _mainChart.data.labels   = result.labels;\n");
-            sb.append("  for (var di = 0; di < result.datasets.length && di < _mainChart.data.datasets.length; di++) {\n");
-            sb.append("    _mainChart.data.datasets[di].data = result.datasets[di].data;\n");
-            sb.append("  }\n");
-            sb.append("  _mainChart.update('none');\n");
-            sb.append("  var nc = document.getElementById('_nObs');\n");
-            sb.append("  if (nc) nc.textContent = result.nActive + ' obs';\n");
+            boolean isCiChart  = o.type.equals("cibar") || o.type.equals("ciline");
+            boolean isHistogram = o.type.equals("histogram");
+            boolean isBoxViolin = o.type.equals("boxplot") || o.type.equals("hboxplot")
+                                || o.type.equals("violin")  || o.type.equals("hviolinplot");
+            if (isCiChart) {
+                // cibar/ciline: barWithErrorBars cannot be updated with .update().
+                // Must destroy and reinit via _initChart() with fresh {y,yMin,yMax} data.
+                // JS recomputes CI bounds using buildGroupStats() n/mean/sd + tCritCI().
+                // tCritCI(df,level): full lookup for 90/95/99% matching Stata ci means.
+                sb.append("  var rows = _sAgg.filterRows(catState, sldState);\n");
+                sb.append("  console.log('[cibar filter] rows:', rows.length, 'catState:', JSON.stringify(catState));\n");
+                // t-critical helper: 90/95/99 lookup tables + Cornish-Fisher for df>30
+                sb.append("  function _tCritCI(df,level) {\n");
+                sb.append("    if (df < 1) df = 1;\n");
+                sb.append("    var idf = Math.floor(df);\n");
+                // 90% table df 1-30
+                sb.append("    var T90=[0,6.31375,2.91999,2.35336,2.13185,2.01505,1.94318,1.89458,1.85955,1.83311,1.81246,1.79588,1.78229,1.77093,1.76131,1.75305,1.74588,1.73961,1.73406,1.72913,1.72472,1.72074,1.71714,1.71387,1.71088,1.70814,1.70562,1.70329,1.70113,1.69913,1.69726];\n");
+                // 95% table df 1-30
+                sb.append("    var T95=[0,12.70620,4.30265,3.18245,2.77645,2.57058,2.44691,2.36462,2.30600,2.26216,2.22814,2.20099,2.17881,2.16037,2.14479,2.13145,2.11991,2.10982,2.10092,2.09302,2.08596,2.07961,2.07387,2.06866,2.06390,2.05954,2.05553,2.05183,2.04841,2.04523,2.04227];\n");
+                // 99% table df 1-30
+                sb.append("    var T99=[0,63.65674,9.92484,5.84091,4.60409,4.03214,3.70743,3.49948,3.35539,3.24984,3.16927,3.10581,3.05454,3.01228,2.97684,2.94671,2.92078,2.89823,2.87844,2.86093,2.84534,2.83136,2.81876,2.80734,2.79694,2.78744,2.77871,2.77068,2.76326,2.75639,2.75000];\n");
+                sb.append("    var T = (level===90) ? T90 : (level===99) ? T99 : T95;\n");
+                sb.append("    if (idf <= 30) return T[idf];\n");
+                // Cornish-Fisher approximation for df > 30
+                sb.append("    var z = (level===90) ? 1.64485363 : (level===99) ? 2.57582930 : 1.95996398;\n");
+                sb.append("    var z2=z*z,z3=z2*z,z5=z2*z3,z7=z2*z5,z9=z2*z7;\n");
+                sb.append("    var d=df,d2=d*d,d3=d2*d,d4=d2*d2;\n");
+                sb.append("    return z+(z3+z)/(4*d)+(5*z5+16*z3+3*z)/(96*d2)+(3*z7+19*z5+17*z3-15*z)/(384*d3)+(79*z9+779*z7+1482*z5-1920*z3-945*z)/(92160*d4);\n");
+                sb.append("  }\n");
+                // Build CI labels and datasets from filtered rows
+                sb.append("  var _ciMeta = window._smeta || {};\n");
+                sb.append("  var _ciOver = _ciMeta.overVar;\n");
+                sb.append("  var _ciVars = _ciMeta.plotVars || [];\n");
+                sb.append("  var _ciLvl  = _ciMeta.cilevel || 95;\n");
+                sb.append("  var _ciOvLbls = _ciMeta.overLabels || [];\n");
+                sb.append("  var _ciOvCol = (window._sd && _ciOver) ? window._sd[_ciOver] : null;\n");
+                sb.append("  function _ciSdz(v) { var s=String(v); return s.endsWith('.0') ? s.slice(0,-2) : s; }\n");
+                if (o.type.equals("cibar")) {
+                // Single pass over ALL groups: keeps x-positions and colors aligned.
+                // Groups with n<2 get {y:null} placeholder (bar hidden, position kept).
+                // This matches Stata: all x-axis labels shown, empty bar for n<2 groups.
+                sb.append("  var _ciDsets = [];\n");
+                sb.append("  for (var _vi=0; _vi < _ciVars.length; _vi++) {\n");
+                sb.append("    var _ciData = [];\n");
+                sb.append("    for (var _ci=0; _ci < _ciOvLbls.length; _ci++) {\n");
+                sb.append("      var _ciGrpR2 = rows.filter(function(r){\n");
+                sb.append("        if (!_ciOvCol) return true;\n");
+                sb.append("        var v2 = _ciOvCol[r];\n");
+                sb.append("        return v2 !== null && v2 !== undefined && _ciSdz(v2) === _ciOvLbls[_ci];\n");
+                sb.append("      });\n");
+                sb.append("      var _gs = _sAgg.buildGroupStats(_ciGrpR2, _ciVars[_vi]);\n");
+                sb.append("      if (!_gs || _gs.n < 2) { _ciData.push({y:null,yMin:null,yMax:null,n:0}); continue; }\n");
+                sb.append("      var _se = _gs.sd / Math.sqrt(_gs.n);\n");
+                sb.append("      var _hw = _tCritCI(_gs.n - 1, _ciLvl) * _se;\n");
+                sb.append("      _ciData.push({y:_gs.mean, yMin:_gs.mean-_hw, yMax:_gs.mean+_hw, n:_gs.n});\n");
+                sb.append("    }\n");
+                sb.append("    var _tmplDs = (typeof _initDatasets !== 'undefined' && _initDatasets[_vi]) ? _initDatasets[_vi] : {};\n");
+                sb.append("    _ciDsets.push(Object.assign({}, _tmplDs, {data: _ciData}));\n");
+                sb.append("  }\n");
+                sb.append("  _initChart(_ciOvLbls.slice(), _ciDsets);\n");
+                } else {
+                    // ciline: 3 datasets per plotVar (upper, lower, mean line)
+                    // For simplicity reuse existing dataset styles, just update data arrays
+                    sb.append("  if (_mainChart && _ciOvLbls.length > 0) {\n");
+                    sb.append("    var _ciNDs = _mainChart.data.datasets.length;\n");
+                    sb.append("    var _ciVarN = _ciVars.length;\n");
+                    sb.append("    var _ciStride = (_ciNDs > 0 && _ciVarN > 0) ? Math.round(_ciNDs / _ciVarN) : 3;\n");
+                    sb.append("    for (var _vii=0; _vii < _ciVarN; _vii++) {\n");
+                    sb.append("      var _upData=[],_loData=[],_mnData=[];\n");
+                    sb.append("      for (var _vjj=0; _vjj < _ciValidIdx.length; _vjj++) {\n");
+                    sb.append("        var _ciGrpR2 = rows.filter(function(r){\n");
+                    sb.append("          if (!_ciOvCol) return true;\n");
+                    sb.append("          var v3 = _ciOvCol[r];\n");
+                    sb.append("          return v3 !== null && v3 !== undefined && _ciSdz(v3) === _ciOvLbls[_ciValidIdx[_vjj]];\n");
+                    sb.append("        });\n");
+                    sb.append("        var _gs2 = _sAgg.buildGroupStats(_ciGrpR2, _ciVars[_vii]);\n");
+                    sb.append("        if (!_gs2 || _gs2.n < 2) { _upData.push(null); _loData.push(null); _mnData.push(null); continue; }\n");
+                    sb.append("        var _se2 = _gs2.sd / Math.sqrt(_gs2.n);\n");
+                    sb.append("        var _hw2 = _tCritCI(_gs2.n - 1, _ciLvl) * _se2;\n");
+                    sb.append("        _upData.push(_gs2.mean + _hw2);\n");
+                    sb.append("        _loData.push(_gs2.mean - _hw2);\n");
+                    sb.append("        _mnData.push(_gs2.mean);\n");
+                    sb.append("      }\n");
+                    sb.append("      var _base = _vii * _ciStride;\n");
+                    sb.append("      if (_mainChart.data.datasets[_base])   _mainChart.data.datasets[_base].data   = _upData;\n");
+                    sb.append("      if (_mainChart.data.datasets[_base+1]) _mainChart.data.datasets[_base+1].data = _loData;\n");
+                    sb.append("      if (_mainChart.data.datasets[_base+2]) _mainChart.data.datasets[_base+2].data = _mnData;\n");
+                    sb.append("    }\n");
+                    sb.append("    _mainChart.data.labels = _ciLabels;\n");
+                    sb.append("    _mainChart.update('none');\n");
+                    sb.append("  }\n");
+                }
+                sb.append("  var nc = document.getElementById('_nObs');\n");
+                sb.append("  if (nc) nc.textContent = rows.length + ' obs';\n");
+            } else if (isHistogram) {
+                // Histogram filter: bin edges are fixed; recount observations per bin
+                // from filtered rows using histBins edges embedded in _smeta.
+                sb.append("  var rows = _sAgg.filterRows(catState, sldState);\n");
+                sb.append("  var _hm = window._smeta || {};\n");
+                sb.append("  var _hBins = _hm.histBins;\n");
+                sb.append("  var _hType = _hm.histType || 'density';\n");
+                sb.append("  var _hBW   = _hm.histBinWidth || 1;\n");
+                sb.append("  if (!_hBins || _hBins.length < 2) return;\n");
+                sb.append("  var _hN    = _hBins.length - 1;\n");  // number of bins
+                // Get the plot variable column
+                sb.append("  var _hPv   = (_hm.plotVars && _hm.plotVars[0]) ? _hm.plotVars[0] : null;\n");
+                sb.append("  if (!_hPv) return;\n");
+                // Count filtered rows into bins
+                sb.append("  var _hCnts = new Array(_hN).fill(0);\n");
+                sb.append("  var _hMin  = _hBins[0];\n");
+                sb.append("  var _hVals = _sAgg.getValues(rows, _hPv);\n");
+                sb.append("  for (var _hi=0; _hi < _hVals.length; _hi++) {\n");
+                sb.append("    var _hv = _hVals[_hi];\n");
+                sb.append("    var _hb = Math.min(_hN-1, Math.max(0, Math.floor((_hv - _hMin) / _hBW)));\n");
+                sb.append("    _hCnts[_hb]++;\n");
+                sb.append("  }\n");
+                // Convert counts to y-values based on histType
+                sb.append("  var _hTotal = rows.length || 1;\n");
+                sb.append("  var _hYVals = _hCnts.map(function(c) {\n");
+                sb.append("    if (_hType === 'frequency') return c;\n");
+                sb.append("    if (_hType === 'fraction')  return c / _hTotal;\n");
+                sb.append("    return c / (_hTotal * _hBW);\n");  // density (default)
+                sb.append("  });\n");
+                sb.append("  if (!_mainChart) return;\n");
+                sb.append("  _mainChart.data.datasets[0].data = _hYVals;\n");
+                sb.append("  _mainChart.update('none');\n");
+                sb.append("  var nc = document.getElementById('_nObs');\n");
+                sb.append("  if (nc) nc.textContent = rows.length + ' obs';\n");
+            } else if (isBoxViolin) {
+                // Boxplot/violin filter: must destroy+reinit since plugin uses
+                // pre-computed stats objects (boxplot) or raw number[] (violin).
+                sb.append("  var rows = _sAgg.filterRows(catState, sldState);\n");
+                sb.append("  var _bm   = window._smeta || {};\n");
+                sb.append("  var _bOv  = _bm.overVar;\n");
+                sb.append("  var _bPv  = (_bm.plotVars && _bm.plotVars[0]) ? _bm.plotVars[0] : null;\n");
+                sb.append("  var _bLbls= _bm.overLabels || [];\n");
+                sb.append("  if (!_bPv) return;\n");
+                sb.append("  var _bIsViolin = (_bm.chartType === 'violin' || _bm.chartType === 'hviolinplot');\n");
+                // Boxplot whisker fence k -- read from first dataset's options if available
+                sb.append("  var _bK = 1.5;\n");
+                sb.append("  if (_mainChart && _mainChart.data.datasets[0] && _mainChart.data.datasets[0].outlierRadius !== undefined) _bK = 1.5;\n");
+                // JS boxplot stats helper
+                sb.append("  function _bPctile(sorted, p) {\n");
+                sb.append("    var n=sorted.length; if(n===0)return null; if(n===1)return sorted[0];\n");
+                sb.append("    var h=(n+1)*p/100, lo=Math.max(1,Math.min(n,Math.floor(h))), hi=Math.max(1,Math.min(n,Math.ceil(h)));\n");
+                sb.append("    if(lo===hi)return sorted[lo-1];\n");
+                sb.append("    return sorted[lo-1]+(h-Math.floor(h))*(sorted[hi-1]-sorted[lo-1]);\n");
+                sb.append("  }\n");
+                sb.append("  function _bStats(vals) {\n");
+                sb.append("    if(!vals||vals.length===0)return null;\n");
+                sb.append("    var s=vals.slice().sort(function(a,b){return a-b;});\n");
+                sb.append("    var n=s.length,sum=0; for(var i=0;i<n;i++)sum+=s[i];\n");
+                sb.append("    var mean=sum/n,q1=_bPctile(s,25),q3=_bPctile(s,75),median=_bPctile(s,50);\n");
+                sb.append("    var iqr=q3-q1, wLo=s[0], wHi=s[n-1];\n");
+                sb.append("    for(var j=0;j<n;j++){if(s[j]>=q1-_bK*iqr){wLo=s[j];break;}}\n");
+                sb.append("    for(var j2=n-1;j2>=0;j2--){if(s[j2]<=q3+_bK*iqr){wHi=s[j2];break;}}\n");
+                sb.append("    var outs=[];\n");
+                sb.append("    for(var k2=0;k2<n;k2++){if(s[k2]<q1-_bK*iqr||s[k2]>q3+_bK*iqr)outs.push(s[k2]);}\n");
+                sb.append("    return {min:wLo,q1:q1,median:median,mean:mean,q3:q3,max:wHi,outliers:outs};\n");
+                sb.append("  }\n");
+                // Collect row values per over-group
+                sb.append("  var _bNewDsets = [];\n");
+                sb.append("  var _bExDsets = (_mainChart && _mainChart.data.datasets) ? _mainChart.data.datasets : [];\n");
+                // Use _sd[overVar] directly for group matching (same as cibar fix)
+                sb.append("  var _bOvCol = (_bOv && window._sd) ? window._sd[_bOv] : null;\n");
+                sb.append("  function _bSdz(v) { var s=String(v); return s.endsWith('.0') ? s.slice(0,-2) : s; }\n");
+                sb.append("  for (var _bdi=0; _bdi < _bExDsets.length; _bdi++) {\n");
+                sb.append("    var _bGrp = _bLbls[_bdi] !== undefined ? _bLbls[_bdi] : null;\n");
+                sb.append("    var _bVals = [];\n");
+                sb.append("    for (var _bri=0; _bri < rows.length; _bri++) {\n");
+                sb.append("      var _br = rows[_bri];\n");
+                if (data.hasOver()) {
+                    sb.append("      if (_bOvCol) {\n");
+                    sb.append("        var _bv2 = _bOvCol[_br];\n");
+                    sb.append("        if (_bv2 === null || _bv2 === undefined || _bSdz(_bv2) !== _bGrp) continue;\n");
+                    sb.append("      }\n");
+                }
+                sb.append("      var _bvArr = _sAgg.getValues([_br], _bPv);\n");
+                sb.append("      if (_bvArr.length > 0) _bVals.push(_bvArr[0]);\n");
+                sb.append("    }\n");
+                // Build data point: violin=raw array, boxplot=stats object
+                sb.append("    var _bPt = _bIsViolin ? (_bVals.length > 0 ? [_bVals] : [[0]]) : [_bStats(_bVals)];\n");
+                sb.append("    _bNewDsets.push(Object.assign({}, _bExDsets[_bdi], {data: _bPt}));\n");
+                sb.append("  }\n");
+                // Reinit chart with new data (destroy+reinit preserves plugin callbacks)
+                sb.append("  if (typeof _initChart === 'function') {\n");
+                sb.append("    _initChart(_mainChart.data.labels, _bNewDsets);\n");
+                sb.append("  } else if (_mainChart) {\n");
+                sb.append("    for (var _bui=0; _bui < _bNewDsets.length; _bui++) {\n");
+                sb.append("      if (_mainChart.data.datasets[_bui]) _mainChart.data.datasets[_bui].data = _bNewDsets[_bui].data;\n");
+                sb.append("    }\n");
+                sb.append("    _mainChart.update('none');\n");
+                sb.append("  }\n");
+                sb.append("  var nc = document.getElementById('_nObs');\n");
+                sb.append("  if (nc) nc.textContent = rows.length + ' obs';\n");
+            } else {
+                // Filter once; pass rows to buildChartDataFromRows (avoids double filter, #1).
+                sb.append("  var rows = _sAgg.filterRows(catState, sldState);\n");
+                sb.append("  var result = _sAgg.buildChartDataFromRows(rows);\n");
+                sb.append("  if (!_mainChart) return;\n");
+                sb.append("  _mainChart.data.labels   = result.labels;\n");
+                sb.append("  for (var di = 0; di < result.datasets.length && di < _mainChart.data.datasets.length; di++) {\n");
+                sb.append("    _mainChart.data.datasets[di].data = result.datasets[di].data;\n");
+                sb.append("  }\n");
+                sb.append("  _mainChart.update('none');\n");
+                sb.append("  var nc = document.getElementById('_nObs');\n");
+                sb.append("  if (nc) nc.textContent = result.nActive + ' obs';\n");
+            }
         }
         // F-2: update stats panel N badges to reflect filtered row counts.
         // querySelector('#g0 .grp-badge') finds the badge inside each group div.

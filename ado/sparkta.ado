@@ -1,4 +1,4 @@
-*! sparkta version 3.5.96
+*! sparkta version 3.5.108
 *! v3.5.58: mlabpos(#) clock position for scatter labels; marker name in tooltip.
 *!          Args renumbered: mlabpos=154, fit=155, fitci=156. Java recompile required.
 *!          fitci CI band for lfit/qfit. Args 152-155 added. Java recompile required.
@@ -350,7 +350,7 @@ program define sparkta
     version 17
 
     // Single version constant -- update this one line on every version bump
-    local sparkta_version "3.5.96"
+    local sparkta_version "3.5.108"
 
     // Print version so user can confirm which ado is loaded
     display as text "  [sparkta v`sparkta_version']"
@@ -1430,7 +1430,7 @@ program define sparkta
         display as text ""
     }
 
-    // - Stata-computed fit lines (v3.5.96) -----------------------------------
+    // - Stata-computed fit lines (v3.5.108) -----------------------------------
     // Computes fitted values using native Stata commands before calling Java.
     // Supports fit() alone (no over) and fit() with over() (per-group lines).
     //
@@ -1468,7 +1468,7 @@ program define sparkta
         if "`over'" != "" local _fit_has_over 1
 
         // Adaptive thinning: cap per-group points so total stays under ~50KB.
-        // No over() or single group: _maxpts = 4000 (unchanged from v3.5.96).
+        // No over() or single group: _maxpts = 4000 (unchanged from v3.5.108).
         local _maxpts 4000
         if `_fit_has_over' {
             quietly levelsof `over' if `touse', local(_over_vals)
@@ -1656,7 +1656,7 @@ program define sparkta
         }
         else {
             // -------------------------------------------------------------------
-            // No over(): single fit on full touse subset (unchanged from v3.5.96)
+            // No over(): single fit on full touse subset (unchanged from v3.5.108)
             // -------------------------------------------------------------------
             quietly count
             local _nfit = r(N)
@@ -1689,7 +1689,7 @@ program define sparkta
                 }
                 // -- lowess ----------------------------------------------------
                 // recast double: lowess generate() stores float by default;
-                // recast promotes in-place so local reads full precision. (v3.5.96)
+                // recast promotes in-place so local reads full precision. (v3.5.108)
                 else if "`_fit'" == "lowess" {
                     quietly lowess `_yvar' `_xvar', generate(`_fv') nograph
                     quietly recast double `_fv'

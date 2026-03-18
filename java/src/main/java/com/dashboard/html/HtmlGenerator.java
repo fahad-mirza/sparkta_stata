@@ -22,7 +22,7 @@ public class HtmlGenerator {
 
     // v3.5.36: single source of truth for the jar version stamped into HTML comments.
     // Update this constant with every version bump -- it is the ONLY place to change.
-    public static final String VERSION = "3.5.96";
+    public static final String VERSION = "3.5.108";
 
     private final DashboardOptions o;
     private String[] seriesColors;
@@ -581,9 +581,10 @@ public class HtmlGenerator {
             // Legend and sort hint - footer row
             + ".stats-footer{display:flex;align-items:center;justify-content:space-between;"
             + "padding:.3rem .9rem .55rem;}\n"
-            + ".spark-legend-global{display:flex;flex-wrap:wrap;align-items:center;"
-            + "gap:.6rem 1.2rem;padding:.5rem 1rem;margin-top:.5rem;"
-            + "border-top:1px solid #e0e0e0;font-size:.68rem;color:"+sub+";}\n"
+            + ".spark-legend-global{display:flex;flex-wrap:nowrap;align-items:center;"
+            + "gap:.4rem .9rem;padding:.45rem 1rem;margin-top:.5rem;"
+            + "border-top:1px solid #e0e0e0;font-size:.68rem;color:"+sub+";"
+            + "justify-content:flex-end;}\n"
             + ".spark-legend{display:flex;align-items:center;gap:1rem;"
             + "font-size:.68rem;color:"+sub+";}\n"
             + ".leg-item{display:flex;align-items:center;gap:.3rem;}\n"
@@ -881,7 +882,7 @@ public class HtmlGenerator {
     String buildDownloadJs(String plotCl) {
         if (!o.chart.download) return "";
         String rawTitle = o.title.isEmpty() ? "sparkta_chart" : o.title;
-        // v3.5.96: composite chart canvas onto a background-filled offscreen canvas
+        // v3.5.108: composite chart canvas onto a background-filled offscreen canvas
         // before toBlob(). canvas.toBlob() captures only the canvas pixels, which
         // are transparent by default. The dark/light background is applied to the
         // surrounding .chart-wrapper div via CSS, not painted onto the canvas.

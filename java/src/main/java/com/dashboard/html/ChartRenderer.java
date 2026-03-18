@@ -881,7 +881,11 @@ class ChartRenderer {
         // With over(): {"Domestic": "x,y|..", "Foreign": "x,y|.."} -- multiple entries
         java.util.LinkedHashMap<String,String> fitGroups = parseFitGroups(o.chart.fitLineData);
 
-        // Java FitComputer fallback when ado did not pre-compute (ma, or empty fitLineData)
+        // Java FitComputer fallback when ado did not pre-compute (ma, or empty fitLineData).
+        // FitComputer output is already a JS array "[{x:...,y:...},...]" -- NOT the
+        // pipe-separated "x,y|x,y|..." format that parseFitGroups/parseXYString expect.
+        // Use sentinel key "__java__" so the rendering path can detect and skip parseXYString.
+        final String[] javaLabelHolder = {""}; // receives FitResult.labelSuffix if fallback used
         if (fitGroups.isEmpty()) {
             java.util.List<Double> xs = new java.util.ArrayList<>();
             java.util.List<Double> ys = new java.util.ArrayList<>();
@@ -897,7 +901,9 @@ class ChartRenderer {
             if (xs.size() < 3) return "";
             FitComputer.FitResult fit = FitComputer.compute(xs, ys, o.chart.fit, o.chart.fitci);
             if (fit.lineData.equals("[]")) return "";
-            fitGroups.put("", fit.lineData);
+            // Store with sentinel: value IS the ready JS array, not pipe-sep format
+            fitGroups.put("__java__", fit.lineData);
+            javaLabelHolder[0] = fit.labelSuffix; // stash suffix outside fitGroups
         }
 
         boolean isMultiGroup = fitGroups.size() > 1;
@@ -907,13 +913,16 @@ class ChartRenderer {
             // ----------------------------------------------------------------
             // Single fit line path (no over(), backward compatible)
             // ----------------------------------------------------------------
-            String pts = fitGroups.values().iterator().next();
-            String lineData = parseXYString(pts);
+            boolean javaFallback = fitGroups.containsKey("__java__");
+            String pts      = javaFallback ? fitGroups.get("__java__") : fitGroups.values().iterator().next();
+            // FitComputer output is already a JS array; pipe-sep format needs parseXYString.
+            String lineData = javaFallback ? pts : parseXYString(pts);
             if (lineData.equals("[]")) return "";
 
             String fitColor = baseColor.replace("0.85","0.75").replace(",1)",",0.9)");
             String ciColor  = baseColor.replace("0.85","0.15").replace(",1)",",0.15)");
-            String suffix   = " (" + o.chart.fit + ")";
+            // Use FitResult label suffix when available (e.g. " (MA-7)"), else fallback
+            String suffix = (!javaLabelHolder[0].isEmpty()) ? javaLabelHolder[0] : " (" + o.chart.fit + ")";
 
             // CI bands (only when no over())
             if (o.chart.fitci && !o.chart.fitCiUpper.isEmpty()
@@ -1608,15 +1617,15 @@ class ChartRenderer {
         //
         //  Mode 1 -- multi-var, no over(): each variable is one slice,
         //            value = sum of that variable across all observations.
-        //            sparkta price mpg weight, type(pie)
+        //            sparkta_test price mpg weight, type(pie)
         //
         //  Mode 2 -- one var + over(): one slice per over() group,
         //            value = sum of variable within that group.
-        //            sparkta price, type(pie) over(rep78)
+        //            sparkta_test price, type(pie) over(rep78)
         //
         //  Mode 3 -- no var, over() only: one slice per over() group,
         //            value = count of observations in that group.
-        //            sparkta, type(pie) over(rep78)
+        //            sparkta_test, type(pie) over(rep78)
         // ----------------------------------------------------------------
         boolean mode1 = !nv.isEmpty() && overVar == null; // multi-var, no over
         boolean mode2 = !nv.isEmpty() && overVar != null; // one var + over
