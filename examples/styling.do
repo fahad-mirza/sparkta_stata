@@ -1,7 +1,7 @@
 *! sparkta example: styling.do
 *! Demonstrates: v2.6.0 typography and tooltip styling options
 *! Dataset: auto (built-in)
-*! Version: 1.0 | 2026-03-06
+*! Version: 3.5.96 | 2026-03-17
 * Run with: do styling.do
 
 sysuse auto, clear

@@ -1,7 +1,7 @@
 *! sparkta example: boxviolin.do
 *! Demonstrates: boxplot, hbox, violin, hviolin, whiskerfence, filter
 *! Dataset: auto (built-in)
-*! Version: 1.0 | 2026-03-06
+*! Version: 3.5.96 | 2026-03-17
 * Run with: do boxviolin.do
 * Charts open in browser unless export() is specified.
 
@@ -69,7 +69,7 @@ sparkta price, type(boxplot) over(rep78) ///
 
 * Boxplot with interactive filter
 sparkta price, type(boxplot) over(rep78) ///
-    filter(foreign) ///
+    filters(foreign) ///
     title("Price Distribution by Repair Record") ///
     subtitle("Filter by Car Origin using the dropdown")
     * export("~/Desktop/ex_box_filter.html")
@@ -122,7 +122,7 @@ sparkta price, type(violin) over(rep78) ///
 
 * Violin with interactive filter (animates on change)
 sparkta price, type(violin) over(rep78) ///
-    filter(foreign) ///
+    filters(foreign) ///
     title("Price Violin by Repair Record") ///
     subtitle("Filter by Car Origin: violin animates on change")
     * export("~/Desktop/ex_violin_filter.html")

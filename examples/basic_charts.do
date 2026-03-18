@@ -1,7 +1,7 @@
 *! sparkta example: basic_charts.do
 *! Demonstrates: bar, hbar, stackedbar, line, area, scatter, bubble, pie, donut
 *! Dataset: auto (built-in)
-*! Version: 1.0 | 2026-03-06
+*! Version: 3.5.96 | 2026-03-17
 * Run with: do basic_charts.do
 * Charts open in browser unless export() is specified.
 * Uncomment export() lines to save files to disk.
@@ -127,7 +127,7 @@ sparkta price, type(donut) over(foreign) stat(sum) ///
 
 * Interactive filter dropdown
 sparkta price weight, type(bar) over(rep78) ///
-    filter(foreign) ///
+    filters(foreign) ///
     title("Price and Weight by Repair Record") ///
     subtitle("Use dropdown to filter by Car Origin")
     * export("~/Desktop/ex_filter.html")

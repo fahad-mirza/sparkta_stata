@@ -46,7 +46,7 @@ di as txt "Chart 2/8 OK: Violin"
 * Chart 3: Dual interactive filter dropdowns
 * ---------------------------------------------------------------------------
 sysuse auto, clear
-sparkta price, over(rep78) filter(foreign) filter2(headroom) nomissing ///
+sparkta price, over(rep78) filters(foreign headroom) nomissing ///
     title("Price by Repair Record") ///
     export("`outdir'/G2_filter2.html")
 di as txt "Chart 3/8 OK: Dual filter"
