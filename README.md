@@ -24,7 +24,7 @@ sparkta price, type(cibar) over(rep78) title("Mean Price by Repair Record")
 
 ---
 
-## What sparkta produces
+## What sparkta produces - sadness
 
 Every `sparkta` command produces a single `.html` file that:
 
