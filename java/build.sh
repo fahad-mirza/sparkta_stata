@@ -20,13 +20,13 @@ warn()  { echo -e " ${YELLOW}[WARN]${RESET} $1"; }
 echo ""
 echo -e " ${YELLOW}IMPORTANT:${RESET} Run fetch_js_libs.sh BEFORE this script if you have not"
 echo    "  already done so. The JS libraries must be present in"
-echo    "  src/main/resources/com/dashboard/js/ before the jar is built."
+echo    "  src/main/resources/com/dashboard_test/js/ before the jar is built."
 echo    "  Without them the offline option will fail at runtime."
 echo ""
 
 echo ""
 echo -e " ${BOLD}=========================================${RESET}"
-echo -e " ${BOLD} Sparkta - Build Script  v3.5.96  ${RESET}"
+echo -e " ${BOLD} Stata Dashboard Plugin - Build Script  ${RESET}"
 echo -e " ${BOLD}=========================================${RESET}"
 echo ""
 
@@ -99,7 +99,7 @@ echo ""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC_DIR="$SCRIPT_DIR/src/main/java"
 OUT_DIR="$SCRIPT_DIR/out"
-DIST_DIR="$SCRIPT_DIR/../dist"
+DIST_DIR="$SCRIPT_DIR/../dist_test"
 
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
@@ -142,9 +142,10 @@ echo ""
 
 # --- Step 6: Copy ado files to dist -----------------------------------------
 cp "$SCRIPT_DIR/../ado/sparkta.ado"         "$DIST_DIR/sparkta.ado"
+cp "$SCRIPT_DIR/../ado/sparkta_check.ado"   "$DIST_DIR/sparkta_check.ado"
 cp "$SCRIPT_DIR/../ado/sparkta.sthlp"       "$DIST_DIR/sparkta.sthlp"
 
-ok "Copied sparkta.ado and sparkta.sthlp to dist/"
+ok "Copied sparkta.ado and sparkta.sthlp to dist_test/"
 echo ""
 
 # --- Step 7: Install into Stata personal ado directory ----------------------
@@ -167,6 +168,6 @@ echo -e " ${BOLD}=========================================${RESET}"
 echo -e " ${BOLD} Build complete! Run this in Stata:    ${RESET}"
 echo ""
 echo -e "   sysuse auto, clear"
-echo -e "   sparkta price, over(foreign)"
+echo -e "   sparkta price mpg, type(bar)"
 echo -e " ${BOLD}=========================================${RESET}"
 echo ""

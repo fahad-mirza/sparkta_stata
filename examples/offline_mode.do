@@ -1,7 +1,7 @@
 *! sparkta example: offline_mode.do
 *! Demonstrates: offline option for air-gapped and institutional environments
 *! Dataset: auto (built-in)
-*! Version: 3.5.96 | 2026-03-17
+*! Version: 1.0 | 2026-03-06
 *
 * The offline option embeds all JavaScript libraries (Chart.js + plugins)
 * directly inside the HTML file. The result opens correctly in any browser
@@ -69,7 +69,7 @@ di "Created: ~/Desktop/offline_confidential.html"
 * Filters work fully offline -- all data pre-computed in the HTML
 
 sparkta price weight, type(bar) over(rep78) ///
-    filters(foreign) offline ///
+    filter(foreign) offline ///
     title("Price and Weight -- Interactive Filter -- OFFLINE") ///
     subtitle("Dropdown works with no internet connection") ///
     export("~/Desktop/offline_filter.html")

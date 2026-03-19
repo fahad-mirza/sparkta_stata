@@ -1,7 +1,7 @@
 *! sparkta example: stat_charts.do
 *! Demonstrates: cibar, ciline, histogram
 *! Dataset: auto (built-in)
-*! Version: 3.5.96 | 2026-03-17
+*! Version: 1.0 | 2026-03-06
 * Run with: do stat_charts.do
 * Charts open in browser unless export() is specified.
 
@@ -84,7 +84,7 @@ sparkta price, type(ciline) over(rep78) ///
 
 * CI line with filter
 sparkta price, type(ciline) over(rep78) ///
-    filters(foreign) cibandopacity(0.20) ///
+    filter(foreign) cibandopacity(0.20) ///
     title("Mean Price by Repair Record (95%% CI)") ///
     subtitle("Filter by Car Origin using the dropdown")
     * export("~/Desktop/ex_ciline_filter.html")
@@ -119,7 +119,7 @@ sparkta price, type(histogram) bins(20) ///
 
 * Histogram with filter
 sparkta price, type(histogram) histtype(density) ///
-    filters(foreign) ///
+    filter(foreign) ///
     title("Price Distribution") ///
     subtitle("Filter by Car Origin using the dropdown")
     * export("~/Desktop/ex_hist_filter.html")

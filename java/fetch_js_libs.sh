@@ -10,9 +10,9 @@
 #
 # Run once. Re-run only if you need to refresh the libraries or if a
 # new library has been added to the package.
-# v3.5.96
+# v2.7.0
 
-DEST="src/main/resources/com/dashboard/js"
+DEST="src/main/resources/com/dashboard_test/js"
 mkdir -p "$DEST"
 
 echo "Fetching chart.js@4.4.0..."

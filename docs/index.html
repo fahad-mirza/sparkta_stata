@@ -330,10 +330,10 @@
   <div class="badges">
     <span class="badge amber">Stata 17+</span>
     <span class="badge mint">MIT License</span>
-    <span class="badge amber">v3.5.108</span>
+    <span class="badge amber">v3.5.111</span>
     <span class="badge warm">Chart.js 4.4</span>
   </div>
-  <code class="install">net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/") replace</code>
+  <code class="install">ssc install sparkta</code>
 </header>
 
 <div class="intro">
@@ -360,28 +360,13 @@
     </div>
     <div class="feature-card">
       <div class="icon">&#x23F1;</div>
-      <h3>500k obs in ~1.0s</h3>
+      <h3>500k obs in ~1.2s</h3>
       <p>Bulk SFI reads, O(N) group scan, lazy sparklines. Fast on large datasets.</p>
     </div>
     <div class="feature-card">
       <div class="icon">&#x1F4CA;</div>
       <h3>CI charts match Stata</h3>
       <p>t-distribution intervals computed in Java, matching <code>ci means</code> exactly.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">&#x1F50D;</div>
-      <h3>Live filter dropdowns</h3>
-      <p><code>filters(varlist)</code> adds interactive dropdowns. Stats panel updates live with every filter change.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">&#x1F39A;</div>
-      <h3>Range sliders</h3>
-      <p><code>sliders(varlist)</code> adds dual-handle range sliders for any numeric variable. No server needed.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">&#x1F4C8;</div>
-      <h3>Scatter fit lines</h3>
-      <p>7 fit types: lfit, qfit, lowess, exp, log, power, ma. <code>fitci</code> adds a confidence band.</p>
     </div>
   </div>
 </div>
@@ -431,11 +416,10 @@
 <div class="chart-block">
   <div class="chart-meta">
     <h2>Dual Interactive Filters</h2>
-    <p class="desc">Two live filter dropdowns using <code>filters(foreign headroom)</code>. The stats panel below the chart updates instantly with every filter change. No server, no framework.</p>
+    <p class="desc">Two independent dropdown filters &mdash; Foreign/Domestic and headroom &mdash; slicing the chart live. No server, no JavaScript framework.</p>
     <pre class="inline-code"><span class="cm">* Stata command</span>
 <span class="kw">sysuse</span> auto, clear
-<span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="cn">///</span>
-    <span class="kw">filters</span>(foreign headroom) <span class="cn">///</span>
+<span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="kw">filter</span>(foreign) <span class="kw">filter2</span>(headroom) <span class="cn">///</span>
     <span class="kw">title</span>("Price <span class="kw">by</span> Repair Record")</pre>
   </div>
   <div class="chart-frame-wrap">
@@ -559,14 +543,11 @@
 <span class="cm">* Violin plot with animated KDE density</span>
 <span class="fn">sparkta</span> price, <span class="kw">type</span>(violin) <span class="kw">over</span>(rep78)
 
-<span class="cm">* Live filter dropdown -- stats panel updates instantly</span>
-<span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="kw">filters</span>(foreign)
+<span class="cm">* Interactive filter dropdown -- no server required</span>
+<span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="kw">filter</span>(foreign)
 
-<span class="cm">* Multiple filters + range slider</span>
-<span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="kw">filters</span>(foreign rep78) <span class="kw">sliders</span>(price)
-
-<span class="cm">* Scatter with fit line</span>
-<span class="fn">sparkta</span> price mpg, <span class="kw">type</span>(scatter) <span class="kw">fit</span>(lowess) <span class="kw">over</span>(foreign)
+<span class="cm">* Two independent filter dropdowns</span>
+<span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="kw">filter</span>(foreign) <span class="kw">filter2</span>(headroom)
 
 <span class="cm">* Fully air-gapped -- all JS embedded, zero network requests when opened</span>
 <span class="fn">sparkta</span> price, <span class="kw">type</span>(cibar) <span class="kw">over</span>(rep78) ///

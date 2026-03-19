@@ -1,4 +1,4 @@
-*! sparkta version 3.5.108
+*! sparkta version 3.5.111  2026-03-19
 *! v3.5.58: mlabpos(#) clock position for scatter labels; marker name in tooltip.
 *!          Args renumbered: mlabpos=154, fit=155, fitci=156. Java recompile required.
 *!          fitci CI band for lfit/qfit. Args 152-155 added. Java recompile required.
@@ -114,6 +114,7 @@
 *!           wherever Stata installed the ado (SSC PLUS/s/sparkta/, net install personal/,
 *!           or any adopath location). Added sysdir_PLUS/s/sparkta/ fallback and Mac/Linux
 *!           forward-slash sysdir_personal variants. Removed hardcoded C:\ado\personal path.
+*!           sparkta_check.ado updated to match. Ado-only, no Java recompile needed.
 *! v3.5.36 Fix: leglabels() generateLabels callback now emitted in colorByCategory mode
 *!         (bar + over() + single var). Root cause: _leglabelsOnXAxis=true was
 *!         suppressing generateLabels. New _leglabelsColorByCategory flag allows it
@@ -342,6 +343,7 @@
 *!          Pie/donut: slice % with raw sum. tooltipformat() respected everywhere.
 *! v3.5.38: sthlp fix -- xticks() Options detail block was missing its opening phang/opt line;
 *!           block started mid-sentence. Sthlp-only change, no recompile needed.
+*! v2.0.9: sparkta_check moved to sparkta_check.ado; "Dashboard ready" -> "Sparkta ready"
 *! v2.0.8: renamed from dashboard to sparkta across all files
 *! v2.0.7: fetch_js_libs.bat rewritten -- all 3 files attempt regardless of
 *!          individual failures, no goto, per-file result, URL shown, pause always
@@ -350,7 +352,7 @@ program define sparkta
     version 17
 
     // Single version constant -- update this one line on every version bump
-    local sparkta_version "3.5.108"
+    local sparkta_version "3.5.111"
 
     // Print version so user can confirm which ado is loaded
     display as text "  [sparkta v`sparkta_version']"
@@ -753,15 +755,16 @@ program define sparkta
             display as error "fit() is only supported for type(scatter) and type(bubble)"
             exit 198
         }
-        // fitci only valid with lfit or qfit
-        if "`fitci'" != "" & "`_fit'" != "lfit" & "`_fit'" != "qfit" {
-            display as error "fitci is only supported with fit(lfit) and fit(qfit)"
+        // fitci valid with lfit, qfit, exp, log, power (all linearised OLS models)
+        local _fitci_ok = inlist("`_fit'", "lfit", "qfit", "exp", "log", "power")
+        if "`fitci'" != "" & !`_fitci_ok' {
+            display as error "fitci is only supported with fit(lfit), fit(qfit), fit(exp), fit(log), fit(power)"
             exit 198
         }
 
     }
     else if "`fitci'" != "" {
-        display as error "fitci requires fit(lfit) or fit(qfit) to also be specified"
+        display as error "fitci requires fit(lfit), fit(qfit), fit(exp), fit(log), or fit(power) to also be specified"
         exit 198
     }
     local _fitci "0"
@@ -1520,7 +1523,7 @@ program define sparkta
                 quietly count
                 if r(N) < 3 continue        // skip groups too small for fit
 
-                tempvar _fv _se _ci_u _ci_l _lny _lnx
+                tempvar _fv _se _ci_u _ci_l _lny _lnx _lnfv
 
                 // -- lfit ------------------------------------------------------
                 if "`_fit'" == "lfit" {
@@ -1557,6 +1560,16 @@ program define sparkta
                         quietly regress `_lny' `_xvar'
                         quietly gen double `_fv' = exp(_b[_cons] + _b[`_xvar'] * `_xvar') ///
                             if `_yvar' > 0
+                        if "`_fitci'" == "1" {
+                            // CI on log scale: exp(lny_hat +/- t*se_lny)
+                            quietly predict double `_lnfv', xb
+                            quietly predict double `_se', stdp
+                            local _tcrit = invttail(e(df_r), 0.025)
+                            quietly gen double `_ci_u' = exp(`_lnfv' + `_tcrit' * `_se') ///
+                                if `_yvar' > 0
+                            quietly gen double `_ci_l' = exp(`_lnfv' - `_tcrit' * `_se') ///
+                                if `_yvar' > 0
+                        }
                     }
                 }
                 // -- log -------------------------------------------------------
@@ -1566,6 +1579,15 @@ program define sparkta
                     if r(N) >= 3 {
                         quietly regress `_yvar' `_lnx'
                         quietly predict double `_fv' if `_xvar' > 0, xb
+                        if "`_fitci'" == "1" {
+                            // CI on y scale (linear model in ln(x)), symmetric
+                            quietly predict double `_se', stdp
+                            local _tcrit = invttail(e(df_r), 0.025)
+                            quietly gen double `_ci_u' = `_fv' + `_tcrit' * `_se' ///
+                                if `_xvar' > 0
+                            quietly gen double `_ci_l' = `_fv' - `_tcrit' * `_se' ///
+                                if `_xvar' > 0
+                        }
                     }
                 }
                 // -- power -----------------------------------------------------
@@ -1577,6 +1599,16 @@ program define sparkta
                         quietly regress `_lny' `_lnx'
                         quietly gen double `_fv' = exp(_b[_cons]) * ///
                             (`_xvar'^_b[`_lnx']) if `_yvar' > 0 & `_xvar' > 0
+                        if "`_fitci'" == "1" {
+                            // CI on log-log scale: exp(lny_hat +/- t*se)
+                            quietly predict double `_lnfv', xb
+                            quietly predict double `_se', stdp
+                            local _tcrit = invttail(e(df_r), 0.025)
+                            quietly gen double `_ci_u' = exp(`_lnfv' + `_tcrit' * `_se') ///
+                                if `_yvar' > 0 & `_xvar' > 0
+                            quietly gen double `_ci_l' = exp(`_lnfv' - `_tcrit' * `_se') ///
+                                if `_yvar' > 0 & `_xvar' > 0
+                        }
                     }
                 }
 
@@ -1663,7 +1695,7 @@ program define sparkta
 
             if `_nfit' >= 3 {
 
-                tempvar _fv _se _ci_u _ci_l _lny _lnx
+                tempvar _fv _se _ci_u _ci_l _lny _lnx _lnfv
 
                 // -- lfit ------------------------------------------------------
                 if "`_fit'" == "lfit" {
@@ -1702,6 +1734,15 @@ program define sparkta
                         quietly regress `_lny' `_xvar'
                         quietly gen double `_fv' = exp(_b[_cons] + _b[`_xvar'] * `_xvar') ///
                             if `_yvar' > 0
+                        if "`_fitci'" == "1" {
+                            quietly predict double `_lnfv', xb
+                            quietly predict double `_se', stdp
+                            local _tcrit = invttail(e(df_r), 0.025)
+                            quietly gen double `_ci_u' = exp(`_lnfv' + `_tcrit' * `_se') ///
+                                if `_yvar' > 0
+                            quietly gen double `_ci_l' = exp(`_lnfv' - `_tcrit' * `_se') ///
+                                if `_yvar' > 0
+                        }
                     }
                 }
                 // -- log -------------------------------------------------------
@@ -1711,6 +1752,14 @@ program define sparkta
                     if r(N) >= 3 {
                         quietly regress `_yvar' `_lnx'
                         quietly predict double `_fv' if `_xvar' > 0, xb
+                        if "`_fitci'" == "1" {
+                            quietly predict double `_se', stdp
+                            local _tcrit = invttail(e(df_r), 0.025)
+                            quietly gen double `_ci_u' = `_fv' + `_tcrit' * `_se' ///
+                                if `_xvar' > 0
+                            quietly gen double `_ci_l' = `_fv' - `_tcrit' * `_se' ///
+                                if `_xvar' > 0
+                        }
                     }
                 }
                 // -- power -----------------------------------------------------
@@ -1722,6 +1771,15 @@ program define sparkta
                         quietly regress `_lny' `_lnx'
                         quietly gen double `_fv' = exp(_b[_cons]) * ///
                             (`_xvar'^_b[`_lnx']) if `_yvar' > 0 & `_xvar' > 0
+                        if "`_fitci'" == "1" {
+                            quietly predict double `_lnfv', xb
+                            quietly predict double `_se', stdp
+                            local _tcrit = invttail(e(df_r), 0.025)
+                            quietly gen double `_ci_u' = exp(`_lnfv' + `_tcrit' * `_se') ///
+                                if `_yvar' > 0 & `_xvar' > 0
+                            quietly gen double `_ci_l' = exp(`_lnfv' - `_tcrit' * `_se') ///
+                                if `_yvar' > 0 & `_xvar' > 0
+                        }
                     }
                 }
 
@@ -1854,7 +1912,9 @@ program define sparkta
     }
 
     // - Call Java -
-    javacall com.dashboard.DashboardBuilder execute,            ///
+    // Show which jar was found -- critical for diagnosing version mismatches
+    display as text "  Using jar: `jarpath'"
+    capture noisily javacall com.dashboard_test.DashboardBuilder execute, ///
         classpath("`jarpath'")                                  ///
         args(`"`varlist'"'           ///  0  varlist
              `"`type'"'              ///  1  chart type
@@ -2017,7 +2077,23 @@ program define sparkta
              `"`_fitLineData'"'            ///  158 Stata-computed fit line: "x,y|x,y|..." sorted by x
              `"`_fitCiUpper'"'             ///  159 Stata-computed CI upper: "x,y|x,y|..."
              `"`_fitCiLower'"')                 //   157 fitci: 1=add CI band to lfit/qfit
+    if _rc == 5100 {
+        display as error ""
+        display as error "  SPARKTA ERROR: Java class not found."
+        display as error "  Your installed sparkta.jar is outdated or from a different version."
+        display as error ""
+        display as error "  Fix: copy the new sparkta.jar to your Stata personal ado folder."
+        display as error "    Windows: %APPDATA%\Stata\ado\personal\"
+        display as error "    Mac/Linux: ~/ado/personal/"
+        display as error ""
+        display as error "  Or reinstall from GitHub:"
+        display as error `"    net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/") replace"'
+        exit 5100
+    }
+    else if _rc {
+        exit _rc
+    }
 
 end
 
-// Stata finds it automatically when that file is in the ado path.
+// sparkta_check removed -- not distributed

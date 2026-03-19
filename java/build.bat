@@ -3,7 +3,7 @@ REM ============================================================
 REM  build.bat - Sparkta build script (Windows)
 REM  Configured for Stata 19 Now (StataNow19) with Zulu JDK 21
 REM  Uses Stata's bundled Java - no Maven or external tools needed
-REM  v3.5.96
+REM  v2.7.0
 REM ============================================================
 
 setlocal ENABLEDELAYEDEXPANSION
@@ -15,7 +15,7 @@ echo  =========================================
 echo.
 echo  IMPORTANT: Run fetch_js_libs.bat BEFORE this script if you have not
 echo  already done so. The JS libraries must be downloaded and placed in
-echo  src\main\resources\com\dashboard\js\ before the jar is built.
+echo  src\main\resources\com\dashboard_test\js\ before the jar is built.
 echo  Without them the offline option will fail at runtime.
 echo.
 
@@ -78,7 +78,7 @@ REM --- Step 3: Set up output directories --------------------------------------
 set SCRIPT_DIR=%~dp0
 set SRC_DIR=%SCRIPT_DIR%src\main\java
 set OUT_DIR=%SCRIPT_DIR%out
-set DIST_DIR=%SCRIPT_DIR%..\dist
+set DIST_DIR=%SCRIPT_DIR%..\dist_test
 
 if exist "%OUT_DIR%" rmdir /s /q "%OUT_DIR%"
 mkdir "%OUT_DIR%"
@@ -132,7 +132,7 @@ if exist "%RES_DIR%" (
 echo.
 
 REM --- Step 4c: Verify JS libs present if resources exist --------------------
-set JS_DIR=%OUT_DIR%\com\dashboard\js
+set JS_DIR=%OUT_DIR%\com\dashboard_test\js
 set OFFLINE_READY=1
 if not exist "%JS_DIR%\chartjs-4.4.0.min.js"                  set OFFLINE_READY=0
 if not exist "%JS_DIR%\chartjs-datalabels-2.2.0.min.js"       set OFFLINE_READY=0
@@ -166,6 +166,7 @@ echo.
 
 REM --- Step 6: Copy ado files to dist -----------------------------------------
 copy /Y "%SCRIPT_DIR%..\ado\sparkta.ado"        "%DIST_DIR%\sparkta.ado"        >nul
+copy /Y "%SCRIPT_DIR%..\ado\sparkta_check.ado"  "%DIST_DIR%\sparkta_check.ado"  >nul
 copy /Y "%SCRIPT_DIR%..\ado\sparkta.sthlp"      "%DIST_DIR%\sparkta.sthlp"      >nul
 
 echo  [OK]  Copied sparkta.ado and sparkta.sthlp to dist\
@@ -179,6 +180,7 @@ set ADO_DIR1=C:\ado\personal
 if not exist "%ADO_DIR1%" mkdir "%ADO_DIR1%"
 copy /Y "%DIST_DIR%\sparkta.jar"    "%ADO_DIR1%\sparkta.jar"    >nul
 copy /Y "%DIST_DIR%\sparkta.ado"        "%ADO_DIR1%\sparkta.ado"        >nul
+copy /Y "%DIST_DIR%\sparkta_check.ado"  "%ADO_DIR1%\sparkta_check.ado"  >nul
 copy /Y "%DIST_DIR%\sparkta.sthlp"      "%ADO_DIR1%\sparkta.sthlp"      >nul
 echo  [OK]  Installed to: %ADO_DIR1%
 
@@ -187,6 +189,7 @@ set ADO_DIR2=%USERPROFILE%\ado\personal
 if not exist "%ADO_DIR2%" mkdir "%ADO_DIR2%"
 copy /Y "%DIST_DIR%\sparkta.jar"    "%ADO_DIR2%\sparkta.jar"    >nul
 copy /Y "%DIST_DIR%\sparkta.ado"        "%ADO_DIR2%\sparkta.ado"        >nul
+copy /Y "%DIST_DIR%\sparkta_check.ado"  "%ADO_DIR2%\sparkta_check.ado"  >nul
 copy /Y "%DIST_DIR%\sparkta.sthlp"      "%ADO_DIR2%\sparkta.sthlp"      >nul
 echo  [OK]  Installed to: %ADO_DIR2%
 
@@ -196,7 +199,7 @@ echo  =========================================
 echo   Build complete! Run this in Stata:
 echo.
 echo     sysuse auto, clear
-echo     sparkta price, over(foreign)
+echo     sparkta price mpg, type(bar)
 echo  =========================================
 echo.
 

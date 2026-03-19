@@ -15,11 +15,11 @@ REM --ssl-no-revoke: bypasses certificate revocation checks on
 REM institutional/corporate networks (schannel error 0x80092012).
 REM --retry 2: retries twice on transient failures before giving up.
 REM Window stays open after all attempts regardless of success or failure.
-REM v3.5.96
+REM v2.7.0
 
 setlocal EnableDelayedExpansion
 
-set DEST=src\main\resources\com\dashboard\js
+set DEST=src\main\resources\com\dashboard_test\js
 if not exist "%DEST%" mkdir "%DEST%"
 set FAILURES=0
 
