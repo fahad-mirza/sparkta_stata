@@ -333,7 +333,7 @@
     <span class="badge amber">v3.5.111</span>
     <span class="badge warm">Chart.js 4.4</span>
   </div>
-  <code class="install">ssc install sparkta</code>
+  <code class="install">net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/") replace</code>
 </header>
 
 <div class="intro">
@@ -349,24 +349,39 @@
       <p>A self-contained .html file. Email it, archive it, USB it. No viewer dependencies.</p>
     </div>
     <div class="feature-card">
-      <div class="icon">&#x1F512;</div>
-      <h3>Data stays in Stata</h3>
-      <p>All processing runs locally via Java Plugin Interface. No uploads, no telemetry.</p>
+      <div class="icon">&#x1F4C8;</div>
+      <h3>Fit lines &amp; CI bands</h3>
+      <p>7 scatter fit types: lfit, qfit, lowess, exp, log, power, ma. Add <code>fitci</code> for a CI band that recomputes live with sliders.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">&#x1F3A8;</div>
+      <h3>17 themes &amp; palettes</h3>
+      <p>Tableau, Okabe-Ito (colorblind-safe), viridis, neon and more. Dark/light variants: <code>theme(dark_viridis)</code>.</p>
     </div>
     <div class="feature-card">
       <div class="icon">&#x1F4F6;</div>
       <h3>Fully offline</h3>
-      <p>The <code>offline</code> flag bundles all JS into the HTML. Zero network requests.</p>
+      <p>The <code>offline</code> flag bundles all JS into the HTML. Zero network requests. Suitable for air-gapped systems.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">&#x1F3AE;</div>
+      <h3>Unlimited live filters</h3>
+      <p><code>filters(v1 v2 v3)</code> adds dropdown menus. <code>sliders(price mpg)</code> adds dual-handle range controls. Stats panel updates live.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">&#x1F3AF;</div>
+      <h3>Reference annotations</h3>
+      <p>19 options: <code>yline()</code> <code>xband()</code> <code>apoint()</code> <code>aellipse()</code> <code>alabelpos()</code>. Lines, bands, markers, ellipses.</p>
     </div>
     <div class="feature-card">
       <div class="icon">&#x23F1;</div>
-      <h3>500k obs in ~1.2s</h3>
-      <p>Bulk SFI reads, O(N) group scan, lazy sparklines. Fast on large datasets.</p>
+      <h3>500k obs in ~0.5s</h3>
+      <p>Bulk SFI reads, O(N) group scan, lazy sparklines. 10&times; faster than v2.x on large datasets.</p>
     </div>
     <div class="feature-card">
       <div class="icon">&#x1F4CA;</div>
       <h3>CI charts match Stata</h3>
-      <p>t-distribution intervals computed in Java, matching <code>ci means</code> exactly.</p>
+      <p>t-distribution intervals computed in Java, matching <code>ci means</code> exactly. Any level 1&ndash;99.</p>
     </div>
   </div>
 </div>
@@ -415,11 +430,12 @@
 
 <div class="chart-block">
   <div class="chart-meta">
-    <h2>Dual Interactive Filters</h2>
-    <p class="desc">Two independent dropdown filters &mdash; Foreign/Domestic and headroom &mdash; slicing the chart live. No server, no JavaScript framework.</p>
+    <h2>Filters &amp; Range Sliders</h2>
+    <p class="desc">Unlimited dropdown filters and dual-handle range sliders slice the chart live. The stats panel updates with every interaction. No server required.</p>
     <pre class="inline-code"><span class="cm">* Stata command</span>
 <span class="kw">sysuse</span> auto, clear
-<span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="kw">filter</span>(foreign) <span class="kw">filter2</span>(headroom) <span class="cn">///</span>
+<span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="cn">///</span>
+    <span class="kw">filters</span>(foreign headroom) <span class="kw">sliders</span>(mpg price) <span class="cn">///</span>
     <span class="kw">title</span>("Price <span class="kw">by</span> Repair Record")</pre>
   </div>
   <div class="chart-frame-wrap">
@@ -531,7 +547,7 @@
 
 <div class="stata-block">
   <pre class="stata-code"><span class="cm">* Install</span>
-<span class="kw">ssc install</span> sparkta
+<span class="kw">net install</span> sparkta, from(<span class="str">"https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/"</span>) replace
 
 <span class="cm">* Bar chart grouped by repair record</span>
 <span class="kw">sysuse</span> auto, <span class="kw">clear</span>
@@ -543,15 +559,21 @@
 <span class="cm">* Violin plot with animated KDE density</span>
 <span class="fn">sparkta</span> price, <span class="kw">type</span>(violin) <span class="kw">over</span>(rep78)
 
-<span class="cm">* Interactive filter dropdown -- no server required</span>
-<span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="kw">filter</span>(foreign)
+<span class="cm">* Scatter with fit line, CI band, and live slider</span>
+<span class="fn">sparkta</span> price mpg, <span class="kw">type</span>(scatter) <span class="kw">fit</span>(<span class="str">lfit</span>) fitci <span class="kw">sliders</span>(mpg)
 
-<span class="cm">* Two independent filter dropdowns</span>
-<span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="kw">filter</span>(foreign) <span class="kw">filter2</span>(headroom)
+<span class="cm">* Unlimited live filters + range sliders</span>
+<span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="kw">filters</span>(foreign headroom) <span class="kw">sliders</span>(mpg price)
+
+<span class="cm">* Reference annotations -- line, band, point marker</span>
+<span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="kw">yline</span>(6165) <span class="kw">ylinelabel</span>(<span class="str">"Overall mean"</span>) ///
+    <span class="kw">yband</span>(4000 8000) <span class="kw">apoint</span>(6165 3)
+
+<span class="cm">* Dark theme with colorblind-safe palette</span>
+<span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="kw">theme</span>(dark_viridis)
 
 <span class="cm">* Fully air-gapped -- all JS embedded, zero network requests when opened</span>
-<span class="fn">sparkta</span> price, <span class="kw">type</span>(cibar) <span class="kw">over</span>(rep78) ///
-    offline <span class="kw">export</span>(<span class="str">"~/secure/chart.html"</span>)</pre>
+<span class="fn">sparkta</span> price, <span class="kw">type</span>(cibar) <span class="kw">over</span>(rep78) offline <span class="kw">export</span>(<span class="str">"~/secure/chart.html"</span>)</pre>
   <p class="caption">
     <a href="https://github.com/fahad-mirza/sparkta_stata/blob/main/ado/sparkta.sthlp">help sparkta</a>
     &nbsp;&bull;&nbsp;

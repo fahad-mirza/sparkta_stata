@@ -146,8 +146,14 @@ sparkta price, type(cibar) over(rep78)
 * Violin plot with animated KDE density
 sparkta price, type(violin) over(rep78)
 
-* Interactive filter dropdown -- filters data live, no server needed
-sparkta price, over(rep78) filter(foreign)
+* Scatter with fit line and live CI band
+sparkta price mpg, type(scatter) fit(lfit) fitci sliders(mpg)
+
+* Unlimited live filter dropdowns -- filters data live, no server needed
+sparkta price, over(rep78) filters(foreign headroom)
+
+* Dual-handle range sliders -- stats panel updates live
+sparkta price, over(rep78) sliders(mpg price)
 
 * Save to a file instead of auto-opening browser
 sparkta price, type(cibar) over(rep78) export("~/Desktop/chart.html")
@@ -158,7 +164,7 @@ sparkta price, over(rep78) offline export("~/secure/chart.html")
 
 ---
 
-## Chart types (18 total)
+## Chart types (20+ total)
 
 ### Core charts
 
@@ -173,6 +179,30 @@ sparkta price mpg, type(scatter) over(foreign)     // scatter coloured by group
 sparkta price mpg weight, type(bubble)             // bubble  (y x size)
 sparkta price, type(pie)   over(foreign)           // pie
 sparkta price, type(donut) over(foreign)           // donut
+```
+
+### Scatter fit lines and CI bands
+
+```stata
+sysuse auto, clear
+
+* 7 fit types -- computed in Stata, rendered in Chart.js
+sparkta price mpg, type(scatter) fit(lfit)         // linear OLS
+sparkta price mpg, type(scatter) fit(qfit)         // quadratic OLS
+sparkta price mpg, type(scatter) fit(lowess)       // locally weighted smoother
+sparkta price mpg, type(scatter) fit(exp)          // exponential
+sparkta price mpg, type(scatter) fit(log)          // logarithmic
+sparkta price mpg, type(scatter) fit(power)        // power
+sparkta price mpg, type(scatter) fit(ma)           // 5-point moving average
+
+* Add a CI band that recomputes live when sliders change
+sparkta price mpg, type(scatter) fit(lfit) fitci
+
+* Separate fit + CI band per over() group
+sparkta price mpg, type(scatter) over(foreign) fit(lowess) fitci
+
+* Combine with sliders -- CI band recomputes as you drag
+sparkta price mpg, type(scatter) fit(lfit) fitci sliders(mpg)
 ```
 
 ### Statistical charts
@@ -234,15 +264,21 @@ sparkta price, over(rep78)
 * by() -- separate panel per group value, rendered side by side
 sparkta price, over(rep78) by(foreign)
 
-* filter() -- interactive dropdown in the chart, filters data live
-sparkta price, over(rep78) filter(foreign)
+* filters() -- unlimited interactive dropdowns, filters data live
+sparkta price, over(rep78) filters(foreign)
+sparkta price, over(rep78) filters(foreign headroom rep78)  // any number of vars
 
-* Two independent dropdowns -- each filters the chart separately
-sparkta price, over(rep78) filter(foreign) filter2(headroom)
+* sliders() -- dual-handle numeric range controls
+sparkta price, over(rep78) sliders(mpg)
+sparkta price, over(rep78) sliders(mpg price weight)       // any numeric vars
 
+* Combine filters and sliders freely
+sparkta price, over(rep78) filters(foreign) sliders(mpg price)
+
+* Stats panel updates live on every filter and slider interaction
 * String variables work exactly the same way
 sysuse nlsw88, clear
-sparkta wage, over(industry) filter(occupation)
+sparkta wage, over(industry) filters(occupation)
 ```
 
 ---
@@ -383,8 +419,9 @@ help sparkta
 | Group | Options |
 |:---|:---|
 | Chart type | `type()` |
-| Grouping | `over()` `by()` `filter()` `filter2()` |
+| Grouping | `over()` `by()` `filters()` `sliders()` |
 | Statistics | `stat()` `cilevel()` `histtype()` `bins()` |
+| Fit lines | `fit()` `fitci` |
 | Axes | `yrange()` `xrange()` `ytitle()` `xtitle()` `xlabels()` `ylabels()` `yreverse` `xreverse` `ygrace()` `noticks` `xticks()` `yticks()` |
 | Annotations | `yline()` `xline()` `yband()` `xband()` `ylinelabel()` `xlinelabel()` `apoint()` `alabeltext()` `aellipse()` |
 | Line / point | `lpattern()` `linewidth()` `nopoints` `smooth` `pointsize()` `pointhoversize()` |
