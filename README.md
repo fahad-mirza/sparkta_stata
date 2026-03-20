@@ -9,7 +9,7 @@ One command. Zero dependencies. No Python. No R. No server.
 [![Version](https://img.shields.io/badge/version-3.5.111-4a9eff?style=flat-square)](#)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](#)
 [![Chart.js](https://img.shields.io/badge/Chart.js-4.4-f97316?style=flat-square)](https://www.chartjs.org)
-[![SSC](https://img.shields.io/badge/SSC-ssc%20install%20sparkta-8b5cf6?style=flat-square)](#installation)
+[![SSC](https://img.shields.io/badge/SSC-ssc%20install%20sparkta%20%20(coming%20soon)-8b5cf6?style=flat-square)](#installation)
 
 ```stata
 sysuse auto, clear
