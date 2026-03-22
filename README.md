@@ -2,7 +2,7 @@
 
 # sparkta
 
-**Interactive, self-contained HTML charts and dashboards from Stata.**  
+**Interactive, self-contained HTML charts/graphs and dashboards from Stata.**  
 One command. Zero dependencies. No Python. No R. No server.
 
 [![Stata 17+](https://img.shields.io/badge/Stata-17%2B-1a6fa0?style=flat-square)](https://www.stata.com)
@@ -18,7 +18,7 @@ sparkta price, type(cibar) over(rep78) title("Mean Price by Repair Record")
 
 *Your browser opens. An interactive, shareable `.html` file is written to disk.*
 
-**[Live chart gallery (GitHub Pages)](https://fahad-mirza.github.io/sparkta_stata/)**
+**[Live chart/graph gallery (GitHub Pages)](https://fahad-mirza.github.io/sparkta_stata/)**
 
 </div>
 
@@ -53,13 +53,13 @@ This is the honest comparison.
 | Stats panel matching `summarize` | no | no | **yes** |
 | Runs inside your existing do-file | yes | no | **yes** |
 
-Python and R produce interactive charts -- but only if your viewer installs the right
+Python and R produce interactive charts/graphs -- but only if your viewer installs the right
 libraries, or if you run a Shiny or Dash server. The output is never truly self-contained.
 sparkta produces a single `.html` file that anyone can open, anywhere, forever.
 
 ### Performance
 
-Chart generation runs entirely inside Stata via the Java Plugin Interface.
+Chart/graphs generation runs entirely inside Stata via the Java Plugin Interface.
 There is no export step, no subprocess, no round-trip.
 
 | Dataset size | Generation time | HTML open time |
@@ -69,7 +69,7 @@ There is no export step, no subprocess, no round-trip.
 | ~100,000 obs | ~0.8 s | instant |
 | ~500,000 obs | 1.0 -- 1.5 s | instant |
 
-The HTML file renders immediately. Even 500-group charts stay under 3 MB thanks
+The HTML file renders immediately. Even 500-group graphs stay under 3 MB thanks
 to lazy sparkline rendering -- group statistics panels load as you scroll, not all at once.
 
 ---
@@ -123,7 +123,7 @@ sysuse auto, clear
 sparkta price, over(rep78)
 ```
 
-A chart should open in your browser. If you see `[sparkta v3.5.111]` in the Stata output, the installation is working.
+A graph should open in your browser. If you see `[sparkta v3.5.111]` in the Stata output, the installation is working.
 
 **Requirements:** Stata 17+ with Java 8+ (bundled with most Stata installations since version 16).
 
@@ -134,7 +134,7 @@ A chart should open in your browser. If you see `[sparkta v3.5.111]` in the Stat
 ```stata
 sysuse auto, clear
 
-* The simplest call -- one variable, default bar chart
+* The simplest call -- one variable, default interactive bar chart/graph
 sparkta price
 
 * Group by a categorical variable
@@ -164,9 +164,9 @@ sparkta price, over(rep78) offline export("~/secure/chart.html")
 
 ---
 
-## Chart types (20+ total)
+## Chart/graph types (20+ total)
 
-### Core charts
+### Core charts/graphs
 
 ```stata
 sysuse auto, clear
@@ -205,7 +205,7 @@ sparkta price mpg, type(scatter) over(foreign) fit(lowess) fitci
 sparkta price mpg, type(scatter) fit(lfit) fitci sliders(mpg)
 ```
 
-### Statistical charts
+### Statistical charts/graphs
 
 These are unique to sparkta -- no other Stata visualization package produces them.
 
@@ -224,7 +224,7 @@ sparkta price, type(histogram) bins(20) histtype(density)
 sparkta price, type(histogram) histtype(fraction)
 ```
 
-### Distribution charts
+### Distribution charts/graphs
 
 ```stata
 * Box and whisker -- Tukey fences, outlier dots, IQR box
@@ -238,7 +238,7 @@ sparkta price, type(hviolin) over(rep78)           // horizontal
 sparkta price, type(violin)  over(rep78) bandwidth(1500)
 ```
 
-### Stacked charts
+### Stacked charts/graphs
 
 ```stata
 sysuse nlsw88, clear
@@ -258,7 +258,7 @@ sparkta price weight length, over(rep78) type(stackedarea)
 ```stata
 sysuse auto, clear
 
-* over() -- one coloured series per group, all on one chart
+* over() -- one coloured series per group, all on one chart/graph
 sparkta price, over(rep78)
 
 * by() -- separate panel per group value, rendered side by side
@@ -285,7 +285,7 @@ sparkta wage, over(industry) filters(occupation)
 
 ## Reference annotations
 
-Draw lines, bands, labelled points, and ellipses on any chart.
+Draw lines, bands, labelled points, and ellipses on any chart/graph.
 
 ```stata
 sysuse auto, clear
@@ -370,10 +370,10 @@ sparkta price, over(rep78)                         ///
 sparkta price weight, type(line) over(foreign)     ///
     lpattern(dash) linewidth(2) nopoints
 
-* Gradient fill on area charts
+* Gradient fill on area charts/graphs
 sparkta price, type(area) over(rep78) gradient
 
-* PNG download button embedded in the chart header
+* PNG download button embedded in the chart/graph header
 sparkta price, type(cibar) over(rep78) download
 
 * Note and subtitle
@@ -389,7 +389,7 @@ sparkta price, over(rep78)                         ///
 ```stata
 sysuse auto, clear
 
-* price on left y-axis, mpg on right y-axis, same chart
+* price on left y-axis, mpg on right y-axis, same chart/graph
 sparkta price mpg, type(line) over(foreign) ///
     y2(mpg) y2title("Fuel economy (MPG)") ytitle("Price (USD)")
 ```
@@ -398,14 +398,14 @@ sparkta price mpg, type(line) over(foreign) ///
 
 ## Summary statistics panel
 
-Every chart includes a collapsible statistics panel computed entirely inside Stata.
+Every chart/graph includes a collapsible statistics panel computed entirely inside Stata.
 
 - **Matches `summarize, detail` exactly** -- same N, Mean, Median, SD, Min, Max, CV
 - Per-group breakdown with an IQR sparkline distribution for each group
 - Updates live when filter dropdowns change
 - `nostats` suppresses the panel entirely
 
-The panel is computed before the chart renders. The numbers are always consistent
+The panel is computed before the chart/graph renders. The numbers are always consistent
 with your Stata results window, regardless of filter or display settings.
 
 ---
@@ -418,7 +418,7 @@ help sparkta
 
 | Group | Options |
 |:---|:---|
-| Chart type | `type()` |
+| Chart/graph type | `type()` |
 | Grouping | `over()` `by()` `filters()` `sliders()` |
 | Statistics | `stat()` `cilevel()` `histtype()` `bins()` |
 | Fit lines | `fit()` `fitci` |
@@ -448,7 +448,7 @@ examples/
   boxviolin.do           Boxplot, violin, whiskerfence, bandwidth
   offline_mode.do        Air-gapped workflow
 docs/
-  index.html             Live chart gallery (GitHub Pages)
+  index.html             Live interactive chart/graph gallery (GitHub Pages)
   INSTALL.md
   CHANGELOG.md
 java/
@@ -477,7 +477,7 @@ build.sh                 (Mac / Linux)
 
 **Order matters.** JS libraries must be downloaded before compilation so they
 are bundled inside the jar for offline use. Skipping Step 1 causes `offline`
-charts to fail at render time with a clear pre-flight error message.
+graphs to fail at render time with a clear pre-flight error message.
 
 Requirements: Java 8+ JDK, Stata 17+
 
@@ -491,7 +491,7 @@ Requirements: Java 8+ JDK, Stata 17+
 | Mac (Intel / Apple Silicon) | Jar is platform-independent; browser auto-open uses `open` |
 | Linux | Jar is platform-independent; browser auto-open uses `xdg-open` |
 
-Chart generation and HTML export work on all platforms.
+Chart/graph generation and HTML export work on all platforms.
 If you verify Mac or Linux, please open a GitHub issue with your Stata version and OS.
 
 ---
