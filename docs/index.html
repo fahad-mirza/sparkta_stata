@@ -4,7 +4,7 @@
 <meta name="google-site-verification" content="DYmfC3KMp5dkQzT08pf_WlUbTwNQpGVWEJqaeQdD7II" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>sparkta &mdash; Live Chart Gallery</title>
+<title>sparkta &mdash; Live Chart/Graph Gallery</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -381,15 +381,15 @@
     </div>
     <div class="feature-card">
       <div class="icon">&#x1F4CA;</div>
-      <h3>CI charts match Stata</h3>
+      <h3>CI charts/graphs match Stata</h3>
       <p>t-distribution intervals computed in Java, matching <code>ci means</code> exactly. Any level 1&ndash;99.</p>
     </div>
   </div>
 </div>
 
-<div class="section-label"><h2>Live chart gallery</h2></div>
+<div class="section-label"><h2>Live interactive chart/graph gallery</h2></div>
 <p class="gallery-note">
-  All charts are real sparkta output from Stata's built-in <code>auto</code> and
+  All charts/graphs are real sparkta output from Stata's built-in <code>auto</code> and
   <code>nlsw88</code> datasets. Hover, click the legend, use the dropdowns &mdash;
   everything is interactive.
 </p>
@@ -432,7 +432,7 @@
 <div class="chart-block">
   <div class="chart-meta">
     <h2>Filters &amp; Range Sliders</h2>
-    <p class="desc">Unlimited dropdown filters and dual-handle range sliders slice the chart live. The stats panel updates with every interaction. No server required.</p>
+    <p class="desc">Unlimited dropdown filters and dual-handle range sliders slice the chart/graph live. The stats panel updates with every interaction. No server required.</p>
     <pre class="inline-code"><span class="cm">* Stata command</span>
 <span class="kw">sysuse</span> auto, clear
 <span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78) <span class="cn">///</span>
@@ -537,7 +537,7 @@
   <div class="callout-inner">
     <h3>For sensitive and restricted data</h3>
     <p>
-      All chart generation runs inside Stata on your local machine. The output HTML has no
+      All interactive chart/graph generation runs inside Stata on your local machine. The output HTML has no
       data-fetching code, no callbacks, and makes zero external network requests. The
       <code>offline</code> option embeds all JavaScript directly &mdash; suitable for
       IRB-restricted data, clinical records, financial data, and institutional networks
@@ -550,11 +550,11 @@
   <pre class="stata-code"><span class="cm">* Install</span>
 <span class="kw">net install</span> sparkta, from(<span class="str">"https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/"</span>) replace
 
-<span class="cm">* Bar chart grouped by repair record</span>
+<span class="cm">* Bar graph grouped by repair record</span>
 <span class="kw">sysuse</span> auto, <span class="kw">clear</span>
 <span class="fn">sparkta</span> price, <span class="kw">over</span>(rep78)
 
-<span class="cm">* CI bar chart -- t-distribution intervals matching ci means exactly</span>
+<span class="cm">* CI bar graph -- t-distribution intervals matching ci means exactly</span>
 <span class="fn">sparkta</span> price, <span class="kw">type</span>(cibar) <span class="kw">over</span>(rep78) <span class="kw">cilevel</span>(95)
 
 <span class="cm">* Violin plot with animated KDE density</span>
