@@ -9,7 +9,7 @@ One command. Zero dependencies. No Python. No R. No server.
 [![Version](https://img.shields.io/badge/version-3.5.111-4a9eff?style=flat-square)](#)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](#)
 [![Chart.js](https://img.shields.io/badge/Chart.js-4.4-f97316?style=flat-square)](https://www.chartjs.org)
-[![SSC](https://img.shields.io/badge/SSC-ssc%20install%20sparkta%20%20(coming%20soon)-8b5cf6?style=flat-square)](#installation)
+[![SSC](https://img.shields.io/badge/SSC-ssc%20install%20sparkta,%20replace-8b5cf6?style=flat-square)](#installation)
 
 ```stata
 sysuse auto, clear
@@ -104,16 +104,16 @@ with a clear, actionable error if any are missing. There is no silent CDN fallba
 
 ## Installation
 
-**Option 1 -- from GitHub** (available now):
+**Option 1 -- from SSC**:
+
+```stata
+ssc install sparkta, replace
+```
+
+**Option 2 -- from GitHub** (available now):
 
 ```stata
 net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/")
-```
-
-**Option 2 -- from SSC** (once listed on SSC):
-
-```stata
-ssc install sparkta
 ```
 
 **Verify the installation:**
