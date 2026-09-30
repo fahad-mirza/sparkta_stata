@@ -1,8 +1,17 @@
-# sparkta repo .gitignore (v3.6.0, 2026-09-13)
+# sparkta repo .gitignore (v3.6.0, 2026-09-13; rev 2026-09-30 push-cleanup)
+# rev 2026-09-30: the v3.6.0 push picked up local build output. Lines below
+# keep it out for good. build.bat writes dist_test\ at the REPO ROOT
+# (SCRIPT_DIR\..\dist_test), so the old java/dist_test/ line never matched.
 node_modules/
 verify/_harness_out/
 java/out/
 java/dist_test/
+dist_test/
+java/lib/
+java/build_export/
+dist/sparkta-export.jar
+tests/*.zip
+*.stswp
 test_out/
 test_tag_out/
 test_out_*/
