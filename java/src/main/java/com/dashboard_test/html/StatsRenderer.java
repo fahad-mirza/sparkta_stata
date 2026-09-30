@@ -51,10 +51,10 @@ class StatsRenderer {
         sb.append("</svg></div>\n");
         sb.append("      Summary Statistics\n");
         sb.append("    </div>\n");
-        sb.append("    <button class='hide-btn' id='hideBtn' onclick='toggleStatsPanel(this)'>&#9650; Hide</button>\n");
+        sb.append("    <button class='hide-btn' id='hideBtn' onclick='toggleStatsPanel(this)'>" + (o.style.collapseStats ? "&#9660; Show" : "&#9650; Hide") + "</button>\n");
         sb.append("  </div>\n");
         // Column toggle chips
-        sb.append("  <div class='col-toggles' id='chipsRow'>\n");
+        sb.append("  <div class='col-toggles' id='chipsRow'" + (o.style.collapseStats ? " style='display:none'>" : ">") + "\n");
         sb.append("    <span class='toggle-lbl'>Columns</span>\n");
         // cols: 0=N 1=Mean 2=Median 3=Min 4=Max 5=StdDev 6=Distribution
         String[] chipLabels = {"N","Mean","Median","Min","Max","Std Dev","Distribution"};
@@ -65,7 +65,7 @@ class StatsRenderer {
         sb.append("    <button class='chip-all' onclick='toggleAllStatCols(this)'>Hide all</button>\n");
         sb.append("  </div>\n");
         // Stats body
-        sb.append("  <div class='stats-body' id='statsBody'>\n");
+        sb.append("  <div class='stats-body' id='statsBody'" + (o.style.collapseStats ? " style='display:none'>" : ">") + "\n");
         // Overall block - compute N from non-missing numeric values
         int totalN = 0;
         if (!nv.isEmpty()) { double[] s0 = stats(nv.get(0)); totalN = (int) s0[0]; }
@@ -259,8 +259,12 @@ class StatsRenderer {
         int trackY = 14, trackH = 4;
         int trackX = 2, trackW = W - 4; // usable x range: 2 to 108 (106px)
         // IQR fence for outlier detection
+        // t2j fix6: honor whiskerfence(k) so the sparkline's outlier coloring matches the
+        // boxplot (was hardcoded 1.5, so it disagreed with the chart under whiskerfence(3)).
         double iqr    = q3 - q1;
-        double fence  = iqr * 1.5;
+        double _wfk   = 1.5;
+        try { double _k = Double.parseDouble(o.stats.whiskerfence.trim()); if (_k > 0) _wfk = _k; } catch (Exception ignore) {}
+        double fence  = iqr * _wfk;
         double loFence = q1 - fence;
         double hiFence = q3 + fence;
         // Scale helper: maps value in [min,max] to pixel x in [trackX, trackX+trackW]
@@ -327,8 +331,8 @@ class StatsRenderer {
         sb.append("              <div class='spark-wrap'>\n");
         // Min/max labels
         sb.append("                <div class='spark-labels'>\n");
-        sb.append("                  <span>").append(fmtStat(max)).append("</span>\n");
-        sb.append("                  <span>").append(fmtStat(min)).append("</span>\n");
+        sb.append("                  <span").append(spkId.apply("mx")).append(">").append(fmtStat(max)).append("</span>\n");
+        sb.append("                  <span").append(spkId.apply("mn")).append(">").append(fmtStat(min)).append("</span>\n");
         sb.append("                </div>\n");
         // SVG skeleton: track, IQR box, mean/median lines (static, written by Java)
         sb.append("                <svg class='spark-svg' width='").append(W)
@@ -443,14 +447,14 @@ class StatsRenderer {
             + "inPts.split(',').forEach(function(cx){\n"
             + "var c=document.createElementNS('http://www.w3.org/2000/svg','circle');\n"
             + "c.setAttribute('cx',cx);c.setAttribute('cy',cy);\n"
-            + "c.setAttribute('r','2.2');c.setAttribute('fill','#4e79a7');\n"
+            + "c.setAttribute('r','2.2');c.setAttribute('fill','#4e79a7');c.setAttribute('class','spk-dot');\n"
             + "c.setAttribute('opacity','.55');svg.appendChild(c);});}\n"
             + "var outPts=ph.getAttribute('data-out');\n"
             + "if(outPts&&outPts.length>0){\n"
             + "outPts.split(',').forEach(function(cx){\n"
             + "var c=document.createElementNS('http://www.w3.org/2000/svg','circle');\n"
             + "c.setAttribute('cx',cx);c.setAttribute('cy',cy);\n"
-            + "c.setAttribute('r','2.2');c.setAttribute('fill','#e74c3c');\n"
+            + "c.setAttribute('r','2.2');c.setAttribute('fill','#e74c3c');c.setAttribute('class','spk-dot');\n"
             + "c.setAttribute('opacity','.8');svg.appendChild(c);});}\n"
             + "});},{rootMargin:'200px'});\n"
             + "document.querySelectorAll('.spark-ph').forEach(function(ph){\n"
@@ -510,9 +514,9 @@ class StatsRenderer {
 
     String fmtStat(double v) {
         if (v == Math.floor(v) && !Double.isInfinite(v) && Math.abs(v) < 1e12) {
-            return String.format("%,.0f", v);
+            return String.format(Locale.ROOT, "%,.0f", v);
         }
-        return String.format("%,.2f", v);
+        return String.format(Locale.ROOT, "%,.2f", v);
     }
 
 }

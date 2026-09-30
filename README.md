@@ -2,14 +2,14 @@
 
 # sparkta
 
-**Interactive, self-contained HTML charts/graphs and dashboards from Stata.**  
+**Interactive, self-contained HTML charts and dashboards from Stata.**  
 One command. Zero dependencies. No Python. No R. No server.
 
 [![Stata 17+](https://img.shields.io/badge/Stata-17%2B-1a6fa0?style=flat-square)](https://www.stata.com)
-[![Version](https://img.shields.io/badge/version-3.5.111-4a9eff?style=flat-square)](#)
+[![Version](https://img.shields.io/badge/version-3.6.0-4a9eff?style=flat-square)](#)
 [![License](https://img.shields.io/badge/license-MIT-22c55e?style=flat-square)](#)
 [![Chart.js](https://img.shields.io/badge/Chart.js-4.4-f97316?style=flat-square)](https://www.chartjs.org)
-[![SSC](https://img.shields.io/badge/SSC-ssc%20install%20sparkta,%20replace-8b5cf6?style=flat-square)](#installation)
+[![SSC](https://img.shields.io/badge/SSC-ssc%20install%20sparkta-8b5cf6?style=flat-square)](#installation)
 
 ```stata
 sysuse auto, clear
@@ -18,7 +18,7 @@ sparkta price, type(cibar) over(rep78) title("Mean Price by Repair Record")
 
 *Your browser opens. An interactive, shareable `.html` file is written to disk.*
 
-**[Live chart/graph gallery (GitHub Pages)](https://fahad-mirza.github.io/sparkta_stata/)**
+**[Live chart gallery (GitHub Pages)](https://fahad-mirza.github.io/sparkta_stata/)**
 
 </div>
 
@@ -53,13 +53,13 @@ This is the honest comparison.
 | Stats panel matching `summarize` | no | no | **yes** |
 | Runs inside your existing do-file | yes | no | **yes** |
 
-Python and R produce interactive charts/graphs -- but only if your viewer installs the right
+Python and R produce interactive charts -- but only if your viewer installs the right
 libraries, or if you run a Shiny or Dash server. The output is never truly self-contained.
 sparkta produces a single `.html` file that anyone can open, anywhere, forever.
 
 ### Performance
 
-Chart/graphs generation runs entirely inside Stata via the Java Plugin Interface.
+Chart generation runs entirely inside Stata via the Java Plugin Interface.
 There is no export step, no subprocess, no round-trip.
 
 | Dataset size | Generation time | HTML open time |
@@ -69,7 +69,7 @@ There is no export step, no subprocess, no round-trip.
 | ~100,000 obs | ~0.8 s | instant |
 | ~500,000 obs | 1.0 -- 1.5 s | instant |
 
-The HTML file renders immediately. Even 500-group graphs stay under 3 MB thanks
+The HTML file renders immediately. Even 500-group charts stay under 3 MB thanks
 to lazy sparkline rendering -- group statistics panels load as you scroll, not all at once.
 
 ---
@@ -104,16 +104,16 @@ with a clear, actionable error if any are missing. There is no silent CDN fallba
 
 ## Installation
 
-**Option 1 -- from SSC**:
-
-```stata
-ssc install sparkta, replace
-```
-
-**Option 2 -- from GitHub** (available now):
+**Option 1 -- from GitHub** (available now):
 
 ```stata
 net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/")
+```
+
+**Option 2 -- from SSC** (once listed on SSC):
+
+```stata
+ssc install sparkta
 ```
 
 **Verify the installation:**
@@ -123,9 +123,16 @@ sysuse auto, clear
 sparkta price, over(rep78)
 ```
 
-A graph should open in your browser. If you see `[sparkta v3.5.111]` in the Stata output, the installation is working.
+A chart should open in your browser. If you see `[sparkta v3.6.0]` in the Stata output, the installation is working.
 
-**Requirements:** Stata 17+ with Java 8+ (bundled with most Stata installations since version 16).
+**Requirements:** Stata 17+ with Java 11+ (Stata 17 and later bundle a suitable Java runtime; the jar is compiled for Java 11).
+
+**Upgrading from 3.5.111:** run `net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/") replace`
+(3.6.0 is a 24-file package: sparkta.ado, 21 helper ado files, the help file and sparkta.jar), then
+**restart Stata** so its Java runtime loads the new jar. Note that relative paths in `export()` and
+`saveas()` now resolve against Stata's current working directory, `c(pwd)`; 3.5.111 resolved them
+against the Java runtime's folder. The last single-file release stays installable from the tag:
+`net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/v3.5.111/ado/") replace`.
 
 ---
 
@@ -134,7 +141,7 @@ A graph should open in your browser. If you see `[sparkta v3.5.111]` in the Stat
 ```stata
 sysuse auto, clear
 
-* The simplest call -- one variable, default interactive bar chart/graph
+* The simplest call -- one variable, default bar chart
 sparkta price
 
 * Group by a categorical variable
@@ -164,9 +171,9 @@ sparkta price, over(rep78) offline export("~/secure/chart.html")
 
 ---
 
-## Chart/graph types (20+ total)
+## Chart types (20+ total)
 
-### Core charts/graphs
+### Core charts
 
 ```stata
 sysuse auto, clear
@@ -205,7 +212,7 @@ sparkta price mpg, type(scatter) over(foreign) fit(lowess) fitci
 sparkta price mpg, type(scatter) fit(lfit) fitci sliders(mpg)
 ```
 
-### Statistical charts/graphs
+### Statistical charts
 
 These are unique to sparkta -- no other Stata visualization package produces them.
 
@@ -224,7 +231,7 @@ sparkta price, type(histogram) bins(20) histtype(density)
 sparkta price, type(histogram) histtype(fraction)
 ```
 
-### Distribution charts/graphs
+### Distribution charts
 
 ```stata
 * Box and whisker -- Tukey fences, outlier dots, IQR box
@@ -238,7 +245,7 @@ sparkta price, type(hviolin) over(rep78)           // horizontal
 sparkta price, type(violin)  over(rep78) bandwidth(1500)
 ```
 
-### Stacked charts/graphs
+### Stacked charts
 
 ```stata
 sysuse nlsw88, clear
@@ -258,7 +265,7 @@ sparkta price weight length, over(rep78) type(stackedarea)
 ```stata
 sysuse auto, clear
 
-* over() -- one coloured series per group, all on one chart/graph
+* over() -- one coloured series per group, all on one chart
 sparkta price, over(rep78)
 
 * by() -- separate panel per group value, rendered side by side
@@ -285,7 +292,7 @@ sparkta wage, over(industry) filters(occupation)
 
 ## Reference annotations
 
-Draw lines, bands, labelled points, and ellipses on any chart/graph.
+Draw lines, bands, labelled points, and ellipses on any chart.
 
 ```stata
 sysuse auto, clear
@@ -370,10 +377,10 @@ sparkta price, over(rep78)                         ///
 sparkta price weight, type(line) over(foreign)     ///
     lpattern(dash) linewidth(2) nopoints
 
-* Gradient fill on area charts/graphs
+* Gradient fill on area charts
 sparkta price, type(area) over(rep78) gradient
 
-* PNG download button embedded in the chart/graph header
+* PNG download button embedded in the chart header
 sparkta price, type(cibar) over(rep78) download
 
 * Note and subtitle
@@ -389,7 +396,7 @@ sparkta price, over(rep78)                         ///
 ```stata
 sysuse auto, clear
 
-* price on left y-axis, mpg on right y-axis, same chart/graph
+* price on left y-axis, mpg on right y-axis, same chart
 sparkta price mpg, type(line) over(foreign) ///
     y2(mpg) y2title("Fuel economy (MPG)") ytitle("Price (USD)")
 ```
@@ -398,15 +405,101 @@ sparkta price mpg, type(line) over(foreign) ///
 
 ## Summary statistics panel
 
-Every chart/graph includes a collapsible statistics panel computed entirely inside Stata.
+Every chart includes a collapsible statistics panel computed entirely inside Stata.
 
 - **Matches `summarize, detail` exactly** -- same N, Mean, Median, SD, Min, Max, CV
 - Per-group breakdown with an IQR sparkline distribution for each group
 - Updates live when filter dropdowns change
 - `nostats` suppresses the panel entirely
 
-The panel is computed before the chart/graph renders. The numbers are always consistent
+The panel is computed before the chart renders. The numbers are always consistent
 with your Stata results window, regardless of filter or display settings.
+
+---
+
+## Post-estimation charts (new in 3.6.0)
+
+`type(coefplot)`, `type(marginsplot)` and `type(eventstudy)` take no varlist. They draw
+the numbers Stata stored -- `e(b)`/`e(V)` after estimation, `r(table)` after `margins`,
+stored estimates via `estnames()`, any matrix via `matrix()`, or a `.dta`/frame of
+estimates via `results()` -- and never re-estimate anything. A publication table sits
+beneath every post-estimation chart (sortable on the page; Copy as Markdown/LaTeX/TSV,
+Download as CSV, `.tex` or PDF), built from the same source as the chart.
+
+```stata
+sysuse auto, clear
+regress price mpg weight foreign
+sparkta, type(coefplot)                                  // markers + CI, reference line at 0
+sparkta, type(coefplot) levels(90 95) cistyle(band)      // nested intervals
+sparkta, type(coefplot) show(mpg weight) coeflabels(mpg = "Miles per gallon") coefsort(abs)
+
+logit foreign mpg weight
+sparkta, type(coefplot) eform title("Odds ratios")
+
+estimates store m1                                       // several models side by side
+regress price mpg weight
+estimates store m2
+sparkta, type(coefplot) estnames(m1 m2) estlabels(Full~Reduced)
+
+regress price i.rep78##c.mpg
+margins rep78, at(mpg = (15 25 35))
+sparkta, type(marginsplot)                               // what marginsplot would draw
+
+* event study: coefficient names carry the period (lead3 lag2, Tm3 Tp2, -3.rel_time, ...)
+sparkta, type(eventstudy) show(lead5 lead4 lead3 lead2 lag0 lag1 lag2 lag3 lag4 lag5)
+sparkta, type(eventstudy) matrix(r(table))               // after csdid/jwdid estat event
+```
+
+Table options: `stars()`, `headings()`, `indicators()`, `tstat`, `nostars`, `notable`.
+Chart options: `cilevel()`, `levels()`, `cistyle(whisker|band|bar|area)`, `noci`, `eform`,
+`rescale()`, `vertical`, `connected`, `coefstyle(bar)`, `refval()`, `refperiod()`,
+`together`/`separate`, `pointstyles()`, `cicolors()`. See `help sparkta` for the full list.
+
+---
+
+## Export to PNG, PDF and SVG (saveas)
+
+`saveas()` renders the finished page in a headless Microsoft Edge or Google Chrome session
+and writes one or more files; it needs `export()`. PDF and SVG are vector, PNG is drawn at
+`scale()` (default 2x).
+
+```stata
+sysuse auto, clear
+sparkta price, over(rep78) export(fig1.html) saveas(fig1.png fig1.pdf)
+sparkta price, type(boxplot) by(rep78) export(fig2.html) saveas(fig2.pdf)    // panels two across
+regress price mpg weight foreign
+sparkta, type(coefplot) export(cp.html) saveas("out/coef table.pdf", table)  // the table only
+sparkta, type(coefplot) export(cp.html) saveas(cp.png, page scale(3) close)  // whole page, print density
+sparkta, findbrowser                                     // which browser saveas() would use
+sparkta, closebrowser                                    // quit it (it idles 120 s by default)
+```
+
+The browser is found automatically; `browser(path)` or `global SPARKTA_BROWSER "C:\...\msedge.exe"`
+names one. There is no EPS writer -- use PDF or SVG.
+
+---
+
+## Large data
+
+A scatter or bubble chart with more than 20,000 points (per chart: `over()` groups are
+summed, each `by()` panel counts on its own) switches to large-data mode on its own: the
+point cloud is drawn once onto an offscreen bitmap and reused on every redraw, and the
+load animation is off. Stata prints one note, `large-data mode: N points drawn once, no
+animation (hover and export unchanged)`. Tooltips, `mlabel()`, `filters()`, `sliders()`,
+legend clicks, `fit()` lines and CI bands work exactly as on a small chart; there is no
+option to set. `saveas()` on such a page embeds the cloud as one image (axes, text, fit
+line and band stay vector), so a PNG, PDF or SVG of 100,000 points takes a few seconds
+and the SVG is about 0.5-1.5 MB. A 100,000-point scatter loads in about 3 s and hover is
+immediate. For very large datasets see `help sparkta##memory` (`set java_heapmax`).
+
+```stata
+clear
+set obs 100000
+gen x = rnormal()
+gen y = 0.5*x + rnormal()
+gen g = ceil(runiform()*4)
+sparkta y x, type(scatter) over(g) fit(lfit) fitci export(big.html) saveas(big.png big.pdf)
+```
 
 ---
 
@@ -418,7 +511,7 @@ help sparkta
 
 | Group | Options |
 |:---|:---|
-| Chart/graph type | `type()` |
+| Chart type | `type()` |
 | Grouping | `over()` `by()` `filters()` `sliders()` |
 | Statistics | `stat()` `cilevel()` `histtype()` `bins()` |
 | Fit lines | `fit()` `fitci` |
@@ -428,7 +521,9 @@ help sparkta
 | Typography | `titlesize()` `titlecolor()` `subtitlesize()` `xtitlesize()` `xlabsize()` `xlabcolor()` `tooltipbg()` `tooltipfontsize()` `notesize()` |
 | Legend | `legend()` `legtitle()` `leglabels()` `legsize()` `nolegend` `relabel()` |
 | Theme | `theme()` `colors()` `bgcolor()` `plotcolor()` `gradient` |
-| Export | `export()` `offline` `download` |
+| Export | `export()` `offline` `download` `saveas()` `browser()` |
+| Post-estimation | `estnames()` `matrix()` `results()` `show()` `coeflabels()` `coefsort()` `cilevel()` `levels()` `cistyle()` `eform` `rescale()` `refperiod()` `together` `separate` |
+| Publication table | `stars()` `headings()` `indicators()` `tstat` `interval` `nostars` `notable` |
 | Box / violin | `whiskerfence()` `bandwidth()` `mediancolor()` `meancolor()` |
 | Secondary axis | `y2()` `y2title()` `y2range()` |
 | Labelling | `title()` `subtitle()` `note()` `caption()` `xlabels()` `ylabels()` |
@@ -439,21 +534,42 @@ help sparkta
 
 ```
 ado/
-  sparkta.ado            Stata command
+  sparkta.ado            Stata command (main program)
+  sparkta_*.ado          21 helper programs installed with it (colour grammar,
+                         post-estimation readers, browser export, ...)
   sparkta.sthlp          Help file  (help sparkta)
-  sparkta.jar            Pre-compiled Java plugin
+  sparkta.jar            Pre-compiled Java backend (Java 11 class files)
+  sparkta.pkg, stata.toc Package files for  net install
+dist/
+  sparkta.jar            Same build as ado/sparkta.jar (build scripts write both)
 examples/
   basic_charts.do        Bar, line, scatter, area, pie, donut
   stat_charts.do         CI bar, CI line, histogram
   boxviolin.do           Boxplot, violin, whiskerfence, bandwidth
+  filters_and_sliders.do Live filters and range sliders
+  styling.do             Themes, colours, labels
   offline_mode.do        Air-gapped workflow
+  showcase.do            Regenerates the gallery charts in docs/charts/
+  postest.do             coefplot, marginsplot, eventstudy, saveas() exports
+tests/
+  test_release_v360.do   Release suite (210 cases; writes test_out/)
+  test_byfilter_v360.do  by() panels x filters on every chart type
+  test_fix9d_v360.do     saveas() PNG/PDF export checks
+  test_fix9g_v360.do     Large-data mode (13 cases, 100k-point scatters, exports)
+  test_netinstall_v360.do Clean net install check (isolates PLUS/PERSONAL, no 2nd machine needed)
+  test_tag_v360.do       Six-case install smoke test
+verify/                  Offline QA pipeline (no Stata needed): ado lint, headless
+                         render harness, JS/LaTeX/visual audits, fidelity check
+verify_before_zip.py     Pre-release gate (run from the repo root)
+make_ssc_zip.py          Builds the flat zip for the SSC archive
 docs/
-  index.html             Live interactive chart/graph gallery (GitHub Pages)
-  INSTALL.md
-  CHANGELOG.md
+  index.html             Live chart gallery (GitHub Pages)
+  CHANGELOG_sparkta_full.md
+  SSC_SUBMISSION.md
+  OPTIONS_VS_STATA.md
 java/
   src/                   Java source (developers only)
-  build.bat / build.sh
+  build.bat / build.sh   Compile the jar (--release 11) and refresh dist/ and ado/
   fetch_js_libs.bat / fetch_js_libs.sh
 ```
 
@@ -477,9 +593,9 @@ build.sh                 (Mac / Linux)
 
 **Order matters.** JS libraries must be downloaded before compilation so they
 are bundled inside the jar for offline use. Skipping Step 1 causes `offline`
-graphs to fail at render time with a clear pre-flight error message.
+charts to fail at render time with a clear pre-flight error message.
 
-Requirements: Java 8+ JDK, Stata 17+
+Requirements: Java 11+ JDK (build with --release 11), Stata 17+
 
 ---
 
@@ -487,11 +603,11 @@ Requirements: Java 8+ JDK, Stata 17+
 
 | Platform | Status |
 |:---|:---|
-| Windows (Stata 17-19, Java 8-21) | Fully tested |
+| Windows (Stata 17-19, Java 11-21) | Fully tested |
 | Mac (Intel / Apple Silicon) | Jar is platform-independent; browser auto-open uses `open` |
 | Linux | Jar is platform-independent; browser auto-open uses `xdg-open` |
 
-Chart/graph generation and HTML export work on all platforms.
+Chart generation and HTML export work on all platforms.
 If you verify Mac or Linux, please open a GitHub issue with your Stata version and OS.
 
 ---

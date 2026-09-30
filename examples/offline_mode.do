@@ -1,7 +1,7 @@
 *! sparkta example: offline_mode.do
 *! Demonstrates: offline option for air-gapped and institutional environments
 *! Dataset: auto (built-in)
-*! Version: 1.0 | 2026-03-06
+*! Version: 1.0 | 2026-03-06 | rev 2026-09-14 (3.6.0): "%%" -> "%" in titles (a literal %% showed on the page); the if clause moved before the comma
 *
 * The offline option embeds all JavaScript libraries (Chart.js + plugins)
 * directly inside the HTML file. The result opens correctly in any browser
@@ -32,7 +32,7 @@ di "Created: ~/Desktop/offline_bar.html"
 * CI bar -- offline: whiskers included, fully self-contained
 sparkta price weight, type(cibar) over(foreign) ///
     cilevel(95) offline ///
-    title("Mean Price and Weight (95%% CI) -- OFFLINE") ///
+    title("Mean Price and Weight (95% CI) -- OFFLINE") ///
     export("~/Desktop/offline_cibar.html")
 di "Created: ~/Desktop/offline_cibar.html"
 
@@ -55,9 +55,9 @@ di "Created: ~/Desktop/offline_violin.html"
 * suitable for clinical, financial, or restricted datasets.
 
 * Simulate confidential data with a restricted subsample
-sparkta price, type(cibar) over(rep78) if price > 4000 ///
+sparkta price if price > 4000, type(cibar) over(rep78) ///
     cilevel(99) offline ///
-    title("Restricted Sample -- 99%% CI -- OFFLINE") ///
+    title("Restricted Sample -- 99% CI -- OFFLINE") ///
     subtitle("No network request made when this file opens") ///
     note("Safe for institutional networks and confidential archives") ///
     export("~/Desktop/offline_confidential.html")

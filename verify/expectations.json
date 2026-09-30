@@ -1,0 +1,666 @@
+[
+ {
+  "file": "^r_base_bar_over",
+  "type": "bar",
+  "numericX": false,
+  "nDatasets": 2
+ },
+ {
+  "file": "^r_base_hbar_relabel",
+  "type": "bar",
+  "labelsInclude": [
+   "One",
+   "Five"
+  ]
+ },
+ {
+  "file": "^r_base_stackedbar\\.",
+  "type": "bar"
+ },
+ {
+  "file": "^r_base_stackedbar100",
+  "type": "bar"
+ },
+ {
+  "file": "^r_base_line_over_by",
+  "type": "line"
+ },
+ {
+  "file": "^r_base_area",
+  "type": "line"
+ },
+ {
+  "file": "^r_base_scatter_fit",
+  "type": "scatter"
+ },
+ {
+  "file": "^r_base_bubble",
+  "type": "bubble"
+ },
+ {
+  "file": "^r_base_pie",
+  "type": "pie"
+ },
+ {
+  "file": "^r_base_donut",
+  "type": "doughnut"
+ },
+ {
+  "file": "^r_base_cibar",
+  "type": "barWithErrorBars"
+ },
+ {
+  "file": "^r_base_ciline",
+  "type": "line",
+  "htmlIncludes": [
+   "filter:function(it)"
+  ]
+ },
+ {
+  "file": "^r_base_histogram",
+  "type": "bar"
+ },
+ {
+  "file": "^r_base_boxplot",
+  "type": "boxplot"
+ },
+ {
+  "file": "^r_base_hbox",
+  "type": "boxplot"
+ },
+ {
+  "file": "^r_base_violin",
+  "type": "bar",
+  "plugins": [
+   "customViolin"
+  ]
+ },
+ {
+  "file": "^r_opt_annotations",
+  "htmlIncludes": [
+   "chartjs-plugin-annotation"
+  ]
+ },
+ {
+  "file": "^r_opt_lines_legend",
+  "type": "line",
+  "htmlIncludes": [
+   "borderDash",
+   "rl=['Price','MPG'"
+  ]
+ },
+ {
+  "file": "^r_opt_theme_dark",
+  "htmlIncludes": [
+   "background:#"
+  ]
+ },
+ {
+  "file": "^r_pe_cp_whisker",
+  "plugins": [
+   "cpWhisker",
+   "cpZero"
+  ],
+  "noPlugins": [
+   "cpInner"
+  ]
+ },
+ {
+  "file": "^r_pe_cp_band",
+  "plugins": [
+   "cpBand"
+  ]
+ },
+ {
+  "file": "^r_pe_cp_area_bar",
+  "plugins": [
+   "cpBarArea",
+   "cpDot|cpZero"
+  ]
+ },
+ {
+  "file": "^r_pe_cp_levels",
+  "plugins": [
+   "cpInner",
+   "cpCiLegend|cpPexline"
+  ]
+ },
+ {
+  "file": "^r_pe_cp_labels_omit",
+  "labelsInclude": [
+   "Miles per gallon"
+  ]
+ },
+ {
+  "file": "^r_pe_cp_eform\\.",
+  "htmlIncludes": [
+   "Odds ratio"
+  ]
+ },
+ {
+  "file": "^r_pe_cp_multi_whisker",
+  "nDatasets": 3
+ },
+ {
+  "file": "^r_pe_cp_multi_band_levels",
+  "nDatasets": 3,
+  "plugins": [
+   "cpMInner",
+   "cpMDot"
+  ]
+ },
+ {
+  "file": "^r_pe_cp_multi_noci",
+  "nDatasets": 3,
+  "noPlugins": [
+   "cpM(Whisker|Band|Area)"
+  ]
+ },
+ {
+  "file": "^r_pe_es_band",
+  "type": "scatter",
+  "numericX": true,
+  "plugins": [
+   "esCI",
+   "esZero"
+  ],
+  "htmlIncludes": [
+   "Treatment (0)"
+  ]
+ },
+ {
+  "file": "^r_pe_es_area_levels",
+  "type": "scatter",
+  "numericX": true,
+  "plugins": [
+   "esCI",
+   "esZero"
+  ],
+  "htmlIncludes": [
+   "90% CI (inner)",
+   "ribbon(arr,3,4,0.45)"
+  ]
+ },
+ {
+  "file": "^r_mp_t1_factor",
+  "type": "line",
+  "numericX": false,
+  "nDatasets": 1,
+  "plugins": [
+   "mpW0"
+  ],
+  "labelsInclude": [
+   "1",
+   "5"
+  ],
+  "tooltipTitleRegex": "^Repair record 1978: 1$",
+  "tooltipLabelRegex": "Margin: 5,408.*95% CI",
+  "noPlugins": [
+   "mpZ"
+  ]
+ },
+ {
+  "file": "^r_mp_t2_bar",
+  "plugins": [
+   "mpW0"
+  ],
+  "type": "bar"
+ },
+ {
+  "file": "^r_mp_t3_area",
+  "plugins": [
+   "mpA0"
+  ],
+  "noPlugins": [
+   "mpW0"
+  ]
+ },
+ {
+  "file": "^r_mp_t4_interaction",
+  "nDatasets": 2,
+  "datasetLabels": [
+   "Domestic",
+   "Foreign"
+  ],
+  "plugins": [
+   "mpW0",
+   "mpW1"
+  ]
+ },
+ {
+  "file": "^r_mp_t5_interaction_area",
+  "nDatasets": 2,
+  "plugins": [
+   "mpA0",
+   "mpA1"
+  ]
+ },
+ {
+  "file": "^r_mp_t6_numericx",
+  "numericX": true,
+  "nDatasets": 1,
+  "plugins": [
+   "mpA0"
+  ],
+  "labelsInclude": [
+   1760,
+   4760
+  ],
+  "tooltipTitleRegex": "^Weight \\(lbs\\.\\) = 1760$",
+  "tooltipLabelRegex": "Margin: 1,80[0-9].*95% CI"
+ },
+ {
+  "file": "^r_mp_t7_numericx_2series",
+  "numericX": true,
+  "nDatasets": 2,
+  "datasetLabels": [
+   "Domestic",
+   "Foreign"
+  ],
+  "plugins": [
+   "mpA0",
+   "mpA1"
+  ],
+  "labelsInclude": [
+   1760
+  ],
+  "tooltipTitleRegex": "^Weight \\(lbs\\.\\) = 1760$",
+  "tooltipLabelRegex": "^Domestic: "
+ },
+ {
+  "file": "^r_mp_t8_contrast",
+  "plugins": [
+   "mpW0",
+   "mpPex"
+  ],
+  "labelsInclude": [
+   "3"
+  ],
+  "htmlIncludes": [
+   "Contrast of"
+  ]
+ },
+ {
+  "file": "^r_mp_t9_ame",
+  "plugins": [
+   "mpW0",
+   "mpPex"
+  ],
+  "htmlIncludes": [
+   "dy/dx (weight)"
+  ]
+ },
+ {
+  "file": "^r_mp_t10_nested",
+  "plugins": [
+   "mpW0",
+   "mpW_L2_0"
+  ],
+  "tooltipLabelRegex": "95% CI.*90% CI|90% CI",
+  "htmlIncludes": [],
+  "noPlugins": [
+   "mpZ"
+  ]
+ },
+ {
+  "file": "^r_mp_t11_post_coefplot",
+  "type": "scatter",
+  "plugins": [
+   "cpWhisker"
+  ]
+ },
+ {
+  "file": "^r_mp_t12_pwcompare",
+  "plugins": [
+   "mpW0",
+   "mpPex"
+  ],
+  "labelsInclude": [
+   "2 vs 1",
+   "5 vs 4"
+  ],
+  "htmlIncludes": [
+   "Pairwise contrast"
+  ]
+ },
+ {
+  "file": "^r_mp_t13_nested_numericx",
+  "numericX": true,
+  "plugins": [
+   "mpW0",
+   "mpW_L2_0"
+  ],
+  "noPlugins": [
+   "mpZ"
+  ]
+ },
+ {
+  "file": "^r_mp_t14_nested_2series",
+  "nDatasets": 2,
+  "plugins": [
+   "mpW0",
+   "mpW1",
+   "mpW_L2_0",
+   "mpW_L2_1"
+  ],
+  "noPlugins": [
+   "mpZ"
+  ]
+ },
+ {
+  "file": "^r_mp_t17_logit_pr",
+  "numericX": true,
+  "plugins": [
+   "mpA0"
+  ],
+  "htmlIncludes": [
+   "Pr(foreign)"
+  ]
+ },
+ {
+  "file": "^r_mp_t19_dark",
+  "plugins": [
+   "mpA0",
+   "mpA_L2_0",
+   "mpPex"
+  ],
+  "noPlugins": [
+   "mpW_L2_0"
+  ],
+  "htmlIncludes": [
+   "% CI (band)",
+   "% CI (inner band)",
+   "fillRect(xPx-hw",
+   "includeBounds:false"
+  ]
+ },
+ {
+  "file": "^r_mp_t20_titles_width",
+  "htmlIncludes": [
+   "Repair record",
+   "Predicted price (USD)"
+  ]
+ },
+ {
+  "file": "^r_pe_cp_factor_base",
+  "plugins": [
+   "cpWhisker"
+  ],
+  "tooltipLabelRegex": "base or omitted|Coef:"
+ },
+ {
+  "file": "^r_mp_t15_factor_at",
+  "numericX": false,
+  "labelsInclude": [
+   "Domestic",
+   "Foreign"
+  ],
+  "htmlIncludes": [
+   "Car origin"
+  ]
+ },
+ {
+  "file": "^r_opt_palette_okabe",
+  "type": "bar",
+  "htmlIncludes": [
+   "rgba(230,159,0",
+   "rgba(86,180,233"
+  ]
+ },
+ {
+  "file": "^r_opt_palette_viridis",
+  "type": "line",
+  "nDatasets": 2
+ },
+ {
+  "file": "^r_pe_cp_multi_whisker",
+  "nDatasets": 3,
+  "plugins": [
+   "cpMWhisker|cpMDot"
+  ],
+  "noPlugins": [
+   "cpMInner"
+  ]
+ },
+ {
+  "file": "^r_pe_cp_multi_noci",
+  "nDatasets": 3,
+  "noPlugins": [
+   "cpMInner",
+   "cpMWhisker",
+   "cpMBand"
+  ]
+ },
+ {
+  "file": "^r_base_bar_over",
+  "htmlIncludes": [
+   "<h1"
+  ]
+ },
+ {
+  "file": "^r_base_bar_over",
+  "htmlIncludes": [
+   "Mean of Price",
+   "N = 74",
+   "Made with sparkta"
+  ]
+ },
+ {
+  "file": "^r_pe_cp_whisker",
+  "htmlIncludes": [
+   "regress on price",
+   "95% CI (t)",
+   "role='img'"
+  ]
+ },
+ {
+  "file": "^r_mp_t10_nested",
+  "htmlIncludes": [
+   "(inner 90%)"
+  ]
+ },
+ {
+  "file": "^r_base_pie",
+  "htmlIncludes": [
+   "Share of observations by Repair record 1978"
+  ]
+ },
+ {
+  "file": "^r_mp_t7_numericx_2series",
+  "htmlIncludes": [
+   "2 series"
+  ],
+  "tooltipTitleRegex": "^Weight \\(lbs\\.\\) = 1760$"
+ },
+ {
+  "file": "^r_pe_es_band",
+  "htmlIncludes": [
+   "N = 4,000"
+  ]
+ },
+ {
+  "file": "^r_base_nlsw_over_by",
+  "htmlIncludes": [
+   "role='img'"
+  ]
+ },
+ {
+  "file": "^r_mp_t19_dark",
+  "htmlIncludes": [
+   "% CI (band)",
+   "% CI (inner band)",
+   "fillRect(xPx-hw",
+   "includeBounds:false"
+  ],
+  "plugins": [
+   "mpA0",
+   "mpA_L2_0",
+   "mpPex"
+  ],
+  "noPlugins": [
+   "mpW_L2_0"
+  ]
+ },
+ {
+  "file": "^r_mp_t3_area",
+  "htmlIncludes": [
+   "closePath()"
+  ]
+ },
+ {
+  "file": "^r_mp_t21_nested_ribbon",
+  "plugins": [
+   "mpA0",
+   "mpA_L2_0"
+  ],
+  "noPlugins": [
+   "mpW0",
+   "mpW_L2_0"
+  ],
+  "htmlIncludes": [
+   "closePath()",
+   "% CI (band)"
+  ]
+ },
+ {
+  "file": "^r_mp_t22_nested_ribbon_whisk",
+  "plugins": [
+   "mpA0",
+   "mpA_L2_0",
+   "mpW0",
+   "mpW_L2_0"
+  ],
+  "htmlIncludes": [
+   "% CI (inner)",
+   "data-role='ci' data-color",
+   "% CI (band)"
+  ]
+ },
+ {
+  "file": "^r_es_ref_together",
+  "type": "scatter",
+  "numericX": true,
+  "plugins": [
+   "esCI",
+   "esZero"
+  ],
+  "htmlIncludes": [
+   "esRef:true",
+   "reference period (normalised to 0)"
+  ],
+  "nDatasets": 4
+ },
+ {
+  "file": "^r_es_ref_none",
+  "type": "scatter",
+  "numericX": true,
+  "plugins": [
+   "esCI",
+   "esZero"
+  ],
+  "nDatasets": 3
+ },
+ {
+  "file": "^r_es_ref_explicit",
+  "type": "scatter",
+  "numericX": true,
+  "plugins": [
+   "esCI",
+   "esZero"
+  ],
+  "htmlIncludes": [
+   "esRef:true"
+  ],
+  "nDatasets": 3
+ },
+ {
+  "file": "^r_es_separate",
+  "type": "scatter",
+  "numericX": true,
+  "plugins": [
+   "esCI",
+   "esZero"
+  ],
+  "htmlIncludes": [
+   "(pre line)",
+   "(post line)"
+  ],
+  "nDatasets": 5
+ },
+ {
+  "file": "^r_mat_lwdid_event",
+  "type": "scatter",
+  "numericX": true,
+  "plugins": [
+   "esCI",
+   "esZero"
+  ],
+  "htmlIncludes": [
+   "esRef:true"
+  ],
+  "nDatasets": 3
+ },
+ {
+  "file": "^r_res_coef_file",
+  "type": "scatter",
+  "plugins": [
+   "cpWhisker"
+  ],
+  "htmlIncludes": [
+   "Estimates from"
+  ]
+ },
+ {
+  "file": "^r_res_coef_frame",
+  "type": "scatter",
+  "plugins": [
+   "cpWhisker"
+  ],
+  "htmlIncludes": [
+   "frame:spk_res"
+  ]
+ },
+ {
+  "file": "^r_res_mp_factor",
+  "type": "line",
+  "htmlIncludes": [
+   "mpW"
+  ]
+ },
+ {
+  "file": "^r_res_mp_at",
+  "type": "line",
+  "htmlIncludes": [
+   "mpW"
+  ]
+ },
+ {
+  "file": "^r_res_mp_at_factor",
+  "type": "line",
+  "htmlIncludes": [
+   "mpW"
+  ]
+ },
+ {
+  "file": "^r_mp_colors_snapshot",
+  "type": "line",
+  "htmlIncludes": [
+   "rgba(26,71,111"
+  ]
+ },
+ {
+  "file": "^r_mp_palette_snapshot",
+  "type": "line",
+  "htmlIncludes": [
+   "borderColor:'rgba(0,0,0,1.00)'"
+  ]
+ },
+ {
+  "file": "^r_mp_cicolors_series",
+  "type": "line",
+  "htmlIncludes": [
+   "rgba(123,146,168",
+   "rgba(191,161,156"
+  ]
+ }
+]

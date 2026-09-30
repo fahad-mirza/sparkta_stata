@@ -1,7 +1,7 @@
 *! sparkta example: basic_charts.do
 *! Demonstrates: bar, hbar, stackedbar, line, area, scatter, bubble, pie, donut
 *! Dataset: auto (built-in)
-*! Version: 1.0 | 2026-03-06
+*! Version: 1.0 | 2026-03-06 | rev 2026-09-14 (3.6.0): "%%" -> "%" in titles (a literal %% showed on the page)
 * Run with: do basic_charts.do
 * Charts open in browser unless export() is specified.
 * Uncomment export() lines to save files to disk.
@@ -46,8 +46,8 @@ sparkta price weight, type(stackedbar) over(rep78) ///
 
 * 100% stacked -- share of group total
 sparkta price weight mpg, type(stackedbar100) over(foreign) ///
-    title("Variable Share by Car Origin (100%% Stacked)") ///
-    subtitle("Each bar sums to 100%%") ///
+    title("Variable Share by Car Origin (100% Stacked)") ///
+    subtitle("Each bar sums to 100%") ///
     legend(bottom)
     * export("~/Desktop/ex_stackedbar100.html")
 

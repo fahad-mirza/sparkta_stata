@@ -22,11 +22,38 @@ import java.io.IOException;
  */
 public class DashboardBuilder {
 
+    // v3.6.0-t2i (hardening): force a locale-neutral number format for the whole
+    // render. Every machine number reaches JS/JSON/LaTeX via String.format, whose
+    // no-Locale overloads use the JVM default -- under de_DE/fr_FR etc. "%.4f"
+    // emits "1,5000" and corrupts the generated JavaScript (Astra: 41/44 js pages
+    // failed under de_DE). Setting the default to US around execute() (restored in
+    // finally) makes ALL of them '.'-decimal in one place, current and future.
     public static int execute(String[] args) {
+        java.util.Locale _spkPrevLocale = java.util.Locale.getDefault();
         try {
-            if (args.length < 161) {
+            java.util.Locale.setDefault(java.util.Locale.US);
+            return execute0(args);
+        } finally {
+            java.util.Locale.setDefault(_spkPrevLocale);
+        }
+    }
+
+    private static int execute0(String[] args) {
+        try {
+            if (args.length < 210) {
                 SFIToolkit.error("sparkta: insufficient arguments (" + args.length
-                    + " received, 160 expected)\n");
+                    + " received, 210 expected)\n");
+                return SFIToolkit.RC_GENERAL_ERROR;
+            }
+            // fix9g-c: Stata splits an over-long javacall argument (~5,000+ characters) into
+            // several arguments, so every later slot shifts and the chart silently renders
+            // garbage (a 100,000-row fit() line arrived as 140-point chunks). Refuse instead.
+            if (args.length > 210) {
+                int worst = 0, at = -1;
+                for (int i = 0; i < args.length; i++) if (args[i] != null && args[i].length() > worst) { worst = args[i].length(); at = i; }
+                SFIToolkit.error("sparkta: " + args.length + " arguments received, 210 expected -- an option value"
+                    + " was too long for javacall and was split (longest argument: slot " + at + ", " + worst
+                    + " characters). This is a sparkta bug: please report the command that produced it.\n");
                 return SFIToolkit.RC_GENERAL_ERROR;
             }
 
@@ -34,17 +61,25 @@ public class DashboardBuilder {
             wireArgs(args, o);
             aliasTypes(o);
 
-            SFIToolkit.displayln("  Reading data from Stata...");
-            StataDataReader reader = new StataDataReader();
-            DataSet data = reader.read(o.varlist, o.over, o.by, o.tousename,
-                                       o.nomissing, o.chart.novaluelabels,
-                                       o.axes.filterList);
+            DataSet data;
+            if (o.isPostEstimation()) {
+                // v3.6.0: Post-estimation types read from pipe-sep args, not Stata data.
+                // Create minimal empty DataSet -- chart rendering uses o.chart.pe* fields.
+                SFIToolkit.displayln("  Post-estimation chart: skipping data scan.");
+                data = new DataSet();
+            } else {
+                SFIToolkit.displayln("  Reading data from Stata...");
+                StataDataReader reader = new StataDataReader();
+                data = reader.read(o.varlist, o.over, o.by, o.tousename,
+                                   o.nomissing, o.chart.novaluelabels,
+                                   o.axes.filterList);
 
-            loadAuxVars(reader, o, data);
+                loadAuxVars(reader, o, data);
 
-            if (data.isEmpty()) {
-                SFIToolkit.error("sparkta: no data could be read\n");
-                return SFIToolkit.RC_GENERAL_ERROR;
+                if (data.isEmpty()) {
+                    SFIToolkit.error("sparkta: no data could be read\n");
+                    return SFIToolkit.RC_GENERAL_ERROR;
+                }
             }
 
             int rc = checkOfflinePreflight(o);
@@ -52,6 +87,8 @@ public class DashboardBuilder {
 
             String jsMode = o.chart.offline ? "offline (embedded JS)" : "online (CDN)";
             SFIToolkit.displayln("  Generating " + o.type + " chart  [" + jsMode + "]");
+            // v3.6.0-s8i: nested-CI subtitle removed -- mpLegend/cpCiLegend draw the CI key
+            // on the chart and HtmlGenerator.contextLine() states "(inner 90%)".
             HtmlGenerator gen = new HtmlGenerator(o);
             String html = gen.build(data);
 
@@ -59,6 +96,7 @@ public class DashboardBuilder {
 
         } catch (Exception e) {
             SFIToolkit.error("sparkta error: " + e.getMessage() + "\n");
+            if (System.getProperty("sparkta.trace") != null) e.printStackTrace(System.out);
             return SFIToolkit.RC_GENERAL_ERROR;
         }
     }
@@ -70,7 +108,7 @@ public class DashboardBuilder {
 
         // 0-18: identity and core
         o.varlist             = a(args,0);
-        o.type                = a(args,1).toLowerCase();
+        o.type                = a(args,1).toLowerCase(java.util.Locale.ROOT);
         o.title               = a(args,2).isEmpty() ? "Dashboard" : a(args,2);
         o.theme               = a(args,3).isEmpty() ? "default"   : a(args,3);
         o.export              = a(args,4);
@@ -80,6 +118,7 @@ public class DashboardBuilder {
         o.by                  = a(args,8);
         o.tousename           = a(args,9);
         o.chart.layout        = a(args,10).isEmpty() ? "vertical" : a(args,10);
+        o.chart.layoutExplicit = !a(args,10).isEmpty();   // fix9f: explicit layout(vertical) keeps the stack in exports
         o.chart.bgcolor       = a(args,11);
         o.chart.plotcolor     = a(args,12);
         o.chart.gridcolor     = a(args,13);
@@ -100,9 +139,9 @@ public class DashboardBuilder {
         o.chart.fill          = flag(args,26);
 
         // 27-34: appearance
-        o.chart.smooth        = a(args,27).isEmpty() ? "0.3" : a(args,27);
+        o.chart.smooth        = a(args,27);   // t2j fix8 (A10): no default here -- regular lines default tension to 0.3, post-est connected lines to 0 (straight), via *Or("...") helpers; honors an explicit smooth() on post-est connectors too
         o.chart.pointsize     = a(args,28).isEmpty() ? "4"   : a(args,28);
-        o.chart.linewidth     = a(args,29).isEmpty() ? "2"   : a(args,29);
+        o.chart.linewidth     = a(args,29);   // t2j fix8 (A7): no default here -- lines/ciline default to 2, bars to 1, via DatasetBuilder.lineWidthOr(); honors an explicit linewidth() on bar outlines too
         o.chart.aspect        = a(args,30);
         o.chart.animate       = a(args,31);
         o.chart.legend        = a(args,32).isEmpty() ? "top" : a(args,32);
@@ -139,11 +178,16 @@ public class DashboardBuilder {
         o.chart.borderradius  = a(args,57);
         o.chart.opacity       = a(args,58);
         o.chart.padding       = a(args,59);
+        o.chart.plotMargin    = a(args,205);   // v3.6.0-s8p
+        o.chart.yfree         = flag(args,206);  // v3.6.0-s9g
+        o.chart.peXpos        = a(args,207);     // v3.6.0-t2d
+        o.chart.esOpts        = a(args,208);     // v3.6.0-t2f
+        parseTableOpts(o, a(args,209));          // v3.6.0-t2h (batch 2a): publication table
 
         // 60-63: animation and tooltip
         o.chart.easing        = a(args,60);
         o.chart.animdelay     = a(args,61);
-        o.chart.tooltipmode   = a(args,62).isEmpty() ? "index"   : a(args,62);
+        o.chart.tooltipmode   = a(args,62);   // t2j fix8 (A8): no default here -- each tooltip builder keeps its own historical default when empty, so an explicit tooltipmode(index) is honored instead of coerced+remapped
         o.chart.tooltippos    = a(args,63).isEmpty() ? "average" : a(args,63);
 
         // 64-66: legend
@@ -167,7 +211,8 @@ public class DashboardBuilder {
         { String[] fp = o.axes.filterList.split("\\|", -1);
           o.axes.filter1 = fp.length > 0 ? fp[0].trim() : "";
           o.axes.filter2 = fp.length > 1 ? fp[1].trim() : ""; }
-        // arg 77 reserved (was filter2, now folded into filterList)
+        // arg 77: reference-line width px (t2j fix8 A13; slot was reserved/empty)
+        o.chart.refLineWidth     = a(args,77);
         o.chart.nostats          = flag(args,78);
         o.stats.cilevel          = a(args,79).isEmpty() ? "95"      : a(args,79);
         o.stats.cibandopacity    = a(args,80).isEmpty() ? "0.18"    : a(args,80);
@@ -269,6 +314,56 @@ public class DashboardBuilder {
         o.chart.fitLineData      = a(args,158);
         o.chart.fitCiUpper       = a(args,159);
         o.chart.fitCiLower       = a(args,160);
+
+        // 161-179: Post-estimation charts (v3.6.0)
+        o.chart.peNames          = a(args,161);
+        
+        o.chart.peCoefs          = a(args,162);
+        o.chart.peLower          = a(args,163);
+        o.chart.peUpper          = a(args,164);
+        o.chart.peSes            = a(args,165);
+        o.chart.pePvals          = a(args,166);
+        o.chart.peEstNames       = a(args,167);
+        o.chart.peHeadings       = a(args,168);
+        o.chart.peNobs           = a(args,169);
+        o.chart.peDepvar         = a(args,170);
+        o.chart.peOrient         = a(args,171);
+        o.chart.peCoefStyle      = a(args,172);
+        o.chart.peCiStyle        = a(args,173);
+        o.chart.pePStyles        = a(args,174);
+        o.chart.mpData           = a(args,175);
+        o.chart.mpUpper          = a(args,176);
+        o.chart.mpLower          = a(args,177);
+        o.chart.mpXlab           = a(args,178);
+        o.chart.mpYlab           = a(args,179);
+        o.chart.mpSeries         = a(args,203);  // v3.6.0-s8a: series labels
+        o.chart.mpXpos           = a(args,204);  // v3.6.0-s8a: numeric x positions from r(at)
+
+        // 180-184: Post-estimation table extras (v3.6.0)
+        o.chart.peBases          = a(args,180);
+        o.chart.peTstat          = a(args,181);
+        o.chart.peCmd            = a(args,182);
+        o.chart.peNoci           = flag(args,183);
+        o.chart.peTzvals         = a(args,184);
+        // -- Session 6 visual control (v3.6.0-s6) --
+        o.chart.peRefval         = a(args,185).isEmpty() ? "0" : a(args,185);
+        o.chart.peEstlabels      = a(args,186);
+        o.chart.peCicolors       = a(args,187);
+        o.chart.peCiwidth        = a(args,188);
+        o.stataPwd              = a(args,189);   // Stata c(pwd) for relative path resolution
+        o.chart.peConnected     = flag(args,190); // connected: draw line through point estimates
+        o.chart.peModelStats    = a(args,191);    // v3.6.0-s6c: fit stats per model (tilde-sep pipe-sep)
+        o.chart.peIndicators    = a(args,192);    // v3.6.0-s6c: indicator rows for table export
+        o.chart.peAddstats      = a(args,193);    // v3.6.0-s6c: addstats rows for table export
+        o.chart.peVarLabels     = a(args,194);    // v3.6.0: auto variable labels varname|||label~~~
+        o.chart.peCustomLabels  = a(args,195);    // v3.6.0: custom labels from coeflabels()
+        o.chart.pePexline       = a(args,196);    // v3.6.0-s7a: pexline() vertical reference for coefplot/eventstudy
+        o.chart.peLevels2Lo     = a(args,197);    // v3.6.0-s7b: levels() inner CI lower bounds
+        o.chart.peLevels2Hi     = a(args,198);    // v3.6.0-s7b: levels() inner CI upper bounds
+        o.chart.peLevels2Val    = a(args,199);    // v3.6.0-s7b: levels() inner CI level value
+        o.style.noTimestamp     = flag(args,200);  // v3.6.0-s7d: suppress timestamp subtitle
+        o.style.collapseStats   = flag(args,201);  // v3.6.0-s7d: stats panel starts collapsed
+        o.style.noAllFilter     = flag(args,202);  // v3.6.0-s7d: suppress All in filter dropdowns
     }
 
     // -------------------------------------------------------------------------
@@ -360,10 +455,11 @@ public class DashboardBuilder {
     // -------------------------------------------------------------------------
     private static int exportOrOpen(DashboardOptions o, String html) throws Exception {
         if (!o.export.isEmpty()) {
-            String resolvedPath = FileUtil.resolvedPathString(o.export);
+            // Pass Stata's c(pwd) so relative paths resolve correctly (v3.6.0-s6)
+            String resolvedPath = FileUtil.resolvedPathString(o.export, o.stataPwd);
             SFIToolkit.displayln("  Exporting to: " + resolvedPath);
             try {
-                FileUtil.writeFile(o.export, html);
+                FileUtil.writeFile(o.export, o.stataPwd, html);
                 String exportMode = o.chart.offline ? " [fully offline]" : "";
                 SFIToolkit.displayln("Dashboard exported to: " + resolvedPath + exportMode);
             } catch (IOException ex) {
@@ -391,4 +487,38 @@ public class DashboardBuilder {
     // -------------------------------------------------------------------------
     private static String  a(String[] a, int i) { return i < a.length ? a[i].trim() : ""; }
     private static boolean flag(String[] a, int i) { return i < a.length && a[i].trim().equals("1"); }
+
+    // -------------------------------------------------------------------------
+    // v3.6.0-t2h (batch 2a): parse the packed publication-table option string
+    // emitted by sparkta_table_opts.ado into o.table.*. Format is a pipe-sep
+    // list of key=value pairs (order-independent, all optional):
+    //   "stars=0.10 0.05 0.01|nostars=0|tstat=0|ci=0|nofooter=0|notable=0"
+    // An empty arg leaves every default in place. Unknown keys are ignored so
+    // the Java side never rejects a string the ado might extend later.
+    // -------------------------------------------------------------------------
+    private static void parseTableOpts(DashboardOptions o, String packed) {
+        if (packed == null || packed.isEmpty()) return;
+        for (String pair : packed.split("\\|", -1)) {
+            int eq = pair.indexOf('=');
+            if (eq < 1) continue;
+            String key = pair.substring(0, eq).trim();
+            String val = pair.substring(eq + 1).trim();
+            switch (key) {
+                case "stars":
+                    if (!val.isEmpty()) {
+                        String[] t = val.split("\\s+");
+                        java.util.List<String> keep = new java.util.ArrayList<>();
+                        for (String s : t) if (!s.isEmpty()) keep.add(s);
+                        if (!keep.isEmpty()) o.table.stars = keep.toArray(new String[0]);
+                    }
+                    break;
+                case "nostars":  o.table.noStars  = val.equals("1"); break;
+                case "tstat":    o.table.tstat    = val.equals("1"); break;
+                case "ci":       o.table.ci       = val.equals("1"); break;
+                case "nofooter": o.table.noFooter = val.equals("1"); break;
+                case "notable":  o.table.noTable  = val.equals("1"); break;
+                default: /* forward-compatible: ignore unknown keys */ break;
+            }
+        }
+    }
 }

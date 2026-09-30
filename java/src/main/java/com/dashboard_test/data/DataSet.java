@@ -131,6 +131,14 @@ public class DataSet {
             boolean hasMissing = false;
             for (Object v : var.getValues()) if (v == null) { hasMissing = true; break; }
             if (hasMissing) vals.add(MISSING_SENTINEL);
+        } else {
+            // t2j fix8 (deep-dive r3): the base uniqueValues() maps a missing (null)
+            // over-value to an empty-string group and includes it; by default (showmissing
+            // off) that surfaced as a PHANTOM empty "(Missing)" category -- an empty bar at
+            // index 0, a blank stacked100 legend swatch, a blank leading ciline category, and
+            // Overall-N != sum-of-group-N. Stata drops a missing over() group unless asked,
+            // so remove it here. showmissing re-adds it as a labelled MISSING_SENTINEL above.
+            vals.remove("");
         }
         return vals;
     }
@@ -142,6 +150,10 @@ public class DataSet {
             boolean hasMissing = false;
             for (Object v : var.getValues()) if (v == null) { hasMissing = true; break; }
             if (hasMissing) keys.add(MISSING_SENTINEL);
+        } else {
+            // t2j fix8 (deep-dive r3): drop the empty/missing group by default, kept in
+            // lockstep with uniqueValues() above so labels and keys stay aligned.
+            keys.remove("");
         }
         return keys;
     }
@@ -170,16 +182,13 @@ public class DataSet {
             catch (NumberFormatException e) { numericKeys.add(null); }
         }
         List<String> labelSeen = new ArrayList<>(seen.values());
+        List<String> seenRaw   = new ArrayList<>(seen.keySet());
         if (sort) {
             int n = labelSeen.size();
             List<int[]> idx = new ArrayList<>();
             for (int i = 0; i < n; i++) idx.add(new int[]{i});
-            idx.sort((a, b) -> {
-                Double da = numericKeys.get(a[0]);
-                Double db = numericKeys.get(b[0]);
-                if (da != null && db != null) return Double.compare(da, db);
-                return labelSeen.get(a[0]).compareTo(labelSeen.get(b[0]));
-            });
+            idx.sort((a, b) -> groupOrder(numericKeys.get(a[0]), labelSeen.get(a[0]), seenRaw.get(a[0]),
+                                          numericKeys.get(b[0]), labelSeen.get(b[0]), seenRaw.get(b[0])));
             List<String> sorted = new ArrayList<>();
             for (int[] i : idx) sorted.add(labelSeen.get(i[0]));
             return sorted;
@@ -208,17 +217,29 @@ public class DataSet {
             int n = rawSeen.size();
             List<int[]> idx = new ArrayList<>();
             for (int i = 0; i < n; i++) idx.add(new int[]{i});
-            idx.sort((a, b) -> {
-                Double da = numericKeys.get(a[0]);
-                Double db = numericKeys.get(b[0]);
-                if (da != null && db != null) return Double.compare(da, db);
-                return rawSeen.get(a[0]).compareTo(rawSeen.get(b[0]));
-            });
+            idx.sort((a, b) -> groupOrder(numericKeys.get(a[0]), rawSeen.get(a[0]), rawSeen.get(a[0]),
+                                          numericKeys.get(b[0]), rawSeen.get(b[0]), rawSeen.get(b[0])));
             List<String> sorted = new ArrayList<>();
             for (int[] i : idx) sorted.add(rawSeen.get(i[0]));
             return sorted;
         }
         return rawSeen;
+    }
+
+    /**
+     * t2j fix8q (QC sweep S2): one group comparator for uniqueValues() and uniqueGroupKeys()
+     * so labels and keys always sort identically. Missing (raw "") sorts LAST -- Stata's own
+     * sort order for missing values, and where a by(, showmissing) panel belongs (it rendered
+     * FIRST before). Numbers sort numerically and before non-numeric strings; strings sort by
+     * the given text. The ordering is total, so the sort never hits the "comparison method
+     * violates its general contract" exception the old numeric/string mix could throw.
+     */
+    private static int groupOrder(Double da, String ta, String rawA, Double db, String tb, String rawB) {
+        boolean ma = rawA.isEmpty(), mb = rawB.isEmpty();
+        if (ma != mb) return ma ? 1 : -1;
+        if (da != null && db != null) return Double.compare(da, db);
+        if ((da != null) != (db != null)) return da != null ? -1 : 1;
+        return ta.compareTo(tb);
     }
 
     private static List<String> uniqueValuesDesc(Variable var) {

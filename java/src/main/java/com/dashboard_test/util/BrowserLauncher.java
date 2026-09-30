@@ -24,7 +24,7 @@ public class BrowserLauncher {
      * Opens a URI in the default browser.
      */
     public static void openUri(URI uri) throws Exception {
-        String os = System.getProperty("os.name").toLowerCase();
+        String os = System.getProperty("os.name").toLowerCase(java.util.Locale.ROOT);
 
         if (os.contains("win")) {
             // Windows

@@ -1,0 +1,231 @@
+[
+ {
+  "file": "^h_t19_mp_offline",
+  "htmlIncludes": [
+   "Chart.js v4.4.0"
+  ]
+ },
+ {
+  "file": "^h_t21_mp_bar",
+  "type": "bar",
+  "plugins": [
+   "mpW0"
+  ]
+ },
+ {
+  "file": "^h_t22_mp_bar_2series",
+  "type": "bar",
+  "nDatasets": 2,
+  "plugins": [
+   "mpW0",
+   "mpW1"
+  ]
+ },
+ {
+  "file": "^h_t16_mp_dark",
+  "plugins": [
+   "mpA0",
+   "mpA_L2_0"
+  ],
+  "noPlugins": [
+   "mpW_L2_0"
+  ],
+  "htmlIncludes": [
+   "% CI (band)"
+  ]
+ },
+ {
+  "file": "^h_t23_mp_nested_ribbon",
+  "plugins": [
+   "mpA0",
+   "mpA_L2_0"
+  ],
+  "noPlugins": [
+   "mpW0",
+   "mpW_L2_0"
+  ],
+  "htmlIncludes": [
+   "closePath()"
+  ]
+ },
+ {
+  "file": "^h_t24_mp_nested_ribbon_whisk",
+  "plugins": [
+   "mpA0",
+   "mpA_L2_0",
+   "mpW0",
+   "mpW_L2_0"
+  ],
+  "htmlIncludes": [
+   "% CI (inner)",
+   "data-role='ci' data-color",
+   "% CI (band)"
+  ]
+ },
+ {
+  "file": "^h_t25_mp_nested_rect_whisk",
+  "plugins": [
+   "mpA0",
+   "mpA_L2_0",
+   "mpW0",
+   "mpW_L2_0"
+  ],
+  "htmlIncludes": [
+   "fillRect(xPx-hw"
+  ]
+ },
+ {
+  "file": "^h_t26_mp_plotmargin",
+  "numericX": true
+ },
+ {
+  "file": "^h_t30_cp_bar_area",
+  "plugins": [
+   "cpBarArea"
+  ]
+ },
+ {
+  "file": "^h_t40_cp_bar_whisker",
+  "type": "bar",
+  "plugins": [
+   "cpBarWhisker"
+  ],
+  "htmlIncludes": [
+   "Hollow bar: p &gt; 0.1",
+   "backgroundColor:_cpSig.map("
+  ],
+  "htmlExcludes": [
+   "Hollow marker: p &gt; 0.1"
+  ]
+ },
+ {
+  "file": "^h_t41_cp_bar_v_whisker",
+  "type": "bar",
+  "htmlIncludes": [
+   "Hollow bar: p &gt; 0.1",
+   "backgroundColor:_cpSig.map("
+  ],
+  "htmlExcludes": [
+   "Hollow marker: p &gt; 0.1"
+  ]
+ },
+ {
+  "file": "^h_t42_cp_bar_area_sig",
+  "type": "bar",
+  "htmlIncludes": [
+   "Hollow bar: p &gt; 0.1",
+   "backgroundColor:_cpSig.map("
+  ],
+  "htmlExcludes": [
+   "Hollow marker: p &gt; 0.1"
+  ]
+ },
+ {
+  "file": "^h_t43_cp_bar_barci",
+  "type": "bar",
+  "htmlIncludes": [
+   "Hollow bar: p &gt; 0.1",
+   "backgroundColor:_cpSig.map("
+  ],
+  "htmlExcludes": [
+   "Hollow marker: p &gt; 0.1"
+  ]
+ },
+ {
+  "file": "^h_t44_cp_bar_noci",
+  "type": "bar",
+  "htmlIncludes": [
+   "Hollow bar: p &gt; 0.1",
+   "backgroundColor:_cpSig.map("
+  ],
+  "htmlExcludes": [
+   "Hollow marker: p &gt; 0.1"
+  ]
+ },
+ {
+  "file": "^h_t45_cp_bar_levels",
+  "type": "bar",
+  "htmlIncludes": [
+   "Hollow bar: p &gt; 0.1",
+   "backgroundColor:_cpSig.map("
+  ],
+  "htmlExcludes": [
+   "Hollow marker: p &gt; 0.1"
+  ]
+ },
+ {
+  "file": "^h_d1_bar_over",
+  "type": "bar"
+ },
+ {
+  "file": "^h_d2_box_by",
+  "type": "boxplot",
+  "htmlIncludes": [
+   "spk-shared-key",
+   "(missing)"
+  ]
+ },
+ {
+  "file": "^h_d3_bar_over_by",
+  "type": "bar",
+  "htmlIncludes": [
+   "spk-shared-key"
+  ]
+ },
+ {
+  "file": "^h_d4_line_over_by",
+  "type": "line"
+ },
+ {
+  "file": "^h_d5_violin_by",
+  "htmlIncludes": [
+   "spk-shared-key"
+  ]
+ },
+ {
+  "file": "^h_d6_scatter",
+  "type": "scatter"
+ },
+ {
+  "file": "^h_t33_es_band_levels",
+  "type": "scatter",
+  "numericX": true,
+  "plugins": [
+   "esCI",
+   "esZero"
+  ],
+  "htmlIncludes": [
+   "ribbon(arr,3,4,0.45)",
+   "#1b9e77",
+   "#d95f02",
+   "esRef:true",
+   "reference period (normalised to 0)"
+  ]
+ },
+ {
+  "file": "^h_t34_es_together_ref",
+  "type": "scatter",
+  "numericX": true,
+  "plugins": [
+   "esCI",
+   "esZero"
+  ],
+  "htmlIncludes": [
+   "esRef:true"
+  ],
+  "nDatasets": 8
+ },
+ {
+  "file": "^h_t35_es_zero_row",
+  "type": "scatter",
+  "numericX": true,
+  "plugins": [
+   "esCI",
+   "esZero"
+  ],
+  "htmlIncludes": [
+   "esRef:true"
+  ],
+  "nDatasets": 3
+ }
+]

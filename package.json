@@ -1,0 +1,25 @@
+{
+  "name": "sparkta_v3_6_0_t2g_handover",
+  "version": "1.0.0",
+  "description": "<div align=\"center\">",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@sgratzl/chartjs-chart-boxplot": "^4.4.5",
+    "@xmldom/xmldom": "^0.9.12",
+    "canvas": "^3.2.3",
+    "chart.js": "^4.4.0",
+    "chartjs-chart-error-bars": "^4.4.0",
+    "playwright": "^1.63.0",
+    "pngjs": "^7.0.0"
+  }
+}

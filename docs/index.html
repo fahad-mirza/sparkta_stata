@@ -94,6 +94,8 @@
     border: 1px solid rgba(245,158,11,0.25);
     border-radius: var(--radius);
     padding: 12px 22px;
+    max-width: 100%;
+    overflow-wrap: anywhere;   /* fix9u: the net install line is long */
     font-size: 1rem;
     font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     color: var(--accent2);
@@ -331,10 +333,10 @@
   <div class="badges">
     <span class="badge amber">Stata 17+</span>
     <span class="badge mint">MIT License</span>
-    <span class="badge amber">v3.5.111</span>
+    <span class="badge amber">v3.6.0</span>
     <span class="badge warm">Chart.js 4.4</span>
   </div>
-  <code class="install">ssc install sparkta, replace</code>
+  <code class="install">net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/") replace</code>
 </header>
 
 <div class="intro">

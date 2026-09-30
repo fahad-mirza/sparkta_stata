@@ -1,7 +1,7 @@
 *! sparkta example: stat_charts.do
 *! Demonstrates: cibar, ciline, histogram
 *! Dataset: auto (built-in)
-*! Version: 1.0 | 2026-03-06
+*! Version: 1.0 | 2026-03-06 | rev 2026-09-14 (3.6.0): "%%" -> "%" in titles (a literal %% showed on the page)
 * Run with: do stat_charts.do
 * Charts open in browser unless export() is specified.
 
@@ -14,33 +14,33 @@ sysuse auto, clear
 
 * Basic CI bar: 95% CI (default)
 sparkta price, type(cibar) over(rep78) ///
-    title("Mean Price by Repair Record (95%% CI)") ///
+    title("Mean Price by Repair Record (95% CI)") ///
     ytitle("Mean Price (USD)") ///
-    note("Whiskers show t-distribution 95%% confidence intervals")
+    note("Whiskers show t-distribution 95% confidence intervals")
     * export("~/Desktop/ex_cibar_basic.html")
 
 * Multiple variables: each gets its own color
 sparkta price weight, type(cibar) over(foreign) ///
-    title("Price and Weight by Origin (95%% CI)") ///
+    title("Price and Weight by Origin (95% CI)") ///
     legend(bottom) legtitle("Variable")
     * export("~/Desktop/ex_cibar_multi.html")
 
 * 90% CI -- narrower whiskers
 sparkta price, type(cibar) over(rep78) cilevel(90) ///
-    title("Mean Price (90%% CI)") ///
-    subtitle("Narrower interval compared to 95%%")
+    title("Mean Price (90% CI)") ///
+    subtitle("Narrower interval compared to 95%")
     * export("~/Desktop/ex_cibar_90.html")
 
 * 99% CI -- wider whiskers
 sparkta price, type(cibar) over(rep78) cilevel(99) ///
-    title("Mean Price (99%% CI)") ///
-    subtitle("Wider interval compared to 95%%")
+    title("Mean Price (99% CI)") ///
+    subtitle("Wider interval compared to 95%")
     * export("~/Desktop/ex_cibar_99.html")
 
 * Horizontal CI bar
 sparkta price weight, type(cibar) over(rep78) ///
     horizontal cilevel(95) ///
-    title("Price and Weight (95%% CI) -- Horizontal") ///
+    title("Price and Weight (95% CI) -- Horizontal") ///
     legend(bottom)
     * export("~/Desktop/ex_cibar_horiz.html")
 
@@ -57,14 +57,14 @@ sparkta price, type(cibar) over(rep78) ///
 
 * Basic CI line: 95% band
 sparkta price, type(ciline) over(rep78) ///
-    title("Mean Price by Repair Record (95%% CI Band)") ///
+    title("Mean Price by Repair Record (95% CI Band)") ///
     ytitle("Mean Price (USD)") ///
     note("Shaded band shows t-distribution confidence interval")
     * export("~/Desktop/ex_ciline_basic.html")
 
 * Multiple variables: one line per variable
 sparkta price weight, type(ciline) over(foreign) ///
-    title("Price and Weight (95%% CI) -- Line") ///
+    title("Price and Weight (95% CI) -- Line") ///
     legend(bottom)
     * export("~/Desktop/ex_ciline_multi.html")
 
@@ -85,7 +85,7 @@ sparkta price, type(ciline) over(rep78) ///
 * CI line with filter
 sparkta price, type(ciline) over(rep78) ///
     filter(foreign) cibandopacity(0.20) ///
-    title("Mean Price by Repair Record (95%% CI)") ///
+    title("Mean Price by Repair Record (95% CI)") ///
     subtitle("Filter by Car Origin using the dropdown")
     * export("~/Desktop/ex_ciline_filter.html")
 

@@ -6,22 +6,22 @@ import com.dashboard_test.data.Variable;
 import java.util.*;
 
 /**
- * DataEmbedder  (F-0, sparkta)  v1.2 -- Float32Array base64 encoding for _sd
+ * DataEmbedder  (F-0, sparkta)  v1.2 -- Float64Array base64 encoding for _sd
  *
  * Performance upgrade: numeric _sd arrays are now emitted as base64-encoded
- * Float32Array buffers instead of plain JSON arrays. This reduces payload size
+ * Float64Array buffers instead of plain JSON arrays. This reduces payload size
  * by ~60% for numeric columns (4 bytes/value vs ~7 bytes average in JSON) and
  * cuts browser parse time significantly at N>10k rows.
  *
  * Encoding:
- *   Each numeric column is packed into a little-endian Float32Array (4 bytes
- *   per value). Missing values (null) are encoded as Float.NaN (0x7FC00000).
+ *   Each numeric column is packed into a little-endian Float64Array (8 bytes
+ *   per value). Missing values (null) are encoded as Double.NaN.
  *   The raw bytes are base64-encoded and emitted as a string literal.
  *   The engine decodes on first access via _sdDecode() in sparkta_engine.js.
  *
  *   Emitted form:  _sdb['varname'] = 'base64string';
  *   At runtime:    _sd['varname']  = _sdDecode(_sdb['varname']);
- *                  decoded as Float32Array, NaN positions treated as null.
+ *                  decoded as Float64Array, NaN positions treated as null.
  *
  * Fallback: integer-valued whole columns retain compact integer JSON for
  *   human readability in small datasets (N < PLAIN_JSON_THRESHOLD = 200).
@@ -62,7 +62,7 @@ import java.util.*;
  * ------------
  *   We keep plain JSON (not base64 typed arrays) for the initial F-0
  *   implementation -- simpler, universally readable in all browsers,
- *   and adequate for datasets up to ~100k rows.  The base64/Float32Array
+ *   and adequate for datasets up to ~100k rows.  The base64/Float64Array
  *   upgrade path is documented but deferred to F-0b.
  *
  *   The engine reads _sd for numeric columns and _si/_sc for categoricals.
@@ -91,8 +91,8 @@ public class DataEmbedder {
 
         // -- _sd / _sdb: numeric values for each variable ---------------------
         // Small datasets (N < PLAIN_JSON_THRESHOLD): plain JSON into _sd directly.
-        // Large datasets: base64 Float32Array into _sdb; _sd decoded lazily by engine.
-        // _sdDecode() in sparkta_engine.js handles the base64 -> Float32Array path.
+        // Large datasets: base64 Float64Array into _sdb; _sd decoded lazily by engine.
+        // _sdDecode() in sparkta_engine.js handles the base64 -> Float64Array path.
         boolean useb64 = nObs >= PLAIN_JSON_THRESHOLD;
         sb.append("var _sd = {};\n");
         if (useb64) sb.append("var _sdb = {};\n");
@@ -274,6 +274,16 @@ public class DataEmbedder {
             } else {
                 sb.append("null");
             }
+        } else if (!data.hasOver() && data.getNumericVariables().size() > 1
+                   && (o.type.equals("bar") || o.type.equals("hbar"))) {
+            // Multi-var no-over() bar: embed display names for filter engine
+            sb.append("[");
+            List<Variable> nvars = data.getNumericVariables();
+            for (int i = 0; i < nvars.size(); i++) {
+                if (i > 0) sb.append(",");
+                sb.append(jsStr(nvars.get(i).getDisplayName()));
+            }
+            sb.append("]");
         } else {
             sb.append("null");
         }
@@ -312,7 +322,7 @@ public class DataEmbedder {
             }
             int hBins = 0;
             if (!hVals.isEmpty()) {
-                hBins = (int) Math.max(5, Math.min(50, Math.ceil(Math.log(hVals.size()) / Math.log(2) + 1)));
+                hBins = DatasetBuilder.sturgesBins(hVals.size());   // t2j fix8: same rule as build path (A12)
                 if (!o.stats.bins.isEmpty()) {
                     try { hBins = Math.max(2, Integer.parseInt(o.stats.bins.trim())); }
                     catch (Exception ignore2) {}
@@ -324,13 +334,13 @@ public class DataEmbedder {
                 double hMin = hVals.get(0);
                 double hMax = hVals.get(hVals.size()-1);
                 double hW   = (hMax == hMin) ? 1.0 : (hMax - hMin) / hBins;
-                sb.append(",\n  histBinWidth: ").append(String.format("%.10f", hW));
+                sb.append(",\n  histBinWidth: ").append(String.format(Locale.ROOT, "%.10f", hW));
                 sb.append(",\n  histBins: [");
                 for (int hb = 0; hb < hBins; hb++) {
                     if (hb > 0) sb.append(",");
-                    sb.append(String.format("%.10f", hMin + hb * hW));
+                    sb.append(String.format(Locale.ROOT, "%.10f", hMin + hb * hW));
                 }
-                sb.append(",").append(String.format("%.10f", hMax));
+                sb.append(",").append(String.format(Locale.ROOT, "%.10f", hMax));
                 sb.append("]");
             } else {
                 sb.append(",\n  histBinWidth: 1");
@@ -355,10 +365,17 @@ public class DataEmbedder {
     /**
      * Encodes a numeric Variable as either:
      *   - Plain JSON array (N < PLAIN_JSON_THRESHOLD): "[1,2,null,4,...]"
-     *   - Base64 Float32Array (N >= threshold): base64 string for _sdb
+     *   - Base64 Float64Array (N >= threshold): base64 string for _sdb
      *
-     * Missing values: null in JSON, Float.NaN in Float32Array.
+     * Missing values: null in JSON, Double.NaN in Float64Array.
      * Whole-number values in JSON are emitted as integers (saves ~30% space).
+     *
+     * v3.6.0-t2i (hardening): the large-N path was Float32 (4 bytes), which keeps
+     * only ~7 significant digits -- filtering then silently changed means, CIs,
+     * currency, weights, IDs and dates (100000000 and 100000001 collided). It is
+     * now Float64 (8 bytes), lossless for any double Stata stores. Small-N stays
+     * full-precision JSON. Payload for large data roughly doubles for the buffer,
+     * an acceptable trade for correct filtered numbers.
      */
     private String numericArray(Variable v, int nObs) {
         List<Object> vals = v.getValues();
@@ -384,24 +401,24 @@ public class DataEmbedder {
             return sb.toString();
         }
 
-        // Large dataset -- Float32Array packed as base64
-        return toBase64Float32(vals, n);
+        // Large dataset -- Float64Array packed as base64 (lossless)
+        return toBase64Float64(vals, n);
     }
 
     /**
-     * Packs values into a little-endian Float32Array and returns base64 string.
-     * Missing (null) values are encoded as Float.NaN (IEEE 754: 0x7FC00000).
-     * Uses Java's built-in Base64 encoder (available since Java 8).
+     * Packs values into a little-endian Float64Array (8 bytes/value) and returns
+     * a base64 string. Missing (null) values are encoded as Double.NaN. Lossless
+     * for every double Stata can store. Uses Java's built-in Base64 encoder.
      */
-    private static String toBase64Float32(List<Object> vals, int n) {
-        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(n * 4);
+    private static String toBase64Float64(List<Object> vals, int n) {
+        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(n * 8);
         buf.order(java.nio.ByteOrder.LITTLE_ENDIAN);
         for (int i = 0; i < n; i++) {
             Object val = vals.get(i);
             if (val == null) {
-                buf.putFloat(Float.NaN);
+                buf.putDouble(Double.NaN);
             } else {
-                buf.putFloat((float) ((Number) val).doubleValue());
+                buf.putDouble(((Number) val).doubleValue());
             }
         }
         return java.util.Base64.getEncoder().encodeToString(buf.array());
@@ -493,13 +510,39 @@ public class DataEmbedder {
         return raw;
     }
 
-    /** Emits a JS string literal with basic escaping. ASCII-only safe. */
+    /**
+     * Emits a JS string literal with full escaping. ASCII-only output.
+     * t2j fix4 (ported from Astra rc1): also escape less-than, greater-than,
+     * ampersand, the U+2028/U+2029 line/paragraph separators, and all C0 control
+     * chars. Without the less-than escape a value label, marker label or slider
+     * label containing a closing script tag (or an onerror image tag) could
+     * terminate the containing script element and inject HTML, because this string
+     * is written UNQUOTED into the page's data script block.
+     */
     static String jsStr(String s) {
         if (s == null) return "null";
-        return "'" + s.replace("\\", "\\\\")
-                      .replace("'", "\\'")
-                      .replace("\n", "\\n")
-                      .replace("\r", "\\r") + "'";
+        StringBuilder out = new StringBuilder(s.length() + 16).append('\'');
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '\\': out.append("\\\\"); break;
+                case '\'': out.append("\\'"); break;
+                case '\b': out.append("\\b"); break;
+                case '\f': out.append("\\f"); break;
+                case '\n': out.append("\\n"); break;
+                case '\r': out.append("\\r"); break;
+                case '\t': out.append("\\t"); break;
+                case '<': out.append("\\u003c"); break;
+                case '>': out.append("\\u003e"); break;
+                case '&': out.append("\\u0026"); break;
+                default:
+                    if (c == 0x2028) out.append("\\u2028");
+                    else if (c == 0x2029) out.append("\\u2029");
+                    else if (c < 0x20) out.append(String.format(Locale.ROOT, "\\u%04x", (int) c));
+                    else out.append(c);
+            }
+        }
+        return out.append('\'').toString();
     }
 
     /**
@@ -557,7 +600,7 @@ public class DataEmbedder {
             return String.valueOf((long) d);
         }
         // Strip trailing zeros after decimal point
-        String s = String.format("%.4f", d);
+        String s = String.format(Locale.ROOT, "%.4f", d);
         s = s.replaceAll("0+$", "").replaceAll("\\.$", "");
         return s;
     }

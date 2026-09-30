@@ -52,11 +52,15 @@
      * _sdGet(name)  --  lazy _sd column accessor  (v1.4)
      *
      * For small datasets (N < 200), columns are plain JSON arrays in _sd.
-     * For large datasets, columns are base64-encoded Float32Array buffers
+     * For large datasets, columns are base64-encoded Float64Array buffers
      * stored in _sdb. _sdGet() decodes on first access, caches in _sd,
-     * and returns the decoded Float32Array.
+     * and returns the decoded Float64Array.
      *
-     * NaN values in Float32Array represent missing (null in JSON).
+     * v3.6.0-t2i (hardening): the buffer is Float64 (8 bytes), was Float32 (4).
+     * Float32 keeps only ~7 significant digits, so filtering silently changed
+     * means/CIs/currency/weights/IDs/dates; Float64 is lossless.
+     *
+     * NaN values in Float64Array represent missing (null in JSON).
      * All engine code uses _sdGet(name) instead of w._sd[name] directly.
      * ----------------------------------------------------------------------- */
     function _sdGet(name) {
@@ -64,17 +68,17 @@
         if (w._sd && w._sd[name] !== undefined) return w._sd[name];
         // Check _sdb for base64-encoded column
         if (!w._sdb || w._sdb[name] === undefined) return null;
-        // Decode base64 -> ArrayBuffer -> Float32Array
+        // Decode base64 -> ArrayBuffer -> Float64Array (8 bytes/value, lossless)
         var b64  = w._sdb[name];
         var bin  = atob(b64);
         var buf  = new ArrayBuffer(bin.length);
         var view = new Uint8Array(buf);
         for (var i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
-        var f32  = new Float32Array(buf);
+        var f64  = new Float64Array(buf);
         // Cache decoded array in _sd for subsequent calls
         if (!w._sd) w._sd = {};
-        w._sd[name] = f32;
-        return f32;
+        w._sd[name] = f64;
+        return f64;
     }
 
     /* Helper: get value at row r, treating NaN as null (missing sentinel). */
@@ -201,13 +205,14 @@
         }
 
         // Compute stat per bucket
-        var data = [];
+        var data = [], counts = [];
         for (var g3 = 0; g3 < nGroups; g3++) {
             var vals = buckets[g3];
             data.push(vals.length === 0 ? null : computeStat(vals, stat));
+            counts.push(vals.length);   // I6: per-group n for tooltips
         }
 
-        return { labels: labels.slice(), data: data };
+        return { labels: labels.slice(), data: data, counts: counts };
     }
 
     /* -----------------------------------------------------------------------
@@ -270,12 +275,17 @@
         var labels   = null;
         var datasets = [];
 
+        var tipN = [];
         for (var vi = 0; vi < plotVars.length; vi++) {
             var pv  = plotVars[vi];
             var agg = aggregate(rows, pv, groupVar);
             if (labels === null) labels = agg.labels;
             datasets.push({ label: pv, data: agg.data });
+            tipN.push(agg.counts || []);
         }
+        // I6: tooltips read n/share from the SAME aggregation the chart draws from,
+        // so they stay in sync under filters (never recompute in the tooltip)
+        w._spkTipN = tipN; w._spkTipTotal = rows.length;
 
         return {
             labels:   labels || [],
@@ -309,9 +319,11 @@
             var pts = [];
             for (var ri = 0; ri < rows.length; ri++) {
                 var r = rows[ri];
-                var xv = xCol[r], yv = yCol[r];
-                if (xv === null || xv === undefined) continue;
-                if (yv === null || yv === undefined) continue;
+                // fix9b: read through _sdVal like the grouped branch below -- base64 float64
+                // columns decode a Stata missing as NaN, and the raw null test let NaN rows
+                // through as {x:NaN} points (nlsw88 tenure: 9 phantom points per filter change)
+                var xv = _sdVal(xCol, r), yv = _sdVal(yCol, r);
+                if (xv === null || yv === null) continue;
                 var pt = { x: xv, y: yv };
                 if (labels && labels[r] != null) pt.label = labels[r];
                 pts.push(pt);
@@ -335,6 +347,57 @@
             var g2 = groupOf ? groupOf[r2] : 0;
             if (g2 < 0 || g2 >= nGroups) continue;
             var pt2 = { x: xv2, y: yv2 };
+            if (labels && labels[r2] != null) pt2.label = labels[r2];
+            grouped[g2].data.push(pt2);
+        }
+        return grouped;
+    }
+
+    /* -----------------------------------------------------------------------
+     * buildBubblePoints(rows, xVar, yVar, rVar, rmin, rspan, groupVar)
+     * v3.6.0-t2j (F2): like buildScatterPoints but attaches the bubble RADIUS.
+     * Radius uses the SAME fixed scale as the initial server render
+     *   r = 5 + 35 * (rawSize - rmin) / rspan
+     * with rmin/rspan taken from the FULL dataset (passed in by FilterRenderer),
+     * so a bubble keeps a consistent absolute size across filter changes instead
+     * of losing its size (the old scatter filter path emitted only {x,y}).
+     * Returns the same [{data:[{x,y,r,label?}], groupLabel}] shape as scatter.
+     * ----------------------------------------------------------------------- */
+    function buildBubblePoints(rows, xVar, yVar, rVar, rmin, rspan, groupVar) {
+        var m      = meta();
+        var xCol   = _sdGet(xVar);
+        var yCol   = _sdGet(yVar);
+        var rCol   = _sdGet(rVar);
+        var labels = m.labels || null;
+        if (!xCol || !yCol || !rCol) return [{data:[], groupLabel:''}];
+        var span = (rspan === 0 || rspan === null || rspan === undefined) ? 1 : rspan;
+        function radius(rawR) { return 5 + 35 * (rawR - rmin) / span; }
+
+        if (!groupVar) {
+            var pts = [];
+            for (var ri = 0; ri < rows.length; ri++) {
+                var r = rows[ri];
+                var xv = _sdVal(xCol, r), yv = _sdVal(yCol, r), rv = _sdVal(rCol, r);
+                if (xv === null || yv === null || rv === null) continue;
+                var pt = { x: xv, y: yv, r: radius(rv) };
+                if (labels && labels[r] != null) pt.label = labels[r];
+                pts.push(pt);
+            }
+            return [{data: pts, groupLabel: ''}];
+        }
+
+        var groupLabels = w._sc[groupVar] || [];
+        var groupOf     = w._si[groupVar];
+        var nGroups     = groupLabels.length;
+        var grouped     = [];
+        for (var g = 0; g < nGroups; g++) grouped.push({ data: [], groupLabel: groupLabels[g] });
+        for (var ri2 = 0; ri2 < rows.length; ri2++) {
+            var r2  = rows[ri2];
+            var xv2 = _sdVal(xCol, r2), yv2 = _sdVal(yCol, r2), rv2 = _sdVal(rCol, r2);
+            if (xv2 === null || yv2 === null || rv2 === null) continue;
+            var g2 = groupOf ? groupOf[r2] : 0;
+            if (g2 < 0 || g2 >= nGroups) continue;
+            var pt2 = { x: xv2, y: yv2, r: radius(rv2) };
             if (labels && labels[r2] != null) pt2.label = labels[r2];
             grouped[g2].data.push(pt2);
         }
@@ -408,32 +471,62 @@
                 ln = MAX_LOWESS_N_JS;
             }
             var span = Math.max(3, Math.ceil(0.8 * ln));
-            for (var i5 = 0; i5 < ln; i5++) {
-                var xi5 = lxs[i5];
-                // Expand window
-                var lo = i5, hi = i5;
-                while (hi - lo + 1 < span) {
-                    var eL = lo > 0    ? xi5 - lxs[lo-1] : 1e18;
-                    var eR = hi < ln-1 ? lxs[hi+1] - xi5 : 1e18;
-                    if (eL <= eR) lo--; else hi++;
+            // t2j fix8 (cross-path): Cleveland ROBUST lowess with 3 bisquare
+            // robustness iterations, matching Stata's `lowess` (the initial-render
+            // source, ado sparkta.ado:3730 -- "includes 3 bisquare robust iters").
+            // The old code did a SINGLE tricube pass with no robustness, so a filter
+            // that left an outlier in place produced a curve that bent toward it and
+            // no longer matched the initial render. Each iteration multiplies the
+            // tricube weight by a per-point robustness weight delta_j derived from the
+            // previous fit's residuals: delta = (1-(r/6*med|r|)^2)^2, 0 when |r|>=6*med.
+            var deltaL = new Array(ln);
+            for (var di = 0; di < ln; di++) deltaL[di] = 1.0;
+            var fittedL = new Array(ln);
+            var ROBUST_ITERS = 4;   // 1 initial fit + 3 bisquare reweights = Stata lowess default iterate(3)
+            for (var it = 0; it < ROBUST_ITERS; it++) {
+                for (var i5 = 0; i5 < ln; i5++) {
+                    var xi5 = lxs[i5];
+                    // Expand window
+                    var lo = i5, hi = i5;
+                    while (hi - lo + 1 < span) {
+                        var eL = lo > 0    ? xi5 - lxs[lo-1] : 1e18;
+                        var eR = hi < ln-1 ? lxs[hi+1] - xi5 : 1e18;
+                        if (eL <= eR) lo--; else hi++;
+                    }
+                    lo = Math.max(0, lo); hi = Math.min(ln-1, hi);
+                    var h = Math.max(xi5 - lxs[lo], lxs[hi] - xi5);
+                    if (h < 1e-12) { fittedL[i5] = lys[i5]; continue; }
+                    var sw=0,swx=0,swy=0,swxx=0,swxy=0;
+                    for (var j = lo; j <= hi; j++) {
+                        var u = Math.abs(lxs[j] - xi5) / h;
+                        if (u >= 1.0) continue;
+                        var u3 = u*u*u; var wt = Math.pow(1 - u3, 3) * deltaL[j]; // tricube * robustness
+                        sw+=wt; swx+=wt*lxs[j]; swy+=wt*lys[j];
+                        swxx+=wt*lxs[j]*lxs[j]; swxy+=wt*lxs[j]*lys[j];
+                    }
+                    var det = sw*swxx - swx*swx;
+                    var fy;
+                    if (Math.abs(det) < 1e-12) { fy = sw > 0 ? swy/sw : lys[i5]; }
+                    else { var bw=(sw*swxy-swx*swy)/det; fy=(swy-bw*swx)/sw + bw*xi5; }
+                    fittedL[i5] = fy;
                 }
-                lo = Math.max(0, lo); hi = Math.min(ln-1, hi);
-                var h = Math.max(xi5 - lxs[lo], lxs[hi] - xi5);
-                if (h < 1e-12) { pts.push({ x: xi5, y: lys[i5] }); continue; }
-                var sw=0,swx=0,swy=0,swxx=0,swxy=0;
-                for (var j = lo; j <= hi; j++) {
-                    var u = Math.abs(lxs[j] - xi5) / h;
-                    if (u >= 1.0) continue;
-                    var u3 = u*u*u; var wt = Math.pow(1 - u3, 3); // wt=weight, avoids shadowing IIFE w=window
-                    sw+=wt; swx+=wt*lxs[j]; swy+=wt*lys[j];
-                    swxx+=wt*lxs[j]*lxs[j]; swxy+=wt*lxs[j]*lys[j];
+                if (it < ROBUST_ITERS - 1) {
+                    // Robustness weights from |residual| / (6 * median|residual|).
+                    var absr = new Array(ln);
+                    for (var ir = 0; ir < ln; ir++) absr[ir] = Math.abs(lys[ir] - fittedL[ir]);
+                    var srt = absr.slice().sort(function(p,q){ return p-q; });
+                    var med = (ln % 2) ? srt[(ln-1)>>1] : 0.5*(srt[ln>>1] + srt[(ln>>1)-1]);
+                    var denom = 6.0 * med;
+                    for (var iw = 0; iw < ln; iw++) {
+                        if (denom < 1e-12) { deltaL[iw] = 1.0; }
+                        else {
+                            var rr = absr[iw] / denom;
+                            deltaL[iw] = (rr >= 1.0) ? 0.0 : (1-rr*rr)*(1-rr*rr);
+                        }
+                    }
                 }
-                var det = sw*swxx - swx*swx;
-                var fy;
-                if (Math.abs(det) < 1e-12) { fy = sw > 0 ? swy/sw : lys[i5]; }
-                else { var bw=(sw*swxy-swx*swy)/det; fy=(swy-bw*swx)/sw + bw*xi5; }
-                pts.push({ x: xi5, y: fy });
             }
+            for (var ip = 0; ip < ln; ip++) pts.push({ x: lxs[ip], y: fittedL[ip] });
 
         } else if (ft === 'exp') {
             // y = ae^(bx), linearise via ln(y)
@@ -521,6 +614,31 @@
         return { a: a, b: b, c: c };
     }
 
+    // t2j fix8 (cross-path): solve a 3x3 system M u = v by Gaussian elimination
+    // with partial pivoting. Used for the EXACT quadratic leverage v'(M)^-1 v in
+    // the qfit CI band, so the filtered band matches the Java build path
+    // (FitComputer.computeQfit uses solve3x3 on the same normal matrix). Returns
+    // null on a singular matrix. M is a 3x3 array, v a length-3 array.
+    function _solve3x3(M, v) {
+        var a = [[M[0][0],M[0][1],M[0][2],v[0]],
+                 [M[1][0],M[1][1],M[1][2],v[1]],
+                 [M[2][0],M[2][1],M[2][2],v[2]]];
+        for (var col = 0; col < 3; col++) {
+            var piv = col;
+            for (var r = col+1; r < 3; r++) if (Math.abs(a[r][col]) > Math.abs(a[piv][col])) piv = r;
+            if (Math.abs(a[piv][col]) < 1e-300) return null;
+            if (piv !== col) { var tmp = a[piv]; a[piv] = a[col]; a[col] = tmp; }
+            for (var row = col+1; row < 3; row++) {
+                var f = a[row][col] / a[col][col];
+                for (var k = col; k <= 3; k++) a[row][k] -= f * a[col][k];
+            }
+        }
+        var z2 = a[2][3]/a[2][2];
+        var z1 = (a[1][3] - a[1][2]*z2) / a[1][1];
+        var z0 = (a[0][3] - a[0][2]*z2 - a[0][1]*z1) / a[0][0];
+        return [z0, z1, z2];
+    }
+
     /* -----------------------------------------------------------------------
      * buildCiBands(rows, xVar, yVar)
      * v1.5: Recomputes 95% CI bands for lfit on filtered rows.
@@ -539,9 +657,14 @@
      * Only lfit and qfit support CI bands. qfit CI uses same se formula
      * with hat matrix diagonal approximation (conservative, slightly wider).
      * ----------------------------------------------------------------------- */
-    function buildCiBands(rows, xVar, yVar, fitType) {
+    function buildCiBands(rows, xVar, yVar, fitType, level) {
         var xCol = _sdGet(xVar), yCol = _sdGet(yVar);
         if (!xCol || !yCol) return null;
+        // t2j fix8 (deep-dive r2): honor cilevel() on filtered fit CI bands. Previously
+        // hardcoded to 95% via tCritical95(); now uses the exact two-tailed tCrit(df,level)
+        // (Stata invttail), so a non-default cilevel() on a fit band matches the initial
+        // render and Stata after filtering. Defaults to 95 when level is not supplied.
+        var _lvl = (level === undefined || level === null || !(level > 0)) ? 95 : level;
 
         // Collect filtered non-null pairs
         var xs = [], ys = [];
@@ -578,14 +701,28 @@
             var xbarQ = 0;
             for (var iq2 = 0; iq2 < n; iq2++) xbarQ += sxs[iq2];
             xbarQ /= n;
-            var SxxQ = 0;
-            for (var iq3 = 0; iq3 < n; iq3++) SxxQ += (sxs[iq3]-xbarQ)*(sxs[iq3]-xbarQ);
-            if (SxxQ < 1e-12) return null;
-            var tQ = tCritical95(n - 3);
+            // t2j fix8 (cross-path): EXACT quadratic leverage v'(X'X)^-1 v, matching
+            // FitComputer.computeQfit(). The old code used the LINEAR-model leverage
+            // 1/n+(xi-xbar)^2/Sxx, which omits the x^2 basis dimension and makes the
+            // filtered band up to ~35% too narrow near the centroid. Build the 3x3
+            // normal matrix on centred z=x-xbar (same column span as the build path,
+            // so the hat diagonal is identical) and solve for each evaluation point.
+            var Sz=0, Sz2=0, Sz3=0, Sz4=0;
+            for (var iq3 = 0; iq3 < n; iq3++) {
+                var zc = sxs[iq3]-xbarQ, zc2 = zc*zc;
+                Sz += zc; Sz2 += zc2; Sz3 += zc2*zc; Sz4 += zc2*zc2;
+            }
+            var Mq = [[n, Sz, Sz2],[Sz, Sz2, Sz3],[Sz2, Sz3, Sz4]];
+            var tQ = tCrit(n - 3, _lvl);
             for (var iq4 = 0; iq4 < n; iq4++) {
                 var xiQ = sxs[iq4];
                 var yiQ = q.a + q.b*xiQ + q.c*xiQ*xiQ;
-                var seQ = sQ * Math.sqrt(1.0/n + (xiQ-xbarQ)*(xiQ-xbarQ)/SxxQ);
+                var zi = xiQ - xbarQ;
+                var basisQ = [1.0, zi, zi*zi];
+                var uQ = _solve3x3(Mq, basisQ);
+                if (uQ === null) return null;
+                var levQ = basisQ[0]*uQ[0] + basisQ[1]*uQ[1] + basisQ[2]*uQ[2];
+                var seQ = sQ * Math.sqrt(Math.max(0.0, levQ));
                 upper.push({x: xiQ, y: yiQ + tQ*seQ});
                 lower.push({x: xiQ, y: yiQ - tQ*seQ});
             }
@@ -613,7 +750,7 @@
             var SxxE = 0;
             for (var ie4 = 0; ie4 < me; ie4++) SxxE += (validXe[ie4]-xbarE)*(validXe[ie4]-xbarE);
             if (SxxE < 1e-12) return null;
-            var tE = tCritical95(me - 2);
+            var tE = tCrit(me - 2, _lvl);
             for (var ie5 = 0; ie5 < n; ie5++) {
                 var xiE = sxs[ie5];
                 var lnyiE = re.a + re.b*xiE;
@@ -645,7 +782,7 @@
             var SxxL = 0;
             for (var il4 = 0; il4 < ml; il4++) SxxL += (lnxsL[il4]-lxbarL)*(lnxsL[il4]-lxbarL);
             if (SxxL < 1e-12) return null;
-            var tL = tCritical95(ml - 2);
+            var tL = tCrit(ml - 2, _lvl);
             for (var il5 = 0; il5 < n; il5++) {
                 if (sxs[il5] <= 0) continue;
                 var lnxiL = Math.log(sxs[il5]);
@@ -679,7 +816,7 @@
             var SxxP = 0;
             for (var ip4 = 0; ip4 < mp; ip4++) SxxP += (lnxsP[ip4]-lxbarP)*(lnxsP[ip4]-lxbarP);
             if (SxxP < 1e-12) return null;
-            var tP = tCritical95(mp - 2);
+            var tP = tCrit(mp - 2, _lvl);
             for (var ip5 = 0; ip5 < n; ip5++) {
                 if (sxs[ip5] <= 0) continue;
                 var lnxiP = Math.log(sxs[ip5]);
@@ -705,7 +842,7 @@
             var Sxx=0;
             for (var i5=0; i5<n; i5++) Sxx += (sxs[i5]-xbar)*(sxs[i5]-xbar);
             if (Sxx < 1e-12) return null;
-            var t = tCritical95(n-2);
+            var t = tCrit(n-2, _lvl);
             for (var i6=0; i6<n; i6++){
                 var xi = sxs[i6];
                 var yi = a + b*xi;
@@ -754,21 +891,115 @@
             + (79*z9 + 779*z7 + 1482*z5 - 1920*z3 - 945*z) / (92160*d4);
     }
 
+    /* v3.6.0-t2j: TWO-TAILED t critical for ANY confidence level and df, =
+     * Stata invttail(df,(1-level/100)/2). Exact (regularized incomplete beta +
+     * bisection) and IDENTICAL in algorithm to DatasetBuilder.tCritical, so the
+     * filtered cibar/ciline CI matches the initial render and Stata for cilevel()
+     * outside {90,95,99} too. */
+    function _lgamma(z){
+        var g=[676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
+        if(z<0.5) return Math.log(Math.PI/Math.sin(Math.PI*z))-_lgamma(1-z);
+        z-=1; var a=0.99999999999980993, t=z+7.5;
+        for(var i=0;i<g.length;i++) a+=g[i]/(z+i+1);
+        return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(a);
+    }
+    function _betacf(a,b,x){
+        var TINY=1e-30,EPS=1e-14,MAXIT=300,qab=a+b,qap=a+1,qam=a-1;
+        var c=1,d=1-qab*x/qap; if(Math.abs(d)<TINY)d=TINY; d=1/d; var h=d;
+        for(var m=1;m<=MAXIT;m++){ var m2=2*m;
+            var aa=m*(b-m)*x/((qam+m2)*(a+m2)); d=1+aa*d; if(Math.abs(d)<TINY)d=TINY; c=1+aa/c; if(Math.abs(c)<TINY)c=TINY; d=1/d; h*=d*c;
+            aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2)); d=1+aa*d; if(Math.abs(d)<TINY)d=TINY; c=1+aa/c; if(Math.abs(c)<TINY)c=TINY; d=1/d; var del=d*c; h*=del;
+            if(Math.abs(del-1)<EPS) break; }
+        return h;
+    }
+    function _betai(a,b,x){
+        if(x<=0)return 0; if(x>=1)return 1;
+        var bt=Math.exp(_lgamma(a+b)-_lgamma(a)-_lgamma(b)+a*Math.log(x)+b*Math.log(1-x));
+        if(x<(a+1)/(a+b+2)) return bt*_betacf(a,b,x)/a;
+        return 1-bt*_betacf(b,a,1-x)/b;
+    }
+    function tCrit(df,level){
+        if(df<1) df=1;
+        var alpha=(1-level/100)/2;
+        if(alpha<=0) alpha=1e-12; if(alpha>=0.5) return 0;
+        var lo=0, hi=1e4;
+        for(var i=0;i<200;i++){ var mid=0.5*(lo+hi); if(0.5*_betai(df/2,0.5,df/(df+mid*mid))>alpha) lo=mid; else hi=mid; }
+        return 0.5*(lo+hi);
+    }
+
     /* -----------------------------------------------------------------------
      * buildGroupStats(rows, plotVar)
      * F-2A: Computes full summary statistics for a set of rows on one variable.
      * Returns {n, mean, median, min, max, sd, cv, q1, q3} matching Stata summ,detail.
      * Used by _sparkta_updateStatsTable() to update stat cells after filter change.
      * ----------------------------------------------------------------------- */
+    // v3.6.0-t2j: Stata's DEFAULT percentile (summarize,detail / _pctile / centile
+    // without altdef): i=n*p/100; integer -> avg(x[i],x[i+1]); else x[ceil(i)].
+    // No interpolation. Identical to DatasetBuilder.percentile so filtered stats
+    // match the initial render and Stata (was an altdef-like interpolation).
     function _pctile(sorted, p) {
         var n = sorted.length;
         if (n === 0) return null;
         if (n === 1) return sorted[0];
-        var h  = (n + 1) * p / 100.0;
-        var lo = Math.max(1, Math.min(n, Math.floor(h)));
-        var hi = Math.max(1, Math.min(n, Math.ceil(h)));
-        if (lo === hi) return sorted[lo - 1];
-        return sorted[lo-1] + (h - Math.floor(h)) * (sorted[hi-1] - sorted[lo-1]);
+        var i = n * p / 100.0;
+        var fi = Math.floor(i);
+        if (Math.abs(i - fi) < 1e-9) {
+            var k = fi;
+            if (k < 1) return sorted[0];
+            if (k >= n) return sorted[n - 1];
+            return (sorted[k - 1] + sorted[k]) / 2.0;
+        }
+        var c = Math.ceil(i);
+        if (c < 1) c = 1;
+        if (c > n) c = n;
+        return sorted[c - 1];
+    }
+
+    // v3.6.0-t2j: Gaussian KDE matching DatasetBuilder.computeKde EXACTLY so that
+    // a FILTERED violin shape is recomputed identically to the initial server-side
+    // render. Bandwidth = Stata kdensity default optimal width:
+    //   h = 0.9 * min(sd, IQR/1.349) * n^(-1/5)
+    // (sd = Bessel sample SD; IQR from Stata-default _pctile). 50 eval points
+    // clamped to [min,max]; estimates returned NORMALIZED to max=1 (the renderer
+    // scales normalized density to pixels). Input need not be pre-sorted.
+    function computeKde(valsIn, bwOverride, nPoints) {
+        var vals = valsIn.slice().sort(function (a, b) { return a - b; });
+        var n = vals.length;
+        if (n === 0) return [];
+        if (!nPoints || nPoints < 2) nPoints = 50;
+        var sum = 0, i;
+        for (i = 0; i < n; i++) sum += vals[i];
+        var mn = sum / n;
+        var variance = 0;
+        for (i = 0; i < n; i++) variance += (vals[i] - mn) * (vals[i] - mn);
+        var sd = n > 1 ? Math.sqrt(variance / (n - 1)) : 0;
+        var iqr = _pctile(vals, 75) - _pctile(vals, 25);
+        var scaleIqr = iqr / 1.349;
+        var m;
+        if (sd <= 0) m = scaleIqr;
+        else if (scaleIqr <= 0) m = sd;
+        else m = Math.min(sd, scaleIqr);
+        var h = (bwOverride > 0) ? bwOverride
+              : (m > 0 ? 0.9 * m * Math.pow(n, -0.2) : (vals[n - 1] - vals[0]) * 0.1);
+        if (h <= 0) h = 1.0;
+        var dMin = vals[0], dMax = vals[n - 1];
+        if (dMax <= dMin) { dMin -= h; dMax += h; }
+        var step = (dMax - dMin) / (nPoints - 1);
+        var invNH = 1.0 / (n * h);
+        var sqrt2pi = Math.sqrt(2 * Math.PI);
+        var raw = new Array(nPoints), maxEst = 0, j;
+        for (i = 0; i < nPoints; i++) {
+            var x = dMin + i * step, est = 0;
+            for (j = 0; j < n; j++) {
+                var u = (x - vals[j]) / h;
+                est += Math.exp(-0.5 * u * u) / sqrt2pi;
+            }
+            est *= invNH;
+            raw[i] = [x, est];
+            if (est > maxEst) maxEst = est;
+        }
+        for (i = 0; i < nPoints; i++) raw[i][1] = (maxEst > 0) ? raw[i][1] / maxEst : 0;
+        return raw;
     }
 
     function buildGroupStats(rows, plotVar) {
@@ -814,6 +1045,27 @@
         var plotVars = m.plotVars || [];
         var labels   = null;
         var datasets = [];
+
+        // Multi-var no-groupVar: mirrors initial numDatasets render
+        // (labels=display names, 1 dataset with one value per variable)
+        // Uses window._mainChart.data.labels as the canonical label source since
+        // _smeta.labels may be null for non-mlabel charts. (v3.6.0-s7d fix)
+        var _mc = (typeof window !== 'undefined' && window._mainChart) ? window._mainChart : null;
+        var _initLabels = (_mc && _mc.data && _mc.data.labels && _mc.data.labels.length > 0)
+                          ? _mc.data.labels : (m.labels || null);
+        if (!groupVar && plotVars.length > 1 && _initLabels && _initLabels.length > 0) {
+            var data = [];
+            for (var vi = 0; vi < plotVars.length; vi++) {
+                var agg = aggregate(rows, plotVars[vi], null);
+                data.push(agg.data.length > 0 ? agg.data[0] : null);
+            }
+            return {
+                labels:   _initLabels,
+                datasets: [{ label: m.stat || 'mean', data: data }],
+                nActive:  rows.length
+            };
+        }
+
         for (var vi = 0; vi < plotVars.length; vi++) {
             var pv  = plotVars[vi];
             var agg = aggregate(rows, pv, groupVar);
@@ -848,10 +1100,16 @@
         buildChartData:         buildChartData,
         buildChartDataFromRows: buildChartDataFromRows,
         buildScatterPoints:     buildScatterPoints,
+        buildBubblePoints:      buildBubblePoints,   // t2j F2: filtered bubble radius (full-data scale)
         buildFitLine:           buildFitLine,
         buildCiBands:           buildCiBands,
         computeStat:            computeStat,
-        buildGroupStats:        buildGroupStats
+        buildGroupStats:        buildGroupStats,
+        getValues:              getValues,        // t2i: was defined but NOT exported -> filtered histogram/box/violin threw (Astra)
+        tCrit:                  tCrit,            // t2j: exact two-tailed t critical for any level (Stata invttail)
+        computeKde:             computeKde,       // t2j: filtered-violin KDE recompute (matches DatasetBuilder.computeKde)
+        pctile:                 _pctile,          // t2j: Stata-default percentile, shared with filtered violin box overlay
+        column:                 _sdGet            // s9a: values of one variable (null = missing)
     };
 
 }(window));

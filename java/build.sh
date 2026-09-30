@@ -106,10 +106,11 @@ mkdir -p "$OUT_DIR"
 mkdir -p "$DIST_DIR"
 
 # --- Step 4: Compile --------------------------------------------------------
-python3 check_build.py
-if [ $? -ne 0 ]; then
-    echo "  [ERROR] Pre-build check failed. Fix errors above."
-    exit 1
+# v3.6.0-s8b: Python pre-build check is optional (verify/verify_all.py covers it)
+if command -v python3 >/dev/null 2>&1; then
+    python3 check_build.py || { echo "  [ERROR] Pre-build check failed. Fix errors above."; exit 1; }
+else
+    echo "  [SKIP] python3 not available -- pre-build check skipped."
 fi
 info "Compiling Java sources..."
 
@@ -132,20 +133,84 @@ SOURCES=$(find "$SRC_DIR" -name "*.java")
 ok "Compilation successful."
 echo ""
 
+# --- Step 4b: copy JS/offline resources into OUT_DIR so they are packed into the
+#     jar (t2i hardening: build.sh previously packed classes only via `-C OUT .`
+#     -> the bundled offline libraries were missing and offline mode silently
+#     could not work).
+RES_DIR="$SCRIPT_DIR/src/main/resources"
+if [ -d "$RES_DIR" ]; then
+    cp -r "$RES_DIR"/. "$OUT_DIR/"
+fi
+# Fail closed if a mandatory offline JS library is absent (Windows build only warned).
+JS_DIR="$OUT_DIR/com/dashboard_test/js"
+for _lib in chartjs-4.4.0.min.js sparkta_engine.js chartjs-boxplot-4.4.5.min.js chartjs-errorbars-4.4.0.min.js chartjs-annotation-3.0.1.min.js; do
+    if [ ! -f "$JS_DIR/$_lib" ]; then
+        echo "  [ERROR] required resource missing from jar: com/dashboard_test/js/$_lib"; exit 1;
+    fi
+done
+
 # --- Step 5: Package into jar -----------------------------------------------
 info "Packaging sparkta.jar..."
 
-"$JAR_EXE" cf "$DIST_DIR/sparkta.jar" -C "$OUT_DIR" .
+# Pack ONLY com/dashboard_test (classes + js resources); never any com/stata SFI
+# classes (Stata provides its own SFI at runtime -- shipping them would shadow it).
+"$JAR_EXE" cf "$DIST_DIR/sparkta.jar" -C "$OUT_DIR" com/dashboard_test
 
 ok "sparkta.jar created at: $DIST_DIR/sparkta.jar"
 echo ""
 
+# --- Step 5b (v3.6.0-t2j fix9d, parity with build.bat s9y): fast export path -- OPTIONAL --
+# If fetch_js_libs.sh fetched the five Java libraries into lib/, compile
+# src/export/.../SvgConvert.java against them and package a second jar,
+# sparkta-export.jar, that bundles those libraries (one classpath entry for the ado).
+# Without the libraries this step is skipped and saveas() uses the browser for every
+# format (full-page PNG since fix9d).
+LIB_DIR="$SCRIPT_DIR/lib"
+EXPORT_LIBS="jsvg-2.1.0.jar graphics2d-3.0.5.jar pdfbox-3.0.5.jar fontbox-3.0.5.jar pdfbox-io-3.0.5.jar"
+EXPORT_READY=1
+EXPORT_CP=""
+for J in $EXPORT_LIBS; do
+    if [ ! -f "$LIB_DIR/$J" ]; then EXPORT_READY=0; fi
+    EXPORT_CP="$EXPORT_CP${EXPORT_CP:+:}$LIB_DIR/$J"
+done
+if [ "$EXPORT_READY" = "1" ]; then
+    info "Building sparkta-export.jar (fast PNG/PDF path)..."
+    EXP_OUT="$SCRIPT_DIR/build_export"
+    rm -rf "$EXP_OUT"; mkdir -p "$EXP_OUT"
+    if "$JAVAC" -cp "$EXPORT_CP" --release 11 -d "$EXP_OUT" "$SCRIPT_DIR/src/export/com/dashboard_test/export/SvgConvert.java"; then
+        ( cd "$EXP_OUT" && for J in $EXPORT_LIBS; do "$JAR_EXE" xf "$LIB_DIR/$J"; done && rm -rf META-INF )
+        "$JAR_EXE" cf "$DIST_DIR/sparkta-export.jar" -C "$EXP_OUT" .
+        cp "$DIST_DIR/sparkta-export.jar" "$SCRIPT_DIR/../dist/sparkta-export.jar"
+        cp "$DIST_DIR/sparkta-export.jar" "$HOME/ado/personal/sparkta-export.jar" 2>/dev/null || true
+        ok "sparkta-export.jar built and installed (saveas PNG/PDF now pure Java)"
+    else
+        echo "  [WARN] SvgConvert did not compile -- fast export path disabled (browser fallback still works)."
+    fi
+else
+    info "Java export libraries not in lib/ -- run ./fetch_js_libs.sh to enable the fast saveas path."
+fi
+echo ""
+
 # --- Step 6: Copy ado files to dist -----------------------------------------
-cp "$SCRIPT_DIR/../ado/sparkta.ado"         "$DIST_DIR/sparkta.ado"
-cp "$SCRIPT_DIR/../ado/sparkta_check.ado"   "$DIST_DIR/sparkta_check.ado"
+# t2f: main + sparkta_*.ado components (the glob covers every component). There is
+# no separate sparkta_check.ado -- the pre-build check is java/check_build.py.
+cp "$SCRIPT_DIR"/../ado/sparkta*.ado        "$DIST_DIR/"
 cp "$SCRIPT_DIR/../ado/sparkta.sthlp"       "$DIST_DIR/sparkta.sthlp"
 
 ok "Copied sparkta.ado and sparkta.sthlp to dist_test/"
+echo ""
+
+# --- Step 6b (v3.6.0-t2j fix8o): refresh BOTH shipped jars from the SAME freshly
+#     built jar so they are byte-identical by construction. The repo ships two
+#     copies -- dist/sparkta.jar (GitHub/SSC release folder) and ado/sparkta.jar
+#     (what sparkta.pkg installs to end users). Previously this script wrote
+#     neither (only dist_test/ and ~/ado/personal), so both repo copies were
+#     refreshed by hand and drifted -- verify_before_zip check 16 then failed on
+#     "dist and ado jars differ". Writing the one built jar to both fixes that.
+mkdir -p "$SCRIPT_DIR/../dist"
+cp "$DIST_DIR/sparkta.jar" "$SCRIPT_DIR/../dist/sparkta.jar"
+cp "$DIST_DIR/sparkta.jar" "$SCRIPT_DIR/../ado/sparkta.jar"
+ok "Refreshed dist/sparkta.jar and ado/sparkta.jar (byte-identical to each other)"
 echo ""
 
 # --- Step 7: Install into Stata personal ado directory ----------------------
@@ -159,7 +224,7 @@ if [ ! -d "$ADO_DIR" ]; then
 fi
 
 cp "$DIST_DIR/sparkta.jar"    "$ADO_DIR/sparkta.jar"
-cp "$DIST_DIR/sparkta.ado"    "$ADO_DIR/sparkta.ado"
+cp "$DIST_DIR"/sparkta*.ado   "$ADO_DIR/"
 cp "$DIST_DIR/sparkta.sthlp"  "$ADO_DIR/sparkta.sthlp"
 
 ok "Installed to: $ADO_DIR"

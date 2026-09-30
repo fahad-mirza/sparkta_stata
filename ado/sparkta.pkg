@@ -1,7 +1,7 @@
 v 3
 d sparkta - Interactive self-contained HTML charts from Stata
 d Author: Fahad Mirza
-d Distribution-Date: 20260319
+d Distribution-Date: 20260930
 d URL: https://github.com/fahad-mirza/sparkta_stata
 d
 d sparkta generates interactive, self-contained HTML charts and dashboards
@@ -13,8 +13,29 @@ d bubble charts. Includes live filter dropdowns, dual-handle range sliders,
 d collapsible summary statistics panels with live updates, reference
 d annotations, scatter fit lines (7 types), and full offline mode.
 d
-d Version 3.5.111. Requires Stata 17 or later.
+d Version 3.6.0. Requires Stata 17 or later.
 d
 f sparkta.ado
+f sparkta_browser_run.ado
+f sparkta_color_list.ado
+f sparkta_color_norm.ado
+f sparkta_color_opts.ado
+f sparkta_es_opts.ado
+f sparkta_event_times.ado
+f sparkta_find_browser.ado
+f sparkta_margins_keep.ado
+f sparkta_margins_repost.ado
+f sparkta_matrix_guards.ado
+f sparkta_mg_varlabel.ado
+f sparkta_mg_vlabel.ado
+f sparkta_matrix_sort_time.ado
+f sparkta_parse_coeflabels.ado
+f sparkta_parse_tblrows.ado
+f sparkta_read_eresults.ado
+f sparkta_read_margins.ado
+f sparkta_read_matrix.ado
+f sparkta_read_results.ado
+f sparkta_read_results_margins.ado
+f sparkta_table_opts.ado
 f sparkta.sthlp
 f sparkta.jar

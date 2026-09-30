@@ -1,3 +1,8 @@
+# NOTE (v3.6.0-s8b): all 5 CDN libraries are now CHECKED IN to this folder
+# (exact npm-registry bytes for the pinned versions). fetch_js_libs.bat/.sh is
+# only needed to UPGRADE a library version. build.bat will report
+# "All 6 offline JS libraries verified" on a fresh extract.
+
 # Offline Mode JS Libraries
 # ============================================================
 # Before compiling, download the following files into this folder:

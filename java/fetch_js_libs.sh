@@ -45,5 +45,29 @@ curl -L "https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chart
      -o "$DEST/chartjs-annotation-3.0.1.min.js" --fail --silent --show-error
 echo "  -> $(wc -c < $DEST/chartjs-annotation-3.0.1.min.js) bytes"
 
+# --- v3.6.0-t2j fix9d: the five Java libraries for the OPTIONAL fast saveas() path -------
+# (jsvg + pdfbox: SVG -> PNG/PDF in pure Java, no browser round-trip per format). build.sh
+# Step 5b packs them into sparkta-export.jar when all five are present; without them the
+# browser route is used for every format (fix9d made that route full-page too). Same pins
+# and URLs as fetch_js_libs.bat.
+JLIB="$(dirname "$0")/lib"
+mkdir -p "$JLIB"
 echo ""
-echo "Done. 6 libraries downloaded. Now recompile the jar with: ./build.sh"
+echo "Fetching the Java export libraries into $JLIB (optional fast saveas path)..."
+for JURL in \
+  "https://repo1.maven.org/maven2/com/github/weisj/jsvg/2.1.0/jsvg-2.1.0.jar" \
+  "https://repo1.maven.org/maven2/de/rototor/pdfbox/graphics2d/3.0.5/graphics2d-3.0.5.jar" \
+  "https://repo1.maven.org/maven2/org/apache/pdfbox/pdfbox/3.0.5/pdfbox-3.0.5.jar" \
+  "https://repo1.maven.org/maven2/org/apache/pdfbox/fontbox/3.0.5/fontbox-3.0.5.jar" \
+  "https://repo1.maven.org/maven2/org/apache/pdfbox/pdfbox-io/3.0.5/pdfbox-io-3.0.5.jar"; do
+    JNAME="$(basename "$JURL")"
+    echo "Fetching $JNAME..."
+    if curl -L "$JURL" -o "$JLIB/$JNAME" --fail --silent --show-error --retry 2; then
+        echo "  -> $(wc -c < "$JLIB/$JNAME") bytes"
+    else
+        echo "  [WARN] $JNAME not fetched -- the fast saveas path stays off (browser route still works)"
+    fi
+done
+
+echo ""
+echo "Done. 6 JavaScript libraries (+ 5 optional Java libraries) downloaded. Now recompile the jar with: ./build.sh"

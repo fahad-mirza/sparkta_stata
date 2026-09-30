@@ -1,11 +1,14 @@
 package com.dashboard_test.html;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
- * FitComputer.java -- v3.5.57
+ * FitComputer.java -- v3.5.57 (t2j fix5: ported from the Astra rc1 build)
+ * t2j fix5: normalized-coordinate OLS with Neumaier-compensated sums (steady for
+ * large-magnitude x such as years/income/ids), exact quadratic leverage for the
+ * qfit CI band, and finite-guarded input cleaning. Public API (compute + FitResult)
+ * is unchanged; the single caller is ChartRenderer. ASCII only.
  * Computes scatter fit lines for Sparkta.
  *
  * Supported fit types:
@@ -15,10 +18,12 @@ import java.util.List;
  *   exp    - exponential fit y = a * e^(bx), linearised via ln(y) = ln(a) + bx
  *   log    - logarithmic fit y = a + b * ln(x)
  *   power  - power fit y = a * x^b, linearised via ln(y) = ln(a) + b*ln(x)
- *   ma     - moving average, window = max(3, N/10)
+ *   ma     - centred moving average after sorting finite pairs by x; the
+ *            window is the smallest odd integer >= max(3, floor(N/10)),
+ *            with truncated windows at the two endpoints
  *
- * CI bands (lfit and qfit only):
- *   Computes pointwise 95% prediction interval at each x using:
+ * CI bands:
+ *   Computes a pointwise 95% confidence interval for the fitted mean using:
  *   SE_fit = s * sqrt(1/n + (x - xbar)^2 / Sxx)
  *   where s = sqrt(RSS / (n-2)) is the residual standard error.
  *   t_critical uses df=n-2, approximated for large n.
@@ -59,13 +64,21 @@ public class FitComputer {
     public static FitResult compute(List<Double> xs, List<Double> ys,
                                     String fitType, boolean withCi) {
         FitResult r = new FitResult();
-        if (xs == null || ys == null || xs.size() < 3) return r;
+        if (xs == null || ys == null || fitType == null) return r;
 
-        int n = Math.min(xs.size(), ys.size());
-        double[] x = new double[n], y = new double[n];
-        for (int i = 0; i < n; i++) { x[i] = xs.get(i); y[i] = ys.get(i); }
+        int supplied = Math.min(xs.size(), ys.size());
+        List<Double> cleanX = new ArrayList<>(), cleanY = new ArrayList<>();
+        for (int i = 0; i < supplied; i++) {
+            Double xi = xs.get(i), yi = ys.get(i);
+            if (xi != null && yi != null && Double.isFinite(xi) && Double.isFinite(yi)) {
+                cleanX.add(xi);
+                cleanY.add(yi);
+            }
+        }
+        if (cleanX.size() < 3) return r;
+        double[] x = toArray(cleanX), y = toArray(cleanY);
 
-        switch (fitType.toLowerCase()) {
+        switch (fitType.toLowerCase(java.util.Locale.ROOT)) {
             case "lfit":   computeLfit(r, x, y, withCi); break;
             case "qfit":   computeQfit(r, x, y, withCi); break;
             case "lowess": computeLowess(r, x, y);        break;
@@ -83,26 +96,8 @@ public class FitComputer {
     // -----------------------------------------------------------------------
     private static void computeLfit(FitResult r, double[] x, double[] y, boolean withCi) {
         int n = x.length;
-        double xbar = mean(x), ybar = mean(y);
-        double Sxx = 0, Sxy = 0;
-        for (int i = 0; i < n; i++) {
-            Sxx += (x[i] - xbar) * (x[i] - xbar);
-            Sxy += (x[i] - xbar) * (y[i] - ybar);
-        }
-        if (Math.abs(Sxx) < 1e-12) return; // degenerate: all x identical
-        double b = Sxy / Sxx;
-        double a = ybar - b * xbar;
-
-        // Residual std error for CI
-        double s = 0;
-        if (withCi) {
-            double rss = 0;
-            for (int i = 0; i < n; i++) {
-                double res = y[i] - (a + b * x[i]);
-                rss += res * res;
-            }
-            s = (n > 2) ? Math.sqrt(rss / (n - 2)) : 0;
-        }
+        LinearModel model = LinearModel.fit(x, y, withCi);
+        if (model == null) return;
 
         double xmin = min(x), xmax = max(x);
         StringBuilder line = new StringBuilder("[");
@@ -111,14 +106,15 @@ public class FitComputer {
         double t = tCritical95(n - 2);
 
         for (int i = 0; i <= EVAL_POINTS; i++) {
-            double xi = xmin + (xmax - xmin) * i / EVAL_POINTS;
-            double yi = a + b * xi;
-            if (i > 0) { line.append(","); if (withCi) { upper.append(","); lower.append(","); } }
-            line.append("{x:").append(fmt(xi)).append(",y:").append(fmt(yi)).append("}");
+            double xi = interpolateFinite(xmin, xmax, i / (double) EVAL_POINTS);
+            double fittedNorm = model.predictNormalized(xi);
+            double yi = model.response.denormalize(fittedNorm);
+            if (!appendPoint(line, xi, yi)) return;
             if (withCi) {
-                double se = s * Math.sqrt(1.0/n + (xi-xbar)*(xi-xbar)/Sxx);
-                upper.append("{x:").append(fmt(xi)).append(",y:").append(fmt(yi+t*se)).append("}");
-                lower.append("{x:").append(fmt(xi)).append(",y:").append(fmt(yi-t*se)).append("}");
+                double se = model.seNormalized(xi);
+                double hi = model.response.denormalize(fittedNorm + t * se);
+                double lo = model.response.denormalize(fittedNorm - t * se);
+                if (!appendPoint(upper, xi, hi) || !appendPoint(lower, xi, lo)) return;
             }
         }
         line.append("]");
@@ -133,61 +129,85 @@ public class FitComputer {
     }
 
     // -----------------------------------------------------------------------
-    // qfit: OLS quadratic fit y = a + bx + cx^2
-    // Solve 3x3 normal equations using direct formula (Cramer's rule).
+    // qfit: OLS quadratic fit.  Work on centred/scaled x for numerical
+    // stability and use the exact quadratic leverage v'(X'X)^-1v for the CI.
     // -----------------------------------------------------------------------
     private static void computeQfit(FitResult r, double[] x, double[] y, boolean withCi) {
         int n = x.length;
-        if (n < 4) return; // need at least 4 pts for df > 0
+        if (n < 3) return;
+        // Three distinct predictor values identify a quadratic curve exactly,
+        // but leave zero residual degrees of freedom.  Render the line while
+        // suppressing an unsupported confidence interval in that case.
+        boolean computeCi = withCi && n > 3;
 
-        // Sums for normal equations
-        double s1=n, sx=0, sx2=0, sx3=0, sx4=0, sy=0, sxy=0, sx2y=0;
+        Scale xScale = Scale.of(x, true);
+        Scale yScale = Scale.of(y, false);
+        if (xScale == null || yScale == null) return;
+
+        double[] z = new double[n];
+        double[] w = new double[n];
+        // Normal equations use bounded coordinates, avoiding overflow and
+        // absolute scale-dependent singularity decisions.
+        CompensatedSum szS = new CompensatedSum(), sz2S = new CompensatedSum();
+        CompensatedSum sz3S = new CompensatedSum(), sz4S = new CompensatedSum();
+        CompensatedSum swS = new CompensatedSum(), szwS = new CompensatedSum();
+        CompensatedSum sz2wS = new CompensatedSum();
         for (int i = 0; i < n; i++) {
-            double xi=x[i], yi=y[i], xi2=xi*xi;
-            sx   += xi;   sx2  += xi2;  sx3  += xi2*xi; sx4 += xi2*xi2;
-            sy   += yi;   sxy  += xi*yi; sx2y += xi2*yi;
+            double zi=xScale.normalize(x[i]), wi=yScale.normalize(y[i]), zi2=zi*zi;
+            if (!Double.isFinite(zi) || !Double.isFinite(wi)) return;
+            z[i] = zi; w[i] = wi;
+            szS.add(zi); sz2S.add(zi2); sz3S.add(zi2*zi); sz4S.add(zi2*zi2);
+            swS.add(wi); szwS.add(zi*wi); sz2wS.add(zi2*wi);
         }
-        // Normal equations: [s1 sx sx2; sx sx2 sx3; sx2 sx3 sx4] * [a;b;c] = [sy;sxy;sx2y]
-        double[][] A = {{s1,sx,sx2},{sx,sx2,sx3},{sx2,sx3,sx4}};
-        double[]   B = {sy, sxy, sx2y};
+        double s1=n, sz=szS.value(), sz2=sz2S.value(), sz3=sz3S.value(),
+            sz4=sz4S.value(), sw=swS.value(), szw=szwS.value(), sz2w=sz2wS.value();
+        double[][] A = {{s1,sz,sz2},{sz,sz2,sz3},{sz2,sz3,sz4}};
+        double[]   B = {sw, szw, sz2w};
         double[] coef = solve3x3(A, B);
         if (coef == null) return;
         double a=coef[0], b=coef[1], c=coef[2];
 
         double s = 0;
-        double xbar = sx/n;
-        double Sxx = sx2 - n*xbar*xbar;
-        if (withCi) {
-            double rss = 0;
+        if (computeCi) {
+            CompensatedSum rss = new CompensatedSum();
             for (int i = 0; i < n; i++) {
-                double res = y[i] - (a + b*x[i] + c*x[i]*x[i]);
-                rss += res * res;
+                double fitted = Math.fma(c, z[i]*z[i], Math.fma(b, z[i], a));
+                double res = w[i] - fitted;
+                if (!Double.isFinite(res)) return;
+                rss.add(res * res);
             }
-            s = (n > 3) ? Math.sqrt(rss / (n - 3)) : 0;
+            s = (n > 3) ? Math.sqrt(rss.value() / (n - 3)) : 0;
+            if (!Double.isFinite(s)) return;
         }
 
         double xmin = min(x), xmax = max(x);
         StringBuilder line = new StringBuilder("[");
-        StringBuilder upper = withCi ? new StringBuilder("[") : null;
-        StringBuilder lower = withCi ? new StringBuilder("[") : null;
-        double t = tCritical95(n - 3);
+        StringBuilder upper = computeCi ? new StringBuilder("[") : null;
+        StringBuilder lower = computeCi ? new StringBuilder("[") : null;
+        double t = computeCi ? tCritical95(n - 3) : 0;
 
         for (int i = 0; i <= EVAL_POINTS; i++) {
-            double xi = xmin + (xmax - xmin) * i / EVAL_POINTS;
-            double yi = a + b*xi + c*xi*xi;
-            if (i > 0) { line.append(","); if (withCi) { upper.append(","); lower.append(","); } }
-            line.append("{x:").append(fmt(xi)).append(",y:").append(fmt(yi)).append("}");
-            if (withCi) {
-                // approximate SE using linear term leverage (conservative)
-                double se = s * Math.sqrt(1.0/n + (xi-xbar)*(xi-xbar)/Math.max(Sxx,1e-12));
-                upper.append("{x:").append(fmt(xi)).append(",y:").append(fmt(yi+t*se)).append("}");
-                lower.append("{x:").append(fmt(xi)).append(",y:").append(fmt(yi-t*se)).append("}");
+            double xi = interpolateFinite(xmin, xmax, i / (double) EVAL_POINTS);
+            double zi = xScale.normalize(xi);
+            double fitted = Math.fma(c, zi*zi, Math.fma(b, zi, a));
+            double yi = yScale.denormalize(fitted);
+            if (!appendPoint(line, xi, yi)) return;
+            if (computeCi) {
+                double[] basis = {1.0, zi, zi*zi};
+                double[] invTimesBasis = solve3x3(A, basis);
+                if (invTimesBasis == null) return;
+                double leverage = basis[0]*invTimesBasis[0]
+                    + basis[1]*invTimesBasis[1] + basis[2]*invTimesBasis[2];
+                double se = s * Math.sqrt(Math.max(0.0, leverage));
+                double hi = yScale.denormalize(fitted + t*se);
+                double lo = yScale.denormalize(fitted - t*se);
+                if (!appendPoint(upper, xi, hi) || !appendPoint(lower, xi, lo)) return;
             }
         }
         line.append("]");
         r.lineData    = line.toString();
         r.labelSuffix = " (qfit)";
-        if (withCi) {
+        if (computeCi) {
             upper.append("]"); lower.append("]");
             r.upperData = upper.toString();
             r.lowerData = lower.toString();
@@ -212,6 +232,11 @@ public class FitComputer {
     private static void computeLowess(FitResult r, double[] x, double[] y) {
         int n = x.length;
 
+        // Sort paired primitive arrays before sampling.  This preserves sparse
+        // x regions without allocating one boxed Integer per observation.
+        sortPairs(x, y);
+        double[] sortedX = x, sortedY = y;
+
         // Cap at MAX_LOWESS_N via uniform sampling to protect against O(N^2)
         // at large N. Sample indices spread evenly across sorted order.
         if (n > MAX_LOWESS_N) {
@@ -219,65 +244,101 @@ public class FitComputer {
             double step = (double)(n - 1) / (MAX_LOWESS_N - 1);
             for (int i = 0; i < MAX_LOWESS_N; i++) {
                 int si = (int) Math.round(i * step);
-                xs2[i] = x[si]; ys2[i] = y[si];
+                xs2[i] = sortedX[si]; ys2[i] = sortedY[si];
             }
-            x = xs2; y = ys2; n = MAX_LOWESS_N;
+            sortedX = xs2; sortedY = ys2; n = MAX_LOWESS_N;
         }
 
         double f    = 0.80;
         int    span = Math.max(3, (int) Math.ceil(f * n));
 
-        // Sort by x once -- enables O(log N) bandwidth search per point.
-        // finalX is a final alias required because x may have been reassigned
-        // in the sampling branch above; lambda captures must be effectively final.
-        final double[] finalX = x, finalY = y;
-        Integer[] idx = new Integer[n];
-        for (int i = 0; i < n; i++) idx[i] = i;
-        java.util.Arrays.sort(idx, (a2, b2) -> Double.compare(finalX[a2], finalX[b2]));
-        double[] xs = new double[n], ys = new double[n];
-        for (int i = 0; i < n; i++) { xs[i] = finalX[idx[i]]; ys[i] = finalY[idx[i]]; }
-
-        double[] fitted = new double[n];
+        double[] xs = sortedX, ys = sortedY;
+        Scale xScale = Scale.of(xs, true);
+        Scale yScale = Scale.of(ys, false);
+        if (xScale == null || yScale == null) return;
+        double[] zx = new double[n], wy = new double[n];
         for (int i = 0; i < n; i++) {
-            // O(log N): binary search for left boundary of window,
-            // then expand to collect span nearest neighbours by x-distance.
-            // xs is sorted so nearest neighbours are always contiguous.
-            double xi = xs[i];
+            zx[i] = xScale.normalize(xs[i]);
+            wy[i] = yScale.normalize(ys[i]);
+        }
 
-            // Expand window symmetrically from i until we have span points
-            int lo = i, hi = i;
-            while (hi - lo + 1 < span) {
-                double extL = lo > 0     ? xi - xs[lo-1] : Double.MAX_VALUE;
-                double extR = hi < n-1   ? xs[hi+1] - xi : Double.MAX_VALUE;
-                if (extL <= extR) lo--; else hi++;
+        // t2j fix8 (cross-path): Cleveland ROBUST lowess -- 3 bisquare robustness
+        // iterations, matching Stata's `lowess` (the initial-render source,
+        // sparkta.ado:3730) and the browser-filter recompute in sparkta_engine.js.
+        // Each iteration multiplies the tricube weight by a per-point robustness
+        // weight delta[j] from the previous fit's residuals, so outliers are
+        // progressively down-weighted. Previously this fallback was single-pass and
+        // could disagree with Stata (and with the robust JS filter path).
+        final int ROBUST_ITERS = 4;   // 1 initial fit + 3 bisquare reweights = Stata lowess default iterate(3)
+        double[] fitted = new double[n];
+        double[] delta  = new double[n];
+        for (int i = 0; i < n; i++) delta[i] = 1.0;
+        for (int it = 0; it < ROBUST_ITERS; it++) {
+            for (int i = 0; i < n; i++) {
+                // O(log N): expand a symmetric window of `span` nearest neighbours by
+                // x-distance (xs sorted, so they are contiguous).
+                double zi = zx[i];
+                int lo = i, hi = i;
+                while (hi - lo + 1 < span) {
+                    double extL = lo > 0     ? zi - zx[lo-1] : Double.MAX_VALUE;
+                    double extR = hi < n-1   ? zx[hi+1] - zi : Double.MAX_VALUE;
+                    if (extL <= extR) lo--; else hi++;
+                }
+                lo = Math.max(0, lo);
+                hi = Math.min(n-1, hi);
+
+                double h = Math.max(zi - zx[lo], zx[hi] - zi);
+                if (!(h > 0) || !Double.isFinite(h)) { fitted[i] = wy[i]; continue; }
+
+                // Tricube*robustness weighted least squares on bounded, target-centred
+                // coordinates. Two passes avoid catastrophic determinant cancellation.
+                CompensatedSum swS = new CompensatedSum();
+                CompensatedSum swuS = new CompensatedSum();
+                CompensatedSum swyS = new CompensatedSum();
+                for (int j = lo; j <= hi; j++) {
+                    double u = (zx[j] - zi) / h;
+                    if (Math.abs(u) >= 1.0) continue;
+                    double weight = tricube(Math.abs(u)) * delta[j];
+                    swS.add(weight); swuS.add(weight*u); swyS.add(weight*wy[j]);
+                }
+                double sw = swS.value();
+                if (!(sw > 0) || !Double.isFinite(sw)) { fitted[i] = wy[i]; continue; }
+                double ubar = swuS.value()/sw, ybar = swyS.value()/sw;
+                CompensatedSum suuS = new CompensatedSum(), suyS = new CompensatedSum();
+                for (int j = lo; j <= hi; j++) {
+                    double u = (zx[j] - zi) / h;
+                    if (Math.abs(u) >= 1.0) continue;
+                    double weight = tricube(Math.abs(u)) * delta[j];
+                    double du = u-ubar;
+                    suuS.add(weight*du*du);
+                    suyS.add(weight*du*(wy[j]-ybar));
+                }
+                double suu = suuS.value();
+                if (!usablePositive(suu, sw)) fitted[i] = ybar;
+                else fitted[i] = Math.fma(suyS.value()/suu, -ubar, ybar);
+                if (!Double.isFinite(fitted[i])) return;
             }
-            // Trim to valid bounds
-            lo = Math.max(0, lo);
-            hi = Math.min(n-1, hi);
-
-            double h = Math.max(xi - xs[lo], xs[hi] - xi);
-            if (h < 1e-12) { fitted[i] = ys[i]; continue; }
-
-            // Tricube weighted least squares -- only iterate the window
-            double sw=0, swx=0, swy=0, swxx=0, swxy=0;
-            for (int j = lo; j <= hi; j++) {
-                double u = Math.abs(xs[j] - xi) / h;
-                if (u >= 1.0) continue;
-                double w = tricube(u);
-                sw += w; swx += w*xs[j]; swy += w*ys[j];
-                swxx += w*xs[j]*xs[j]; swxy += w*xs[j]*ys[j];
+            if (it < ROBUST_ITERS - 1) {
+                // Robustness weights: delta = (1-(r/6med)^2)^2, 0 when |r| >= 6*med|r|.
+                double[] absr = new double[n];
+                for (int ir = 0; ir < n; ir++) absr[ir] = Math.abs(wy[ir] - fitted[ir]);
+                double[] srt = absr.clone();
+                java.util.Arrays.sort(srt);
+                double med = (n % 2 == 1) ? srt[(n-1)/2] : 0.5*(srt[n/2] + srt[n/2 - 1]);
+                double denom = 6.0 * med;
+                for (int iw = 0; iw < n; iw++) {
+                    if (denom < 1e-12) { delta[iw] = 1.0; }
+                    else {
+                        double rr = absr[iw] / denom;
+                        delta[iw] = (rr >= 1.0) ? 0.0 : (1-rr*rr)*(1-rr*rr);
+                    }
+                }
             }
-            double det = sw*swxx - swx*swx;
-            if (Math.abs(det) < 1e-12) { fitted[i] = (sw > 0 ? swy/sw : ys[i]); continue; }
-            double bw = (sw*swxy - swx*swy) / det;
-            double aw = (swy - bw*swx) / sw;
-            fitted[i] = aw + bw*xi;
         }
 
         StringBuilder line = new StringBuilder("[");
         for (int i = 0; i < n; i++) {
-            if (i > 0) line.append(",");
-            line.append("{x:").append(fmt(xs[i])).append(",y:").append(fmt(fitted[i])).append("}");
+            if (!appendPoint(line, xs[i], yScale.denormalize(fitted[i]))) return;
         }
         line.append("]");
         r.lineData    = line.toString();
@@ -306,44 +367,27 @@ public class FitComputer {
 
         double[] xa = toArray(lx), lya = toArray(ly);
         int m = xa.length;
-        double xbar = mean(xa), lybar = mean(lya);
-        double Sxx = 0, Sxy = 0;
-        for (int i = 0; i < m; i++) {
-            Sxx += (xa[i]-xbar)*(xa[i]-xbar);
-            Sxy += (xa[i]-xbar)*(lya[i]-lybar);
-        }
-        if (Math.abs(Sxx) < 1e-12) return;
-        double b = Sxy / Sxx;
-        double lna = lybar - b * xbar;
-        double a = Math.exp(lna);
+        LinearModel model = LinearModel.fit(xa, lya, withCi);
+        if (model == null) return;
 
-        // Residual SE on log scale for CI
-        double s = 0;
-        if (withCi) {
-            double rss = 0;
-            for (int i = 0; i < m; i++) {
-                double res = lya[i] - (lna + b * xa[i]);
-                rss += res * res;
-            }
-            s = (m > 2) ? Math.sqrt(rss / (m - 2)) : 0;
-        }
-
-        double xmin = min(x), xmax = max(x);
+        double xmin = min(xa), xmax = max(xa);
         double t = withCi ? tCritical95(m - 2) : 0;
         StringBuilder line = new StringBuilder("[");
         StringBuilder upper = withCi ? new StringBuilder("[") : null;
         StringBuilder lower = withCi ? new StringBuilder("[") : null;
 
         for (int i = 0; i <= EVAL_POINTS; i++) {
-            double xi = xmin + (xmax - xmin) * i / EVAL_POINTS;
-            double lnyi = lna + b * xi;
+            double xi = interpolateFinite(xmin, xmax, i / (double) EVAL_POINTS);
+            double fittedNorm = model.predictNormalized(xi);
+            double lnyi = model.response.denormalize(fittedNorm);
             double yi = Math.exp(lnyi);
-            if (i > 0) { line.append(","); if (withCi) { upper.append(","); lower.append(","); } }
-            line.append("{x:").append(fmt(xi)).append(",y:").append(fmt(yi)).append("}");
+            if (!appendPoint(line, xi, yi)) return;
             if (withCi) {
-                double se = s * Math.sqrt(1.0/m + (xi-xbar)*(xi-xbar)/Sxx);
-                upper.append("{x:").append(fmt(xi)).append(",y:").append(fmt(Math.exp(lnyi + t*se))).append("}");
-                lower.append("{x:").append(fmt(xi)).append(",y:").append(fmt(Math.exp(lnyi - t*se))).append("}");
+                double se = model.seNormalized(xi);
+                double hiLog = model.response.denormalize(fittedNorm + t*se);
+                double loLog = model.response.denormalize(fittedNorm - t*se);
+                if (!appendPoint(upper, xi, Math.exp(hiLog))
+                        || !appendPoint(lower, xi, Math.exp(loLog))) return;
             }
         }
         line.append("]");
@@ -374,44 +418,27 @@ public class FitComputer {
 
         double[] lxa = toArray(lx), ya = toArray(fy);
         int m = lxa.length;
-        double lxbar = mean(lxa), ybar = mean(ya);
-        double Sxx = 0, Sxy = 0;
-        for (int i = 0; i < m; i++) {
-            Sxx += (lxa[i]-lxbar)*(lxa[i]-lxbar);
-            Sxy += (lxa[i]-lxbar)*(ya[i]-ybar);
-        }
-        if (Math.abs(Sxx) < 1e-12) return;
-        double b = Sxy / Sxx;
-        double a = ybar - b * lxbar;
+        LinearModel model = LinearModel.fit(lxa, ya, withCi);
+        if (model == null) return;
 
-        // Residual SE for CI
-        double s = 0;
-        if (withCi) {
-            double rss = 0;
-            for (int i = 0; i < m; i++) {
-                double res = ya[i] - (a + b * lxa[i]);
-                rss += res * res;
-            }
-            s = (m > 2) ? Math.sqrt(rss / (m - 2)) : 0;
-        }
-
-        double xmin = Math.max(min(x), 1e-9), xmax = max(x);
+        double xmin = Math.exp(min(lxa)), xmax = Math.exp(max(lxa));
         double t = withCi ? tCritical95(m - 2) : 0;
         StringBuilder line = new StringBuilder("[");
         StringBuilder upper = withCi ? new StringBuilder("[") : null;
         StringBuilder lower = withCi ? new StringBuilder("[") : null;
 
         for (int i = 0; i <= EVAL_POINTS; i++) {
-            double xi = xmin + (xmax - xmin) * i / EVAL_POINTS;
+            double xi = interpolateFinite(xmin, xmax, i / (double) EVAL_POINTS);
             if (xi <= 0) continue;
             double lnxi = Math.log(xi);
-            double yi = a + b * lnxi;
-            if (i > 0) { line.append(","); if (withCi) { upper.append(","); lower.append(","); } }
-            line.append("{x:").append(fmt(xi)).append(",y:").append(fmt(yi)).append("}");
+            double fittedNorm = model.predictNormalized(lnxi);
+            double yi = model.response.denormalize(fittedNorm);
+            if (!appendPoint(line, xi, yi)) return;
             if (withCi) {
-                double se = s * Math.sqrt(1.0/m + (lnxi-lxbar)*(lnxi-lxbar)/Sxx);
-                upper.append("{x:").append(fmt(xi)).append(",y:").append(fmt(yi + t*se)).append("}");
-                lower.append("{x:").append(fmt(xi)).append(",y:").append(fmt(yi - t*se)).append("}");
+                double se = model.seNormalized(lnxi);
+                double hi = model.response.denormalize(fittedNorm + t*se);
+                double lo = model.response.denormalize(fittedNorm - t*se);
+                if (!appendPoint(upper, xi, hi) || !appendPoint(lower, xi, lo)) return;
             }
         }
         line.append("]");
@@ -442,46 +469,29 @@ public class FitComputer {
 
         double[] lxa = toArray(lx), lya = toArray(ly);
         int m = lxa.length;
-        double lxbar = mean(lxa), lybar = mean(lya);
-        double Sxx = 0, Sxy = 0;
-        for (int i = 0; i < m; i++) {
-            Sxx += (lxa[i]-lxbar)*(lxa[i]-lxbar);
-            Sxy += (lxa[i]-lxbar)*(lya[i]-lybar);
-        }
-        if (Math.abs(Sxx) < 1e-12) return;
-        double b = Sxy / Sxx;
-        double lna = lybar - b * lxbar;
-        double a = Math.exp(lna);
+        LinearModel model = LinearModel.fit(lxa, lya, withCi);
+        if (model == null) return;
 
-        // Residual SE on log-log scale for CI
-        double s = 0;
-        if (withCi) {
-            double rss = 0;
-            for (int i = 0; i < m; i++) {
-                double res = lya[i] - (lna + b * lxa[i]);
-                rss += res * res;
-            }
-            s = (m > 2) ? Math.sqrt(rss / (m - 2)) : 0;
-        }
-
-        double xmin = Math.max(min(x), 1e-9), xmax = max(x);
+        double xmin = Math.exp(min(lxa)), xmax = Math.exp(max(lxa));
         double t = withCi ? tCritical95(m - 2) : 0;
         StringBuilder line = new StringBuilder("[");
         StringBuilder upper = withCi ? new StringBuilder("[") : null;
         StringBuilder lower = withCi ? new StringBuilder("[") : null;
 
         for (int i = 0; i <= EVAL_POINTS; i++) {
-            double xi = xmin + (xmax - xmin) * i / EVAL_POINTS;
+            double xi = interpolateFinite(xmin, xmax, i / (double) EVAL_POINTS);
             if (xi <= 0) continue;
             double lnxi = Math.log(xi);
-            double lnyi = lna + b * lnxi;
-            double yi = a * Math.pow(xi, b);
-            if (i > 0) { line.append(","); if (withCi) { upper.append(","); lower.append(","); } }
-            line.append("{x:").append(fmt(xi)).append(",y:").append(fmt(yi)).append("}");
+            double fittedNorm = model.predictNormalized(lnxi);
+            double lnyi = model.response.denormalize(fittedNorm);
+            double yi = Math.exp(lnyi);
+            if (!appendPoint(line, xi, yi)) return;
             if (withCi) {
-                double se = s * Math.sqrt(1.0/m + (lnxi-lxbar)*(lnxi-lxbar)/Sxx);
-                upper.append("{x:").append(fmt(xi)).append(",y:").append(fmt(Math.exp(lnyi + t*se))).append("}");
-                lower.append("{x:").append(fmt(xi)).append(",y:").append(fmt(Math.exp(lnyi - t*se))).append("}");
+                double se = model.seNormalized(lnxi);
+                double hiLog = model.response.denormalize(fittedNorm + t*se);
+                double loLog = model.response.denormalize(fittedNorm - t*se);
+                if (!appendPoint(upper, xi, Math.exp(hiLog))
+                        || !appendPoint(lower, xi, Math.exp(loLog))) return;
             }
         }
         line.append("]");
@@ -501,26 +511,26 @@ public class FitComputer {
     private static void computeMa(FitResult r, double[] x, double[] y) {
         int n = x.length;
         int win = Math.max(3, n / 10);
+        if ((win & 1) == 0) win++; // centred windows have an odd number of points
         int half = win / 2;
 
-        // Sort by x
-        Integer[] idx = new Integer[n];
-        for (int i = 0; i < n; i++) idx[i] = i;
-        java.util.Arrays.sort(idx, (a2, b2) -> Double.compare(x[a2], x[b2]));
-        double[] xs = new double[n], ys = new double[n];
-        for (int i = 0; i < n; i++) { xs[i] = x[idx[i]]; ys[i] = y[idx[i]]; }
+        sortPairs(x, y);
+        Scale yScale = Scale.of(y, false);
+        if (yScale == null) return;
+        double[] prefix = new double[n + 1];
+        for (int i = 0; i < n; i++) {
+            double normalized = yScale.normalize(y[i]);
+            prefix[i + 1] = prefix[i] + normalized;
+            if (!Double.isFinite(prefix[i + 1])) return;
+        }
 
         StringBuilder line = new StringBuilder("[");
-        boolean first = true;
         for (int i = 0; i < n; i++) {
             int lo = Math.max(0, i - half);
             int hi = Math.min(n - 1, i + half);
-            double sum = 0;
-            for (int j = lo; j <= hi; j++) sum += ys[j];
-            double yi = sum / (hi - lo + 1);
-            if (!first) line.append(",");
-            first = false;
-            line.append("{x:").append(fmt(xs[i])).append(",y:").append(fmt(yi)).append("}");
+            double sum = prefix[hi + 1] - prefix[lo];
+            double yi = yScale.denormalize(sum / (hi - lo + 1));
+            if (!appendPoint(line, x[i], yi)) return;
         }
         line.append("]");
         r.lineData    = line.toString();
@@ -537,23 +547,192 @@ public class FitComputer {
         return v*v*v;
     }
 
+    /** Midrange/scale transform that keeps every finite input near [-1, 1]. */
+    private static final class Scale {
+        final double center;
+        final double scale;
+
+        private Scale(double center, double scale) {
+            this.center = center;
+            this.scale = scale;
+        }
+
+        static Scale of(double[] values, boolean requireVariation) {
+            if (values == null || values.length == 0) return null;
+            double lo = min(values), hi = max(values);
+            if (!Double.isFinite(lo) || !Double.isFinite(hi)) return null;
+            double center = midpointFinite(lo, hi);
+            double scale = 0;
+            for (double value : values) {
+                double delta = value - center;
+                if (!Double.isFinite(delta)) return null;
+                scale = Math.max(scale, Math.abs(delta));
+            }
+            if (!(scale > 0)) {
+                if (requireVariation) return null;
+                scale = 1.0;
+            }
+            return Double.isFinite(center) && Double.isFinite(scale)
+                ? new Scale(center, scale) : null;
+        }
+
+        double normalize(double value) {
+            return (value - center) / scale;
+        }
+
+        double denormalize(double value) {
+            return Math.fma(scale, value, center);
+        }
+    }
+
+    /** Numerically stable straight-line model in normalized x/y coordinates. */
+    private static final class LinearModel {
+        final Scale predictor;
+        final Scale response;
+        final double xMean;
+        final double yMean;
+        final double slope;
+        final double sxx;
+        final double residualSe;
+        final int n;
+
+        private LinearModel(Scale predictor, Scale response, double xMean,
+                            double yMean, double slope, double sxx,
+                            double residualSe, int n) {
+            this.predictor = predictor;
+            this.response = response;
+            this.xMean = xMean;
+            this.yMean = yMean;
+            this.slope = slope;
+            this.sxx = sxx;
+            this.residualSe = residualSe;
+            this.n = n;
+        }
+
+        static LinearModel fit(double[] x, double[] y, boolean needResidualSe) {
+            int n = Math.min(x.length, y.length);
+            if (n < 3) return null;
+            Scale px = Scale.of(x, true), py = Scale.of(y, false);
+            if (px == null || py == null) return null;
+            double[] zx = new double[n], wy = new double[n];
+            CompensatedSum sx = new CompensatedSum(), sy = new CompensatedSum();
+            for (int i = 0; i < n; i++) {
+                zx[i] = px.normalize(x[i]);
+                wy[i] = py.normalize(y[i]);
+                if (!Double.isFinite(zx[i]) || !Double.isFinite(wy[i])) return null;
+                sx.add(zx[i]); sy.add(wy[i]);
+            }
+            double xm = sx.value()/n, ym = sy.value()/n;
+            CompensatedSum sxxSum = new CompensatedSum(), sxySum = new CompensatedSum();
+            for (int i = 0; i < n; i++) {
+                double dx = zx[i]-xm;
+                sxxSum.add(dx*dx);
+                sxySum.add(dx*(wy[i]-ym));
+            }
+            double sxx = sxxSum.value();
+            if (!usablePositive(sxx, n)) return null;
+            double slope = sxySum.value()/sxx;
+            if (!Double.isFinite(slope)) return null;
+            double residualSe = 0;
+            if (needResidualSe) {
+                CompensatedSum rss = new CompensatedSum();
+                for (int i = 0; i < n; i++) {
+                    double fitted = Math.fma(slope, zx[i]-xm, ym);
+                    double residual = wy[i]-fitted;
+                    if (!Double.isFinite(residual)) return null;
+                    rss.add(residual*residual);
+                }
+                residualSe = Math.sqrt(rss.value()/(n-2));
+                if (!Double.isFinite(residualSe)) return null;
+            }
+            return new LinearModel(px, py, xm, ym, slope, sxx, residualSe, n);
+        }
+
+        double predictNormalized(double rawX) {
+            return Math.fma(slope, predictor.normalize(rawX)-xMean, yMean);
+        }
+
+        double seNormalized(double rawX) {
+            double dx = predictor.normalize(rawX)-xMean;
+            double leverage = 1.0/n + dx*dx/sxx;
+            return residualSe*Math.sqrt(Math.max(0.0, leverage));
+        }
+    }
+
+    /** Kahan/Neumaier-style accumulator for bounded regression quantities. */
+    private static final class CompensatedSum {
+        private double sum;
+        private double correction;
+
+        void add(double value) {
+            double next = sum + value;
+            if (Math.abs(sum) >= Math.abs(value)) correction += (sum-next)+value;
+            else correction += (value-next)+sum;
+            sum = next;
+        }
+
+        double value() { return sum + correction; }
+    }
+
+    /** Stable finite interpolation, including opposite-sign near-Double.MAX endpoints. */
+    private static double interpolateFinite(double lo, double hi, double fraction) {
+        if (fraction <= 0) return lo;
+        if (fraction >= 1) return hi;
+        if (Math.copySign(1.0, lo) != Math.copySign(1.0, hi)) {
+            return lo*(1.0-fraction) + hi*fraction;
+        }
+        return Math.fma(hi-lo, fraction, lo);
+    }
+
+    private static double midpointFinite(double lo, double hi) {
+        if (Math.copySign(1.0, lo) != Math.copySign(1.0, hi)) {
+            return lo*0.5 + hi*0.5;
+        }
+        return Math.fma(hi-lo, 0.5, lo);
+    }
+
+    private static boolean usablePositive(double value, double referenceScale) {
+        if (!(value > 0) || !Double.isFinite(value)) return false;
+        double scale = Math.max(1.0, Math.abs(referenceScale));
+        return value > 64.0*Math.ulp(scale);
+    }
+
+    /** Append only complete finite points; callers fail closed on false. */
+    private static boolean appendPoint(StringBuilder out, double x, double y) {
+        if (!Double.isFinite(x) || !Double.isFinite(y)) return false;
+        if (out.length() > 1) out.append(',');
+        out.append("{x:").append(fmt(x)).append(",y:").append(fmt(y)).append('}');
+        return true;
+    }
+
     /** Solve 3x3 linear system Ax = B via Gaussian elimination. Returns null if singular. */
     private static double[] solve3x3(double[][] A, double[] B) {
         double[][] M = new double[3][4];
+        double matrixScale = 0;
         for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) M[i][j] = A[i][j];
+            for (int j = 0; j < 3; j++) {
+                M[i][j] = A[i][j];
+                if (!Double.isFinite(M[i][j])) return null;
+                matrixScale = Math.max(matrixScale, Math.abs(M[i][j]));
+            }
             M[i][3] = B[i];
+            if (!Double.isFinite(M[i][3])) return null;
         }
+        if (!(matrixScale > 0)) return null;
+        double pivotTolerance = 64.0*Math.ulp(matrixScale);
         for (int col = 0; col < 3; col++) {
             // Partial pivot
             int pivot = col;
             for (int row = col+1; row < 3; row++)
                 if (Math.abs(M[row][col]) > Math.abs(M[pivot][col])) pivot = row;
             double[] tmp = M[col]; M[col] = M[pivot]; M[pivot] = tmp;
-            if (Math.abs(M[col][col]) < 1e-12) return null;
+            if (!(Math.abs(M[col][col]) > pivotTolerance)) return null;
             for (int row = col+1; row < 3; row++) {
                 double f = M[row][col] / M[col][col];
-                for (int k = col; k <= 3; k++) M[row][k] -= f * M[col][k];
+                for (int k = col; k <= 3; k++) {
+                    M[row][k] = Math.fma(-f, M[col][k], M[row][k]);
+                    if (!Double.isFinite(M[row][k])) return null;
+                }
             }
         }
         // Back substitution
@@ -562,6 +741,7 @@ public class FitComputer {
             x[i] = M[i][3];
             for (int j = i+1; j < 3; j++) x[i] -= M[i][j]*x[j];
             x[i] /= M[i][i];
+            if (!Double.isFinite(x[i])) return null;
         }
         return x;
     }
@@ -604,9 +784,6 @@ public class FitComputer {
             + (79.0*z9 + 779.0*z7 + 1482.0*z5 - 1920.0*z3 - 945.0*z) / (92160.0*d4);
     }
 
-    private static double mean(double[] a) {
-        double s = 0; for (double v : a) s += v; return s / a.length;
-    }
     private static double min(double[] a) {
         double m = a[0]; for (double v : a) if (v < m) m = v; return m;
     }
@@ -619,15 +796,37 @@ public class FitComputer {
         return a;
     }
 
-    /** Format a double for JS embedding: up to 6 significant figures, no trailing zeros. */
-    static String fmt(double v) {
-        if (Double.isNaN(v) || Double.isInfinite(v)) return "null";
-        // Use %g for compact representation
-        String s = String.format("%.6g", v);
-        // Remove trailing zeros after decimal point
-        if (s.contains(".") && !s.contains("e") && !s.contains("E")) {
-            s = s.replaceAll("0+$", "").replaceAll("\\.$", "");
+    /** In-place paired quicksort with bounded recursion depth. */
+    private static void sortPairs(double[] x, double[] y) {
+        quickSortPairs(x, y, 0, x.length - 1);
+    }
+
+    private static void quickSortPairs(double[] x, double[] y, int left, int right) {
+        while (left < right) {
+            int i = left, j = right;
+            double pivot = x[left + ((right - left) >>> 1)];
+            while (i <= j) {
+                while (i <= right && Double.compare(x[i], pivot) < 0) i++;
+                while (j >= left && Double.compare(x[j], pivot) > 0) j--;
+                if (i <= j) {
+                    double tx = x[i]; x[i] = x[j]; x[j] = tx;
+                    double ty = y[i]; y[i] = y[j]; y[j] = ty;
+                    i++; j--;
+                }
+            }
+            // Recurse into the smaller side; iterate over the larger side.
+            if (j - left < right - i) {
+                if (left < j) quickSortPairs(x, y, left, j);
+                left = i;
+            } else {
+                if (i < right) quickSortPairs(x, y, i, right);
+                right = j;
+            }
         }
-        return s;
+    }
+
+    /** Round-trip-safe, locale-neutral finite JavaScript number literal. */
+    static String fmt(double v) {
+        return Double.isFinite(v) ? Double.toString(v) : "null";
     }
 }

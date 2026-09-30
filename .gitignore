@@ -1,0 +1,10 @@
+# sparkta repo .gitignore (v3.6.0, 2026-09-13)
+node_modules/
+verify/_harness_out/
+java/out/
+java/dist_test/
+test_out/
+test_tag_out/
+test_out_*/
+*_ssc.zip
+*.log

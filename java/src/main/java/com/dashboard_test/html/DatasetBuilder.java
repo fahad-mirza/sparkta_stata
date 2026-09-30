@@ -31,13 +31,16 @@ class DatasetBuilder {
     private String sdz(String s)                     { return gen.sdz(s); }
     private String col(int i)                        { return gen.col(i); }
     private String colS(int i)                       { return gen.colS(i); }
+    // t2j fix8f (issue #10): darkened CI stroke so error bars read stronger than the bar.
+    private String colCi(int i)                      { return gen.colCi(i); }
+    private String darken(String c)                  { return gen.darken(c, 0.62); }
     private String toRgba(String c, double a)        { return gen.toRgba(c, a); }
 
     double aggregate(List<Double> vals, String stat) {
         if (vals == null || vals.isEmpty()) return 0;
-        switch (stat.toLowerCase()) {
+        switch (stat.toLowerCase(Locale.ROOT)) {
             case "sum":
-                double s = 0; for (double d : vals) s += d; return s;
+                return safeSum(vals);                 // t2j fix5: compensated + overflow-safe
             case "count":
                 return vals.size();
             case "min":
@@ -49,13 +52,13 @@ class DatasetBuilder {
                 for (double d : vals) if (d > mx) mx = d;
                 return mx;
             case "median":
-                // Route through percentile() for Stata-compatible (n+1)*p/100 formula.
+                // Route through percentile() for Stata's default empirical-CDF definition.
                 // Matches the stats panel median and Stata summ,detail output.
                 List<Double> sortedMed = new ArrayList<>(vals);
                 java.util.Collections.sort(sortedMed);
                 return percentile(sortedMed, 50);
             default: // mean (also handles pct fallthrough for non-pie charts)
-                double t = 0; for (double d : vals) t += d; return t / vals.size();
+                return safeMean(vals);                // t2j fix5: compensated + overflow-safe
         }
     }
 
@@ -65,7 +68,7 @@ class DatasetBuilder {
      */
     String statSuffix(String stat) {
         if (stat == null) return "";
-        switch (stat.toLowerCase()) {
+        switch (stat.toLowerCase(Locale.ROOT)) {
             case "sum":    return " (Sum)";
             case "count":  return " (Count)";
             case "median": return " (Median)";
@@ -137,6 +140,10 @@ class DatasetBuilder {
     }
 
 
+    /** I6: JSON array of per-dataset group counts, filled by overDatasets(); "" if not built. */
+    StringBuilder lastTipN = null;
+    String tipNJson() { if (lastTipN == null) return "[]"; String t = lastTipN.toString(); if (t.endsWith(",")) t = t.substring(0, t.length()-1); return t + "]"; }
+
     String overDatasets(DataSet data, boolean isLine, boolean logTransform) {
         Variable ov = data.getOverVariable();
         // groups = display labels (value labels if available, else raw)
@@ -179,6 +186,11 @@ class DatasetBuilder {
         List<String> groupKeys = localGroupKeys; // only used in non-global path
 
         List<Variable> nv = new ArrayList<>(data.getNumericVariables());
+        // s9c: colour index follows the variable's ORIGINAL position, even when the
+        // fill path below reorders datasets by area (pixel review: Price turned
+        // orange on r_line_smooth_fill). Draw order may change; identity may not.
+        java.util.Map<Variable,Integer> origIdx = new java.util.HashMap<>();
+        for (int oi = 0; oi < nv.size(); oi++) origIdx.put(nv.get(oi), oi);
         // v2.0.1: For non-stacked area charts, sort series by descending mean so the
         // largest filled area is at the back and the smallest is painted on top.
         // Combined with reduced fill opacity (0.35), both series remain visible AND
@@ -216,6 +228,7 @@ class DatasetBuilder {
         boolean colorByCategory = !isLine && nv.size() == 1;
         StringBuilder sb = new StringBuilder();
         int ci = 0;
+        lastTipN = new StringBuilder("[");   // I6: per-dataset, per-group counts for tooltips
         for (Variable var : nv) {
             // v2.3.0: inject secondary y-axis ID when variable is in y2vars
             boolean varIsY2 = isY2Var(var);
@@ -245,14 +258,16 @@ class DatasetBuilder {
                         if (v instanceof Number) vals.add(((Number)v).doubleValue());
                     }
                 }
+                lastTipN.append(gi == 0 ? "[" : ",").append(vals.size());
                 if (vals.isEmpty()) sb.append("null,");
                 else {
                     double agg = aggregate(vals, o.stats.stat);
                     double out = logTransform ? (agg > 0 ? Math.log10(agg) : 0) : agg;
-                    sb.append(String.format("%.6f",out)).append(",");
+                    sb.append(dbl(out)).append(",");
                 }
             }
             sb.append("],");
+            lastTipN.append("],");
             if (varIsY2) sb.append("yAxisID:'y2',");
             if (colorByCategory) {
                 // Build per-bar color arrays -- one color per group.
@@ -289,12 +304,12 @@ class DatasetBuilder {
                 bgArr.append("]"); brdArr.append("]");
                 sb.append("backgroundColor:").append(bgArr).append(",");
                 sb.append("borderColor:").append(brdArr).append(",");
-                sb.append("borderWidth:1,");
+                sb.append("borderWidth:").append(lineWidthOr("1")).append(",");   // t2j fix8 (A7): honor linewidth() on bar outline
                 if (!o.chart.borderradius.isEmpty()) sb.append("borderRadius:").append(o.chart.borderradius).append(",");
                 if (!o.chart.barwidth.isEmpty())     sb.append("barPercentage:").append(o.chart.barwidth).append(",");
                 if (!o.chart.bargroupwidth.isEmpty())sb.append("categoryPercentage:").append(o.chart.bargroupwidth).append(",");
             } else {
-                sb.append(buildDatasetStyle(ci, isLine, var, ci));
+                sb.append(buildDatasetStyle(origIdx.getOrDefault(var, ci), isLine, var, ci));   // s9c: colour by variable identity
             }
             sb.append("},\n");
             ci++;
@@ -350,7 +365,7 @@ class DatasetBuilder {
             .replace("(","").replace(")","");
         StringBuilder sb = new StringBuilder();
         sb.append("{label:'").append(escJs(legendLabel)).append("',data:[");
-        for (double v : aggVals) sb.append(String.format("%.6f", v)).append(",");
+        for (double v : aggVals) sb.append(dbl(v)).append(",");
         sb.append("],");
         if (!isLine) {
             // Per-bar color arrays so each variable gets a distinct color
@@ -362,7 +377,7 @@ class DatasetBuilder {
             }
             sb.append("],borderColor:[");
             for (int i = 0; i < nv.size(); i++) sb.append("'").append(colS(i)).append("',");
-            sb.append("],borderWidth:1,");
+            sb.append("],borderWidth:").append(lineWidthOr("1")).append(",");   // t2j fix8 (A7)
             if (!o.chart.borderradius.isEmpty()) sb.append("borderRadius:").append(o.chart.borderradius).append(",");
             if (!o.chart.barwidth.isEmpty())     sb.append("barPercentage:").append(o.chart.barwidth).append(",");
             if (!o.chart.bargroupwidth.isEmpty())sb.append("categoryPercentage:").append(o.chart.bargroupwidth).append(",");
@@ -371,11 +386,11 @@ class DatasetBuilder {
             String bgVal = (!o.style.gradient.isEmpty() && o.chart.fill) ? "_grad0" : ("'" + col(0) + "'");
             sb.append("backgroundColor:").append(bgVal).append(",");
             sb.append("borderColor:'").append(colS(0)).append("',");
-            sb.append("borderWidth:").append(o.chart.linewidth).append(",");
+            sb.append("borderWidth:").append(lineWidthOr("2")).append(",");
             // v3.1.0: Phase 1-D -- borderDash for series 0, nopoints, pointhoversize
             sb.append(borderDashProp(0));
             sb.append("fill:").append(o.chart.fill).append(",");
-            sb.append("tension:").append(o.chart.smooth).append(",");
+            sb.append("tension:").append(smoothOr("0.3")).append(",");
             sb.append("pointRadius:").append(linePointRadius()).append(",");
             sb.append("pointHoverRadius:").append(linePointHoverRadius()).append(",");
             sb.append("pointBorderWidth:").append(o.chart.pointborderwidth).append(",");
@@ -433,7 +448,7 @@ class DatasetBuilder {
         sb.append("backgroundColor:").append(bgValue).append(",");
         sb.append("borderColor:'").append(colS(ci)).append("',");
         if (isLine) {
-            sb.append("borderWidth:").append(o.chart.linewidth).append(",");
+            sb.append("borderWidth:").append(lineWidthOr("2")).append(",");
             // v3.1.0: Phase 1-D -- emit borderDash for this series index (solid emits nothing)
             sb.append(borderDashProp(seriesIndex < 0 ? ci : seriesIndex));
             // Stacked area: first series fills to origin, subsequent fill to series below
@@ -456,7 +471,7 @@ class DatasetBuilder {
             } else {
                 sb.append("fill:").append(o.chart.fill).append(",");
             }
-            sb.append("tension:").append(o.chart.smooth).append(",");
+            sb.append("tension:").append(smoothOr("0.3")).append(",");
             // v3.1.0: Phase 1-D -- nopoints and pointhoversize via helpers
             sb.append("pointRadius:").append(linePointRadius()).append(",");
             sb.append("pointHoverRadius:").append(linePointHoverRadius()).append(",");
@@ -466,7 +481,7 @@ class DatasetBuilder {
             if (!o.chart.stepped.isEmpty())    sb.append("stepped:'").append(o.chart.stepped).append("',");
             sb.append("spanGaps:").append(o.chart.spanmissing).append(",");
         } else {
-            sb.append("borderWidth:1,");
+            sb.append("borderWidth:").append(lineWidthOr("1")).append(",");   // t2j fix8 (A7): honor linewidth() on bar outline
             if (!o.chart.borderradius.isEmpty()) sb.append("borderRadius:").append(o.chart.borderradius).append(",");
             if (!o.chart.barwidth.isEmpty())     sb.append("barPercentage:").append(o.chart.barwidth).append(",");
             if (!o.chart.bargroupwidth.isEmpty())sb.append("categoryPercentage:").append(o.chart.bargroupwidth).append(",");
@@ -478,7 +493,8 @@ class DatasetBuilder {
     String buildPointConfig(int ci) {
         StringBuilder sb = new StringBuilder();
         sb.append("pointRadius:").append(o.chart.pointsize).append(",");
-        sb.append("pointHoverRadius:").append(parseDouble(o.chart.pointsize,4)+2).append(",");
+        // t2j fix6: honor pointhoversize() on scatter/bubble (was a hardcoded pointsize+2).
+        sb.append("pointHoverRadius:").append(linePointHoverRadius()).append(",");
         sb.append("pointBorderWidth:").append(o.chart.pointborderwidth).append(",");
         sb.append("pointRotation:").append(o.chart.pointrotation).append(",");
         if (!o.chart.pointstyle.isEmpty()) sb.append("pointStyle:'").append(o.chart.pointstyle).append("',");
@@ -510,7 +526,7 @@ class DatasetBuilder {
      */
     private String lpatternToBorderDash(String pattern) {
         if (pattern == null) return "";
-        switch (pattern.trim().toLowerCase()) {
+        switch (pattern.trim().toLowerCase(Locale.ROOT)) {
             case "dash":    return "[6,3]";
             case "dot":     return "[2,3]";
             case "dashdot": return "[8,3,2,3]";
@@ -590,66 +606,73 @@ class DatasetBuilder {
     /** Returns datalabels:{display:false} suppressor string when the datalabels plugin is
      *  globally registered (pielabels=true) but this chart type doesn't use it.
      *  Without this, Chart.js renders a blank chart for all non-pie charts. */
+    // v3.6.0-t2j: TWO-TAILED t critical value for ANY confidence level and df,
+    // = Stata invttail(df, (1-level/100)/2). The old code only had columns for
+    // 90/95/99 and silently used the 95% column for any other level (so
+    // cilevel(80) drew a 95%-wide band mislabelled 80%), and disagreed with the
+    // JS filter path for df 31-120. This is an exact computation (regularized
+    // incomplete beta + bisection) shared, byte-for-byte in algorithm, with the
+    // engine tCrit() and FilterRenderer _tCritCI so initial and filtered CIs
+    // match each other and Stata to ~1e-7.
     double tCritical(int df, int level) {
-        // z-scores for infinite df (normal approximation)
-        double zCrit = (level == 90) ? 1.6449 : (level == 99) ? 2.5758 : 1.9600;
-        if (df < 1)   return zCrit;
-        if (df > 120) return zCrit;
-
-        // t-table: rows = df 1..30, 40, 60, 80, 100, 120
-        // columns: 90%, 95%, 99%
-        // Source: standard two-tailed t-distribution critical values
-        double[][] tbl = {
-            // df   90%      95%      99%
-            /* 1  */ {6.3138, 12.7062, 63.6567},
-            /* 2  */ {2.9200,  4.3027,  9.9248},
-            /* 3  */ {2.3534,  3.1824,  5.8409},
-            /* 4  */ {2.1318,  2.7764,  4.6041},
-            /* 5  */ {2.0150,  2.5706,  4.0321},
-            /* 6  */ {1.9432,  2.4469,  3.7074},
-            /* 7  */ {1.8946,  2.3646,  3.4995},
-            /* 8  */ {1.8595,  2.3060,  3.3554},
-            /* 9  */ {1.8331,  2.2622,  3.2498},
-            /* 10 */ {1.8125,  2.2281,  3.1693},
-            /* 11 */ {1.7959,  2.2010,  3.1058},
-            /* 12 */ {1.7823,  2.1788,  3.0545},
-            /* 13 */ {1.7709,  2.1604,  3.0123},
-            /* 14 */ {1.7613,  2.1448,  2.9768},
-            /* 15 */ {1.7531,  2.1315,  2.9467},
-            /* 16 */ {1.7459,  2.1199,  2.9208},
-            /* 17 */ {1.7396,  2.1098,  2.8982},
-            /* 18 */ {1.7341,  2.1009,  2.8784},
-            /* 19 */ {1.7291,  2.0930,  2.8609},
-            /* 20 */ {1.7247,  2.0860,  2.8453},
-            /* 21 */ {1.7207,  2.0796,  2.8314},
-            /* 22 */ {1.7171,  2.0739,  2.8188},
-            /* 23 */ {1.7139,  2.0687,  2.8073},
-            /* 24 */ {1.7109,  2.0639,  2.7969},
-            /* 25 */ {1.7081,  2.0595,  2.7874},
-            /* 26 */ {1.7056,  2.0555,  2.7787},
-            /* 27 */ {1.7033,  2.0518,  2.7707},
-            /* 28 */ {1.7011,  2.0484,  2.7633},
-            /* 29 */ {1.6991,  2.0452,  2.7564},
-            /* 30 */ {1.6973,  2.0423,  2.7500},
-            /* 40 */ {1.6839,  2.0211,  2.7045},
-            /* 60 */ {1.6707,  2.0003,  2.6603},
-            /* 80 */ {1.6641,  1.9905,  2.6387},
-            /* 100*/ {1.6602,  1.9840,  2.6259},
-            /* 120*/ {1.6577,  1.9799,  2.6174}
-        };
-        int col = (level == 90) ? 0 : (level == 99) ? 2 : 1;
-
-        // df 1-30: direct lookup
-        if (df <= 30) return tbl[df - 1][col];
-
-        // df 31-120: linear interpolation between bracketing table rows
-        double lo, hi, frac;
-        if (df <= 40)  { lo=tbl[29][col]; hi=tbl[30][col]; frac=(df-30.0)/10.0; }
-        else if (df <= 60)  { lo=tbl[30][col]; hi=tbl[31][col]; frac=(df-40.0)/20.0; }
-        else if (df <= 80)  { lo=tbl[31][col]; hi=tbl[32][col]; frac=(df-60.0)/20.0; }
-        else if (df <= 100) { lo=tbl[32][col]; hi=tbl[33][col]; frac=(df-80.0)/20.0; }
-        else                { lo=tbl[33][col]; hi=tbl[34][col]; frac=(df-100.0)/20.0; }
-        return lo + frac * (hi - lo);
+        double d = df < 1 ? 1 : df;
+        double alpha = (1.0 - level / 100.0) / 2.0;   // one-tail probability
+        if (alpha <= 0) alpha = 1e-12;
+        if (alpha >= 0.5) return 0.0;
+        return invTUpper(d, alpha);
+    }
+    /** t value with upper-tail probability p (two-sided crit = this). Bisection. */
+    static double invTUpper(double df, double p) {
+        double lo = 0.0, hi = 1.0e4;
+        for (int i = 0; i < 200; i++) {
+            double mid = 0.5 * (lo + hi);
+            if (tUpperTail(df, mid) > p) lo = mid; else hi = mid;
+        }
+        return 0.5 * (lo + hi);
+    }
+    /** P(T > t) for Student-t, t >= 0, df > 0, via regularized incomplete beta. */
+    static double tUpperTail(double df, double t) {
+        double x = df / (df + t * t);
+        return 0.5 * betai(df / 2.0, 0.5, x);
+    }
+    /** Regularized incomplete beta I_x(a,b) (Numerical Recipes betai/betacf/lgamma). */
+    static double betai(double a, double b, double x) {
+        if (x <= 0.0) return 0.0;
+        if (x >= 1.0) return 1.0;
+        double lbeta = lgamma(a + b) - lgamma(a) - lgamma(b);
+        double bt = Math.exp(lbeta + a * Math.log(x) + b * Math.log(1.0 - x));
+        if (x < (a + 1.0) / (a + b + 2.0)) return bt * betacf(a, b, x) / a;
+        return 1.0 - bt * betacf(b, a, 1.0 - x) / b;
+    }
+    private static double betacf(double a, double b, double x) {
+        final double TINY = 1e-30, EPS = 1e-14; final int MAXIT = 300;
+        double qab = a + b, qap = a + 1.0, qam = a - 1.0;
+        double c = 1.0, d = 1.0 - qab * x / qap;
+        if (Math.abs(d) < TINY) d = TINY; d = 1.0 / d; double h = d;
+        for (int m = 1; m <= MAXIT; m++) {
+            int m2 = 2 * m;
+            double aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+            d = 1.0 + aa * d; if (Math.abs(d) < TINY) d = TINY;
+            c = 1.0 + aa / c;  if (Math.abs(c) < TINY) c = TINY;
+            d = 1.0 / d; h *= d * c;
+            aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+            d = 1.0 + aa * d; if (Math.abs(d) < TINY) d = TINY;
+            c = 1.0 + aa / c;  if (Math.abs(c) < TINY) c = TINY;
+            d = 1.0 / d; double del = d * c; h *= del;
+            if (Math.abs(del - 1.0) < EPS) break;
+        }
+        return h;
+    }
+    /** Lanczos log-gamma. */
+    static double lgamma(double z) {
+        double[] g = {676.5203681218851, -1259.1392167224028, 771.32342877765313,
+            -176.61502916214059, 12.507343278686905, -0.13857109526572012,
+            9.9843695780195716e-6, 1.5056327351493116e-7};
+        if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - lgamma(1.0 - z);
+        z -= 1.0;
+        double a = 0.99999999999980993, t = z + 7.5;
+        for (int i = 0; i < g.length; i++) a += g[i] / (z + i + 1.0);
+        return 0.5 * Math.log(2.0 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(a);
     }
 
     /**
@@ -752,12 +775,35 @@ class DatasetBuilder {
     }
 
     /**
-     * Sturges rule for bin count: ceil(log2(n) + 1).
-     * Clamps to [5, 50] for visual sanity.
+     * v3.6.0-t2j: Stata's DEFAULT histogram bin count (was Sturges, which Stata
+     * does not use). Stata [R] histogram: k = min( sqrt(N), 10*ln(N)/ln(10) ),
+     * rounded to the closest integer, with k >= 1. No [5,50] clamp (Stata does not
+     * clamp). Method name kept for callers. (Exact rounding to be confirmed against
+     * a live `histogram` run; formula matches the Stata manual.)
      */
-    int sturgesBins(int n) {
-        int b = (int) Math.ceil(Math.log(n) / Math.log(2) + 1);
-        return Math.max(5, Math.min(50, b));
+    // t2j fix8: static so the DATA-EMBED (filter) path can use the SAME default-bin rule as
+    // the build path. Previously DataEmbedder used its own ceil(log2(N)+1) formula, so a
+    // default histogram drew one bin count on load and silently re-binned to another on the
+    // first filter (A12). One shared rule = load and filter agree.
+    /** t2j fix8 (A7): linewidth() is no longer defaulted in wireArgs, so each consumer picks
+     *  its own default when unset -- lines/ciline pass "2", bars pass "1". An explicit
+     *  linewidth() then flows to bar outlines too (was a hardcoded borderWidth:1). */
+    private String lineWidthOr(String def) {
+        return (o.chart.linewidth == null || o.chart.linewidth.isEmpty()) ? def : o.chart.linewidth;
+    }
+
+    /* t2j fix8 (A10): smooth() is un-defaulted at the arg boundary so each call site
+     *  supplies its own historical tension default -- regular lines pass "0.3". An
+     *  explicit smooth() then flows through everywhere identically. */
+    private String smoothOr(String def) {
+        return (o.chart.smooth == null || o.chart.smooth.isEmpty()) ? def : o.chart.smooth;
+    }
+
+    static int sturgesBins(int n) {
+        if (n <= 1) return 1;
+        double k = Math.min(Math.sqrt(n), 10.0 * Math.log(n) / Math.log(10.0));
+        int b = (int) Math.round(k);
+        return Math.max(1, b);
     }
 
     /**
@@ -843,7 +889,7 @@ class DatasetBuilder {
             for (int gi : validIdx) {
                 double[] row = cs[gi];
                 // v2.1.0: embed n in data point so tooltip can show group sample size
-                dataJs.append(String.format("{y:%.6f,yMin:%.6f,yMax:%.6f,n:%.0f},", row[1], row[2], row[3], row[0]));
+                dataJs.append("{y:").append(dbl(row[1])).append(",yMin:").append(dbl(row[2])).append(",yMax:").append(dbl(row[3])).append(",n:").append(Long.toString((long) row[0])).append("},");
             }
             String lbl = escJs(var.getDisplayName() + " (" + level + "% CI)");
             dsJs.append("{label:'").append(lbl).append("',")
@@ -868,24 +914,28 @@ class DatasetBuilder {
                         ? globalCiIdx.get(groups.get(gi)) : colorIdx;
                     String bg  = isMissGrp ? missingBg  : col(palIdx);
                     String brd = isMissGrp ? missingBrd : colS(palIdx);
+                    // t2j fix8f (issue #10): CI error bar uses a DARKENED stroke so the
+                    // interval reads more strongly than the (lighter) bar fill/outline.
+                    String ciCol = darken(brd);
                     bgArr.append("'").append(bg).append("',");
                     brdArr.append("'").append(brd).append("',");
-                    errArr.append("'").append(brd).append("',");
+                    errArr.append("'").append(ciCol).append("',");
                     if (!isMissGrp) colorIdx++;
                 }
                 bgArr.append("]"); brdArr.append("]"); errArr.append("]");
                 dsJs.append("backgroundColor:").append(bgArr).append(",")
                     .append("borderColor:").append(brdArr).append(",")
-                    .append("borderWidth:1,")
+                    .append("borderWidth:").append(lineWidthOr("1")).append(",")   // t2j fix8 (A7 follow-up): cibar outline honors linewidth()
                     .append("errorBarColor:").append(errArr).append(",")
                     .append("errorBarWhiskerColor:").append(errArr).append(",");
             } else {
                 // Multi-variable: one solid color per series
+                // t2j fix8f (issue #10): CI error bar uses a DARKENED stroke for visibility.
                 dsJs.append("backgroundColor:'").append(col(ci)).append("',")
                     .append("borderColor:'").append(colS(ci)).append("',")
-                    .append("borderWidth:1,")
-                    .append("errorBarColor:'").append(colS(ci)).append("',")
-                    .append("errorBarWhiskerColor:'").append(colS(ci)).append("',");
+                    .append("borderWidth:").append(lineWidthOr("1")).append(",")   // t2j fix8 (A7 follow-up): cibar outline honors linewidth()
+                    .append("errorBarColor:'").append(colCi(ci)).append("',")
+                    .append("errorBarWhiskerColor:'").append(colCi(ci)).append("',");
             }
             dsJs.append("errorBarLineWidth:2,errorBarWhiskerLineWidth:2,errorBarWhiskerSize:8,");
             if (!o.chart.borderradius.isEmpty()) dsJs.append("borderRadius:").append(o.chart.borderradius).append(",");
@@ -921,10 +971,10 @@ class DatasetBuilder {
                     meanJs.append("null,"); upperJs.append("null,");
                     lowerJs.append("null,"); nJs.append("null,");
                 } else {
-                    meanJs.append( String.format("%.6f,", row[1]));
-                    upperJs.append(String.format("%.6f,", row[3]));
-                    lowerJs.append(String.format("%.6f,", row[2]));
-                    nJs.append(String.format("%.0f,", row[0]));
+                    meanJs.append(dbl(row[1])).append(",");
+                    upperJs.append(dbl(row[3])).append(",");
+                    lowerJs.append(dbl(row[2])).append(",");
+                    nJs.append(Long.toString((long) row[0])).append(",");
                 }
             }
             String varLbl  = escJs(var.getDisplayName());
@@ -936,9 +986,9 @@ class DatasetBuilder {
             String lineCol  = colS(ci);
             // Mean line: use linewidth + 1 so it stands clearly above the band
             // The +1 ensures the line is always thicker than the band borders (borderWidth:1)
-            int lw = 2;
-            try { lw = Integer.parseInt(o.chart.linewidth.trim()); } catch (Exception ignore) {}
-            int meanLw = lw + 1;  // mean line is 1px thicker than user setting for visibility
+            double lw = 2;
+            try { lw = Double.parseDouble(o.chart.linewidth.trim()); } catch (Exception ignore) {}   // s8v: lwidth(thick) -> 3.5
+            double meanLw = lw + 1;  // mean line is 1px thicker than user setting for visibility
             // Mean line first (order:0 = on top)
             // v3.1.0: Phase 1-D -- borderDash per series index, nopoints, pointhoversize on mean line only.
             // CI band boundary lines keep pointRadius:0 and their fixed borderDash:[4,3] intentionally.
@@ -950,7 +1000,7 @@ class DatasetBuilder {
                 .append("backgroundColor:'transparent',")
                 .append("borderWidth:").append(meanLw).append(",")
                 .append(borderDashProp(ci))
-                .append("tension:").append(o.chart.smooth).append(",")
+                .append("tension:").append(smoothOr("0.3")).append(",")
                 .append("pointRadius:").append(linePointRadius()).append(",")
                 .append("pointHoverRadius:").append(linePointHoverRadius()).append(",")
                 .append("pointBackgroundColor:'").append(lineCol).append("',")
@@ -963,7 +1013,7 @@ class DatasetBuilder {
                 .append("borderColor:'").append(toRgba(colS(ci), 0.4)).append("',")
                 .append("borderWidth:1,borderDash:[4,3],")
                 .append("backgroundColor:'").append(bandFill).append("',")
-                .append("fill:'+1',tension:").append(o.chart.smooth).append(",")
+                .append("fill:'+1',tension:").append(smoothOr("0.3")).append(",")
                 .append("pointRadius:0,order:1,spanGaps:true},\n");
             // Lower boundary (no fill -- upper already covers band)
             dsJs.append("{label:'").append(ciLabel).append(" lower',")
@@ -971,7 +1021,7 @@ class DatasetBuilder {
                 .append("borderColor:'").append(toRgba(colS(ci), 0.4)).append("',")
                 .append("borderWidth:1,borderDash:[4,3],")
                 .append("backgroundColor:'transparent',")
-                .append("fill:false,tension:").append(o.chart.smooth).append(",")
+                .append("fill:false,tension:").append(smoothOr("0.3")).append(",")
                 .append("pointRadius:0,order:1,spanGaps:true},\n");
             ci++;
         }
@@ -1019,16 +1069,19 @@ class DatasetBuilder {
     // -- Descriptive stats (Stata-compatible) ----------------------------
 
     double[] stats(Variable var) {
+        // t2j fix5: admit only FINITE numbers, so a stray NaN/Infinity in a column no
+        // longer poisons mean/SD/CV (min/max are also immune since NaN comparisons are false).
         List<Double> vals = new ArrayList<>();
-        for (Object o : var.getValues()) if (o instanceof Number) vals.add(((Number)o).doubleValue());
+        for (Object o : var.getValues()) if (o instanceof Number) {
+            double value = ((Number)o).doubleValue();
+            if (Double.isFinite(value)) vals.add(value);
+        }
         int n = vals.size();
         if (n == 0) return new double[]{0,0,0,0,0,0,0,0,0};
-        double sum=0, min=Double.MAX_VALUE, max=-Double.MAX_VALUE;
-        for (double v : vals) { sum+=v; if(v<min)min=v; if(v>max)max=v; }
-        double mean = sum / n;
-        double var2 = 0;
-        for (double v : vals) var2 += Math.pow(v - mean, 2);
-        double sd = (n > 1) ? Math.sqrt(var2 / (n - 1)) : 0; // sample SD (N-1), matches Stata summ
+        double min=Double.MAX_VALUE, max=-Double.MAX_VALUE;
+        for (double v : vals) { if(v<min)min=v; if(v>max)max=v; }
+        double mean = safeMean(vals);                 // compensated + overflow-safe
+        double sd   = safeSampleSd(vals, mean);       // sample SD (N-1), matches Stata summ
         // Sort for percentiles
         List<Double> sorted = new ArrayList<>(vals);
         java.util.Collections.sort(sorted);
@@ -1036,21 +1089,144 @@ class DatasetBuilder {
         double q1     = percentile(sorted, 25);
         double q3     = percentile(sorted, 75);
         double cv     = (mean != 0) ? Math.abs(sd / mean) : 0;
+        if (!Double.isFinite(cv)) cv = Double.MAX_VALUE;
         return new double[]{n, mean, min, max, sd, median, q1, q3, cv};
+    }
+
+    // v3.6.0-t2j: Stata's DEFAULT percentile method (what `summarize, detail`,
+    // `_pctile`, and `centile` without `altdef` report), NOT altdef. Given sorted
+    // x[1..n]: let i = n*p/100. If i is an integer, the pth percentile is the
+    // average of x[i] and x[i+1]; otherwise it is x[ceil(i)] (no interpolation).
+    // Verified against auto.dta: price 25%=4195, 50%=5006.5, 75%=6342. The old
+    // code used an interpolating h=(n+1)p/100 (altdef-like) -> wrong Q1/Q3/IQR/
+    // whisker fences/outliers/violin quartiles. MUST stay identical to the JS
+    // _pctile (engine) and _bPctile (FilterRenderer).
+    /**
+     * t2j fix4 (ported from Astra rc1): lossless, finite-guarded, locale-independent
+     * number for embedding into JS. Double.toString round-trips exactly, so box/violin/
+     * CI/KDE statistics no longer lose precision or underflow to 0.000000 (the old
+     * "%.6f" collapsed any value below ~5e-7 to zero). Non-finite -> "0".
+     */
+    static String dbl(double v) {
+        return (Double.isNaN(v) || Double.isInfinite(v)) ? "0" : Double.toString(v);
+    }
+
+    // ------------------------------------------------------------------------
+    // t2j fix5 (ported from Astra rc1): overflow/precision-safe accumulation.
+    // safeSum/safeMean use Neumaier compensation with a scaled fallback so a column
+    // of very large values does not lose low-order bits or overflow to Infinity;
+    // safeSampleSd recomputes in scaled coordinates only if the squares overflow.
+    // These replace the naive sum += v / var += pow(v-mean,2) paths, which suffered
+    // catastrophic cancellation for large-magnitude data (years, income, ids).
+    // ------------------------------------------------------------------------
+    static double safeSum(List<Double> vals) {
+        double ordinary = 0, compensation = 0;
+        for (double value : vals) {
+            double next = ordinary + value;
+            if (!Double.isFinite(next)) return scaledSum(vals);
+            if (Math.abs(ordinary) >= Math.abs(value)) compensation += (ordinary - next) + value;
+            else compensation += (value - next) + ordinary;
+            if (!Double.isFinite(compensation)) return scaledSum(vals);
+            ordinary = next;
+        }
+        double result = ordinary + compensation;
+        return Double.isFinite(result) ? result : scaledSum(vals);
+    }
+
+    static double safeMean(List<Double> vals) {
+        if (vals == null || vals.isEmpty()) return 0;
+        double ordinary = 0, compensation = 0;
+        for (double value : vals) {
+            double next = ordinary + value;
+            if (!Double.isFinite(next)) {
+                double scale = maxAbs(vals);
+                if (!(scale > 0)) return 0;
+                double normalized = compensatedScaledTotal(vals, scale) / vals.size();
+                double result = normalized * scale;
+                return Double.isFinite(result) ? result : Math.copySign(Double.MAX_VALUE, normalized);
+            }
+            if (Math.abs(ordinary) >= Math.abs(value)) compensation += (ordinary - next) + value;
+            else compensation += (value - next) + ordinary;
+            if (!Double.isFinite(compensation)) {
+                double scale = maxAbs(vals);
+                double normalized = compensatedScaledTotal(vals, scale) / vals.size();
+                double result = normalized * scale;
+                return Double.isFinite(result) ? result : Math.copySign(Double.MAX_VALUE, normalized);
+            }
+            ordinary = next;
+        }
+        double result = (ordinary + compensation) / vals.size();
+        if (Double.isFinite(result)) return result;
+        double scale = maxAbs(vals);
+        double normalized = compensatedScaledTotal(vals, scale) / vals.size();
+        result = normalized * scale;
+        return Double.isFinite(result) ? result : Math.copySign(Double.MAX_VALUE, normalized);
+    }
+
+    static double safeSampleSd(List<Double> vals, double mean) {
+        if (vals == null || vals.size() < 2) return 0;
+        double ss = 0;
+        boolean overflow = false;
+        for (double value : vals) {
+            double delta = value - mean;
+            double term = delta * delta;
+            double next = ss + term;
+            if (!Double.isFinite(delta) || !Double.isFinite(term) || !Double.isFinite(next)) { overflow = true; break; }
+            ss = next;
+        }
+        if (!overflow) return Math.sqrt(ss / (vals.size() - 1.0));
+        double scale = Math.max(maxAbs(vals), Math.abs(mean));
+        if (!(scale > 0) || !Double.isFinite(scale)) return 0;
+        double normalizedMean = mean / scale;
+        double normalizedSs = 0;
+        for (double value : vals) { double delta = value / scale - normalizedMean; normalizedSs += delta * delta; }
+        double normalizedSd = Math.sqrt(normalizedSs / (vals.size() - 1.0));
+        double result = normalizedSd * scale;
+        return Double.isFinite(result) ? result : Double.MAX_VALUE;
+    }
+
+    private static double maxAbs(List<Double> vals) {
+        double scale = 0;
+        for (double value : vals) scale = Math.max(scale, Math.abs(value));
+        return scale;
+    }
+
+    private static double compensatedScaledTotal(List<Double> vals, double scale) {
+        double sum = 0, compensation = 0;
+        for (double value : vals) {
+            double term = value / scale;
+            double next = sum + term;
+            if (Math.abs(sum) >= Math.abs(term)) compensation += (sum - next) + term;
+            else compensation += (term - next) + sum;
+            sum = next;
+        }
+        return sum + compensation;
+    }
+
+    private static double scaledSum(List<Double> vals) {
+        double scale = maxAbs(vals);
+        if (!(scale > 0) || !Double.isFinite(scale)) return 0;
+        double normalized = compensatedScaledTotal(vals, scale);
+        double result = normalized * scale;
+        return Double.isFinite(result) ? result : Math.copySign(Double.MAX_VALUE, normalized);
     }
 
     double percentile(List<Double> sorted, double p) {
         int n = sorted.size();
+        if (n == 0) return Double.NaN;
         if (n == 1) return sorted.get(0);
-        double h  = (n + 1) * p / 100.0;
-        int    lo = (int) Math.floor(h);
-        int    hi = (int) Math.ceil(h);
-        // Clamp to valid 1-indexed range
-        lo = Math.max(1, Math.min(n, lo));
-        hi = Math.max(1, Math.min(n, hi));
-        if (lo == hi) return sorted.get(lo - 1); // exact order statistic
-        double frac = h - Math.floor(h);
-        return sorted.get(lo - 1) + frac * (sorted.get(hi - 1) - sorted.get(lo - 1));
+        double i = n * p / 100.0;
+        double fi = Math.floor(i);
+        if (Math.abs(i - fi) < 1e-9) {                 // integer position -> average x[i], x[i+1]
+            int k = (int) fi;
+            if (k < 1) return sorted.get(0);
+            if (k >= n) return sorted.get(n - 1);
+            return (sorted.get(k - 1) + sorted.get(k)) / 2.0;
+        }
+        int c = (int) Math.ceil(i);                    // else round up
+        if (c < 1) c = 1;
+        if (c > n) c = n;
+        return sorted.get(c - 1);
     }
 
     // =========================================================================
@@ -1146,8 +1322,8 @@ class DatasetBuilder {
                         dataJs.append("null,"); rawJs.append("null,");
                     } else {
                         double pct = (colTotal[vi] > 0) ? (raw[vi][gi] / colTotal[vi] * 100.0) : 0.0;
-                        dataJs.append(String.format("%.4f,", pct));
-                        rawJs.append(String.format("%.6f,", raw[vi][gi]));
+                        dataJs.append(String.format(Locale.ROOT, "%.4f,", pct));
+                        rawJs.append(dbl(raw[vi][gi])).append(",");
                     }
                 }
                 String displayLabel = isMissing ? "(Missing)" : groupLabel;
@@ -1177,9 +1353,9 @@ class DatasetBuilder {
         for (int vi = 0; vi < nVars; vi++) {
             Variable var = nv.get(vi);
             String pctStr = Double.isNaN(raw[vi]) ? "null"
-                : String.format("%.4f", (total > 0 ? raw[vi] / total * 100.0 : 0.0));
+                : String.format(Locale.ROOT, "%.4f", (total > 0 ? raw[vi] / total * 100.0 : 0.0));
             String rawStr = Double.isNaN(raw[vi]) ? "null"
-                : String.format("%.6f", raw[vi]);
+                : dbl(raw[vi]);
             sb.append("{label:'").append(escJs(var.getDisplayName() + statSuffix(o.stats.stat))).append("',")
               .append("data:[").append(pctStr).append(",],")
               .append("_raw:[").append(rawStr).append(",],")
@@ -1640,7 +1816,7 @@ class DatasetBuilder {
                     String borderColor = colS(gi);
                     String medC  = boxMarkerColorFromFill(fillColor, false);
                     String meanC = boxMarkerColorFromFill(fillColor, true);
-                    sb.append(buildViolinEntry(escJs(g), gi, fillColor, borderColor,
+                    sb.append(buildViolinEntry(escJs(g), gi, gi, 0, fillColor, borderColor,   // fix9d: gi = global group index (renderGroupsVDA is global here or equals it)
                                                medC, meanC, vals, fence, bwOverride));
                     sb.append(",\n");
                 }
@@ -1670,7 +1846,10 @@ class DatasetBuilder {
                         String borderColor = colS(vi);
                         String medC  = boxMarkerColorFromFill(fillColor, false);
                         String meanC = boxMarkerColorFromFill(fillColor, true);
-                        sb.append(buildViolinEntry(label, xIdxCounter, fillColor, borderColor,
+                        // fix9d: the filter regroups rows by the GLOBAL over index (_si), so
+                        // carry that index (panels render local groups only)
+                        Integer _ggi = globalColorMap.containsKey(g) ? globalColorMap.get(g) : Integer.valueOf(gi);
+                        sb.append(buildViolinEntry(label, xIdxCounter, _ggi, vi, fillColor, borderColor,
                                                    medC, meanC, vals, fence, bwOverride));
                         sb.append(",\n");
                         xIdxCounter++;
@@ -1688,7 +1867,7 @@ class DatasetBuilder {
                 String borderColor = colS(vi);
                 String medC  = boxMarkerColorFromFill(fillColor, false);
                 String meanC = boxMarkerColorFromFill(fillColor, true);
-                sb.append(buildViolinEntry(escJs(var.getDisplayName()), vi,
+                sb.append(buildViolinEntry(escJs(var.getDisplayName()), vi, -1, vi,   // fix9d: no over() -> gi -1
                                            fillColor, borderColor,
                                            medC, meanC, vals, fence, bwOverride));
                 sb.append(",\n");
@@ -1703,12 +1882,17 @@ class DatasetBuilder {
      * vals may be empty -- returns a null-data entry so the x-axis slot exists.
      * v2.5.0
      */
-    private String buildViolinEntry(String label, int xIdx,
+    // t2j fix9d: every entry also carries gi (GLOBAL over-group index, -1 without over())
+    // and vi (plot-variable index) so the client _vFilter can recompute EVERY violin
+    // from the filtered rows -- before, the filter passed one value list per group of
+    // the FIRST variable only, so a two-variable violin lost its second violin on any
+    // filter change (BF40).
+    private String buildViolinEntry(String label, int xIdx, int gi, int vi,
                                     String fillColor, String borderColor,
                                     String medC, String meanC,
                                     List<Double> vals, double fence, double bwOverride) {
         if (vals.isEmpty()) {
-            return "{label:'" + label + "',xIdx:" + xIdx
+            return "{label:'" + label + "',xIdx:" + xIdx + ",gi:" + gi + ",vi:" + vi
                  + ",color:'" + fillColor + "',borderColor:'" + borderColor + "'"
                  + ",kde:[],median:null,mean:null,q1:null,q3:null"
                  + ",whiskerLo:null,whiskerHi:null,min:null,max:null,n:0"
@@ -1740,20 +1924,20 @@ class DatasetBuilder {
         StringBuilder kdeSb = new StringBuilder("[");
         for (double[] pt : kde) {
             double norm = (maxEst > 0) ? pt[1] / maxEst : 0;
-            kdeSb.append(String.format("[%.6f,%.6f],", pt[0], norm));
+            kdeSb.append("[").append(dbl(pt[0])).append(",").append(dbl(norm)).append("],");
         }
         kdeSb.append("]");
 
         return String.format(
-            "{label:'%s',xIdx:%d,color:'%s',borderColor:'%s',"
+            "{label:'%s',xIdx:%d,gi:%d,vi:%d,color:'%s',borderColor:'%s',"
             + "kde:%s,"
-            + "median:%.6f,mean:%.6f,q1:%.6f,q3:%.6f,"
-            + "whiskerLo:%.6f,whiskerHi:%.6f,min:%.6f,max:%.6f,n:%d,"
+            + "median:%s,mean:%s,q1:%s,q3:%s,"
+            + "whiskerLo:%s,whiskerHi:%s,min:%s,max:%s,n:%d,"
             + "medianColor:'%s',meanColor:'%s'}",
-            label, xIdx, fillColor, borderColor,
+            label, xIdx, gi, vi, fillColor, borderColor,
             kdeSb.toString(),
-            median, mean, q1, q3,
-            wLo, wHi, vals.get(0), vals.get(n-1), n,
+            dbl(median), dbl(mean), dbl(q1), dbl(q3),
+            dbl(wLo), dbl(wHi), dbl(vals.get(0)), dbl(vals.get(n-1)), n,
             medC, meanC);
     }
 
@@ -1762,21 +1946,36 @@ class DatasetBuilder {
      * Eval range is clamped to observed data [min, max] -- the kernel uses all data points
      * for density estimation but we do not evaluate tails beyond the data boundary.
      * This prevents the violin shape from extending outside the y-axis range.
-     * Bandwidth: bwOverride if > 0, else Silverman rule h = 1.06 * sd * n^(-0.2).
+     * Bandwidth: bwOverride if > 0, else Stata kdensity default "optimal" width
+     * (Silverman 1986, 48): h = 0.9 * min(sd, IQR/1.349) * n^(-1/5), where sd is
+     * the sample standard deviation and IQR = Q3 - Q1 computed with Stata's
+     * default percentile rule. This is the robust rule-of-thumb Stata's kdensity
+     * uses by default -- more resistant to outliers than the plain 1.06*sd
+     * normal-reference rule (which over-smooths skewed/heavy-tailed data).
      * Returns double[nPoints][2]: {yValue, estimate}.
      * v2.5.1: clamped to [min, max] (was min-h to max+h which caused axis overflow)
+     * S7 (t2j): default bandwidth aligned to Stata kdensity (was 1.06*sd Silverman).
      */
     private double[][] computeKde(List<Double> vals, double bwOverride, int nPoints) {
         int n = vals.size();
-        // Mean and SD for Silverman bandwidth
+        // Mean and SD for the bandwidth rule (sd = Bessel-corrected sample SD)
         double sum = 0;
         for (double v : vals) sum += v;
         double mn = sum / n;
         double variance = 0;
         for (double v : vals) variance += (v - mn) * (v - mn);
         double sd = n > 1 ? Math.sqrt(variance / (n - 1)) : 0;
+        // Stata kdensity optimal width: 0.9 * min(sd, IQR/1.349) * n^(-1/5).
+        // vals is sorted ascending; percentile() uses Stata's default rule.
+        double iqr = percentile(vals, 75) - percentile(vals, 25);
+        double scaleSd  = sd;
+        double scaleIqr = iqr / 1.349;
+        double m;
+        if (scaleSd <= 0)       m = scaleIqr;            // no spread by sd
+        else if (scaleIqr <= 0) m = scaleSd;             // all mass in [Q1,Q3]
+        else                    m = Math.min(scaleSd, scaleIqr);
         double h = (bwOverride > 0) ? bwOverride
-                 : (sd > 0 ? 1.06 * sd * Math.pow(n, -0.2) : (vals.get(n-1) - vals.get(0)) * 0.1);
+                 : (m > 0 ? 0.9 * m * Math.pow(n, -0.2) : (vals.get(n-1) - vals.get(0)) * 0.1);
         if (h <= 0) h = 1.0; // safety floor
 
         // v2.5.1: clamp eval range to actual data bounds -- no tails beyond observed data.
@@ -1900,7 +2099,7 @@ class DatasetBuilder {
      */
     private String buildViolinPoint(List<Double> vals) {
         StringBuilder sb = new StringBuilder("[");
-        for (double v : vals) sb.append(String.format("%.6f,", v));
+        for (double v : vals) sb.append(dbl(v)).append(",");
         sb.append("]");
         return sb.toString();
     }
@@ -1929,14 +2128,20 @@ class DatasetBuilder {
         double mean = sum / n;
         // Outliers: points strictly outside fences
         StringBuilder out = new StringBuilder("[");
-        for (double v : vals) if (v < lo || v > hi) out.append(String.format("%.6f,", v));
+        for (double v : vals) if (v < lo || v > hi) out.append(dbl(v)).append(",");
         out.append("]");
         // v2.4.4: track overall data range including outliers for explicit axis bounds
         if (vals.get(0)   < o._boxYMin) o._boxYMin = vals.get(0);
         if (vals.get(n-1) > o._boxYMax) o._boxYMax = vals.get(n-1);
+        // t2j fix6: emit explicit whiskerMin/whiskerMax so the boxplot plugin draws the
+        // whisker caps to OUR fence ends (wLo/wHi from whiskerfence(k)). Without them the
+        // plugin recomputes whiskers from its own default coef:1.5, so whiskerfence(3) etc.
+        // affected outlier classification but NOT the drawn whisker (D2). min/max are kept
+        // equal to the fence ends for the tooltip's Lower/Upper display.
         return String.format(
-            "{min:%.6f,q1:%.6f,median:%.6f,mean:%.6f,q3:%.6f,max:%.6f,outliers:%s}",
-            wLo, q1, median, mean, q3, wHi, out.toString());
+            "{min:%s,q1:%s,median:%s,mean:%s,q3:%s,max:%s,whiskerMin:%s,whiskerMax:%s,outliers:%s}",
+            dbl(wLo), dbl(q1), dbl(median), dbl(mean), dbl(q3), dbl(wHi),
+            dbl(wLo), dbl(wHi), out.toString());
     }
 
     /**
@@ -2040,7 +2245,7 @@ class DatasetBuilder {
      * happens to match a palette fill. Applied to both medianBorderColor
      * and meanBorderColor consistently. (v2.4.10)
      */
-    private String markerBorderColor(String markerColor) {
+    String markerBorderColor(String markerColor) {
         return boxFillLuminance(markerColor) > 0.35 ? "#000000" : "#ffffff";
     }
     /**
@@ -2053,7 +2258,9 @@ class DatasetBuilder {
      *   5. avg palette lum <= 0.15 (dark fills)         -> #ffffff white
      * Cases 2 and 5 are symmetric: both dark contexts -> white markers.
      */
-    private String boxMarkerColor(int nColors, boolean isMean) {
+    /** s9i: outlier marker colour, the same value the box datasets carry (outlierBorderColor). */
+    String outlierColor() { return gen.isDark() ? "#ff6b6b" : "#e74c3c"; }
+    String boxMarkerColor(int nColors, boolean isMean) {
         String override = isMean ? o.stats.meancolor.trim() : o.stats.mediancolor.trim();
         if (!override.isEmpty()) return override;
         if (gen.isDark()) return "#ffffff";  // dark theme always gets white

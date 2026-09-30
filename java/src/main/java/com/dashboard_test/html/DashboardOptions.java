@@ -39,6 +39,7 @@ public class DashboardOptions {
     public String subtitle  = "";
     public String theme     = "default";
     public String export    = "";
+    public String stataPwd  = "";  // arg 189: Stata c(pwd) for relative export path resolution
     public String note      = "";
     public String caption   = "";
 
@@ -63,6 +64,25 @@ public class DashboardOptions {
     // _byHistPreambles: one preamble per by()-panel histogram, in panel order.
     // Populated by HtmlGenerator.buildByScripts() after each panel histogram()
     // call so each panel's tooltip can reference its own _ttRanges_/_ttCounts_. (v2.6.1)
+    /** s9g: true while by() panels are being built: renderers omit per-panel keys, axes use the shared range. */
+    public boolean _panelMode = false;
+    /** t2j fix8 (deep-dive r3): global bubble size range (min + span) over the FULL dataset,
+     *  set by buildByScripts() before the panel loop so every by() panel scales bubble radii
+     *  on the same basis the JS filter recompute uses (buildBubblePoints, full-data scale).
+     *  Without it the server scaled radii per panel, so bubbles jumped size the first time a
+     *  filter was touched. NaN = not set (non-by bubble uses its own full-data range). */
+    public double _bubbleRminGlobal  = Double.NaN;
+    public double _bubbleRspanGlobal = Double.NaN;
+    /** t2j fix8q (C8 for by() panels): full-data {min,max} of the x / y variables of a
+     *  scatter or bubble, set by buildByScripts() before the panel loop so every panel locks
+     *  its continuous axes to one shared frame (a panel subset only knows its own extent).
+     *  null = not in panel mode. */
+    public double[] _panelXExtent = null;
+    public double[] _panelYExtent = null;
+    /** s9j: elements the renderer drew that are NOT Chart.js datasets -- {role,label,kind,color,dash,pointStyle}.
+     *  Renderers register as they emit; HtmlGenerator renders one "elements key" from the list. */
+    public java.util.List<String[]> _keyItems = new java.util.ArrayList<>();
+    public boolean _sharedAxis = false;
     public java.util.List<String> _byHistPreambles = new java.util.ArrayList<>();
     // _boxYMin/_boxYMax: computed by DatasetBuilder.boxplotDatasets() to hold
     // the overall data range INCLUDING outlier values. The @sgratzl plugin does
@@ -92,6 +112,10 @@ public class DashboardOptions {
     public final AxisOptions  axes  = new AxisOptions();
     public final ChartOptions chart = new ChartOptions();
     public final StatOptions  stats = new StatOptions();
+    // v3.6.0-t2h (batch 2a): publication-table options (arg 209, parsed by
+    // sparkta_table_opts.ado). Drives the estout/esttab-style table and its
+    // LaTeX / Markdown / tidy-CSV exports. See PubTable.java.
+    public final TableOptions table = new TableOptions();
 
     // =========================================================================
     // StyleOptions -- font sizes, colors, tooltip styling (Phase 1-A+B)
@@ -124,6 +148,9 @@ public class DashboardOptions {
         public String tooltipBorder  = "";   // arg 112: tooltip border color
         public String tooltipFontSize = "";  // arg 113: tooltip font size (pt)
         public String tooltipPadding = "";   // arg 114: tooltip padding (px)
+        public boolean noTimestamp   = false; // arg 200: suppress timestamp subtitle (v3.6.0-s7d)
+        public boolean collapseStats = false; // arg 201: stats panel starts collapsed (v3.6.0-s7d)
+        public boolean noAllFilter   = false; // arg 202: suppress All in filter dropdowns (v3.6.0-s7d)
 
         // -- Note/caption size (Phase 1-E, arg 125) --
         // Applied to both .note and .caption CSS classes. Accepts any CSS font-size
@@ -236,6 +263,7 @@ public class DashboardOptions {
     public static class ChartOptions {
         // -- Layout --
         public String  layout        = "vertical";
+        public boolean layoutExplicit = false;   // fix9f: true when the user wrote layout(); the default vertical stack exports two across
         public boolean horizontal    = false;
         public boolean stack         = false;
         public boolean fill          = false;
@@ -268,6 +296,10 @@ public class DashboardOptions {
         // -- Layout & padding --
         public String  aspect        = "";
         public String  padding       = "";
+        public String  plotMargin    = "";    // arg 205: "l r b t" percent of data range (v3.6.0-s8p)
+        public boolean yfree         = false; // arg 206: by() panels keep their own value axis (default: shared) (v3.6.0-s9g)
+        public String  peXpos        = "";    // arg 207: eventstudy relative times, tilde-grouped per model, pipe-sep ("." = not a period) (v3.6.0-t2d)
+        public String  esOpts        = "";    // arg 208: eventstudy reference-period options "ref=auto|none|<#>;together=0|1" (v3.6.0-t2f)
 
         // -- Animation --
         public String  animate       = "";    // coarse: none|fast|slow
@@ -346,6 +378,51 @@ public class DashboardOptions {
 
         // -- Phase 2-A: PNG download button (arg 115, v2.7.0) --
         public boolean download      = false; // arg 115: show PNG download button (SVG removed v2.9.2)
+
+        // -- Post-estimation charts (v3.6.0, args 161-179) --
+        public String  peNames      = "";    // arg 161: pipe-sep coefficient display names
+        public String  peCoefs      = "";    // arg 162: pipe-sep coefficient values
+        public String  peLower      = "";    // arg 163: pipe-sep CI lower bounds
+        public String  peUpper      = "";    // arg 164: pipe-sep CI upper bounds
+        public String  peSes        = "";    // arg 165: pipe-sep standard errors
+        public String  pePvals      = "";    // arg 166: pipe-sep p-values
+        public String  peEstNames   = "";    // arg 167: tilde-sep model names (multi-model)
+        public String  peHeadings   = "";    // arg 168: pipe-sep heading positions and texts
+        public String  peNobs       = "";    // arg 169: sample size(s)
+        public String  peDepvar     = "";    // arg 170: dependent variable name
+        public String  peOrient     = "";    // arg 171: h=horizontal, v=vertical
+        public String  peCoefStyle  = "";    // arg 172: scatter or bar
+        public String  peCiStyle    = "";    // arg 173: whisker | band | bar
+        public String  pePStyles    = "";    // arg 174: space-sep per-model point styles
+        public String  mpData       = "";    // arg 175: marginsplot margins data
+        public String  mpUpper      = "";    // arg 176: marginsplot CI upper
+        public String  mpLower      = "";    // arg 177: marginsplot CI lower
+        public String  mpXlab       = "";    // arg 178: marginsplot x-axis label
+        public String  mpYlab       = "";    // arg 179: marginsplot y-axis label
+        public String  mpSeries     = "";    // arg 203: marginsplot pipe-sep series labels (tilde=sep models)
+        public String  mpXpos       = "";    // arg 204: marginsplot numeric x positions from r(at)
+        public String  peBases      = "";    // arg 180: pipe-sep base/omitted variable display names
+        public String  peTstat      = "";    // arg 181: "1"=t-distribution, "0"=z-distribution
+        public String  peCmd        = "";    // arg 182: estimation command name (regress, logit, etc.)
+        public boolean peNoci       = false; // arg 183: suppress confidence intervals (v3.6.0)
+        public String  peTzvals     = "";    // arg 184: pipe-sep pre-computed t/z statistics (v3.6.0)
+        // -- Session 6 visual control (v3.6.0-s6, args 185-188) --
+        public String  peRefval     = "0";   // arg 185: reference line value or "none" (ado sets 1 for eform)
+        public String  refLineWidth = "";    // arg 77: reference-line width px (t2j fix8 A13; empty -> default 1)
+        public String  peEstlabels  = "";    // arg 186: tilde-sep custom legend labels (overrides estnames display)
+        public String  peCicolors   = "";    // arg 187: pipe-sep per-model CI colors (default: marker at 60% opacity)
+        public String  peCiwidth    = "";    // arg 188: CI line/band-border width px (default 1.5 whisker, 0.5 band)
+        // -- Session 6 connected option (v3.6.0-s6) --
+        public boolean peConnected  = false; // arg 190: draw connecting line through point estimates
+        public String  peModelStats = "";    // arg 191: tilde-sep pipe-sep fit stats "r2=0.42|F=18.4~r2=0.58" (v3.6.0-s6c)
+        public String  peIndicators = "";    // arg 192: tilde-sep indicator rows "label|v1|v2|..." (v3.6.0-s6c)
+        public String  peAddstats   = "";    // arg 193: tilde-sep addstats rows "label|v1|v2|..." (v3.6.0-s6c)
+        public String  peVarLabels  = "";    // arg 194: auto variable labels "varname|||label~~~..." (v3.6.0)
+        public String  peCustomLabels = "";  // arg 195: custom labels from coeflabels() "varname|||label~~~..." (v3.6.0)
+        public String  pePexline     = "";    // arg 196: vertical reference line x-value for coefplot/eventstudy (v3.6.0-s7a)
+        public String  peLevels2Lo   = "";    // arg 197: levels() inner CI lower bounds pipe-sep (v3.6.0-s7b)
+        public String  peLevels2Hi   = "";    // arg 198: levels() inner CI upper bounds pipe-sep (v3.6.0-s7b)
+        public String  peLevels2Val  = "";    // arg 199: levels() inner CI level value e.g. "90" (v3.6.0-s7b)
     }
 
     // =========================================================================
@@ -380,6 +457,33 @@ public class DashboardOptions {
     }
 
     // =========================================================================
+    // TableOptions -- publication-table controls (v3.6.0-t2h, batch 2a).
+    // Parsed in DashboardBuilder from arg 209 (packed by sparkta_table_opts.ado
+    // as "stars=0.10 0.05 0.01|nostars=0|tstat=0|ci=0|nofooter=0|notable=0").
+    // Consumed by PubTable.java only. The chart is unaffected by any of these.
+    // =========================================================================
+    public static class TableOptions {
+        // Significance thresholds, HIGH -> LOW, mapped to * ** *** (estout default
+        // is 0.10 0.05 0.01, which also matches sparkta's existing star legend).
+        public String[] stars   = {"0.10", "0.05", "0.01"};
+        public boolean  noStars = false;   // nostars: suppress the star column entirely
+        public boolean  tstat   = false;   // tstat: show [t]/[z] beneath the estimate
+        public boolean  ci      = false;   // ci: show [lo, hi] beneath the estimate
+        public boolean  noFooter= false;   // nofooter: drop the N / R2 / legend footer block
+        public boolean  noTable = false;   // notable: suppress the whole table block
+    }
+
+    // =========================================================================
+    // POST-ESTIMATION TYPE CHECK (v3.6.0)
+    // Returns true for coefplot, eventstudy, marginsplot.
+    // These types skip data reading and use pre-computed pipe-sep args instead.
+    // =========================================================================
+    public boolean isPostEstimation() {
+        return type.equals("coefplot") || type.equals("eventstudy")
+            || type.equals("marginsplot");
+    }
+
+    // =========================================================================
     // ANNOTATION DEPENDENCY CHECK (v3.5.37)
     // Single source of truth: called by DashboardBuilder (offline preflight)
     // and HtmlGenerator (CDN script tags + needsAN flag).
@@ -389,6 +493,7 @@ public class DashboardOptions {
         return !axes.yline.isEmpty() || !axes.xline.isEmpty()
             || !axes.yband.isEmpty() || !axes.xband.isEmpty()
             || !axes.apoint.isEmpty() || !axes.alabelpos.isEmpty()
-            || !axes.aellipse.isEmpty();
+            || !axes.aellipse.isEmpty()
+            || !chart.pePexline.isEmpty();  // arg 196: pexline for coefplot/eventstudy (v3.6.0-s7a)
     }
 }
