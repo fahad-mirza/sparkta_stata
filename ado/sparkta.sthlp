@@ -728,7 +728,7 @@ for a more prominent band.
 {phang}
 {opt bins(#)} Number of bins. Must be an integer of 2 or greater. If omitted,
 Stata's own {cmd:histogram} rule is used: k = min(sqrt(N), 10*ln(N)/ln(10)),
-rounded, so the default matches {cmd:histogram varname} in Stata. Fewer bins reveal
+rounded down, so the default matches {cmd:histogram varname} in Stata. Fewer bins reveal
 broad shape, more reveal fine structure.
 
 {p 8 8 2}{it:Example:} {cmd:sparkta price, type(histogram) bins(20)}{p_end}
@@ -2211,7 +2211,7 @@ Stata's {cmd:invttail(df, (1-level/100)/2)} to about 1e-7.{p_end}
 
 {p 4 4 2}
 {bf:Histogram binning.}
-Stata's {cmd:histogram} default: k = min(sqrt(N), 10*ln(N)/ln(10)), rounded.
+Stata's {cmd:histogram} default: k = min(sqrt(N), 10*ln(N)/ln(10)), rounded down.
 Override with {cmd:bins(k)}.{p_end}
 
 {p 4 4 2}

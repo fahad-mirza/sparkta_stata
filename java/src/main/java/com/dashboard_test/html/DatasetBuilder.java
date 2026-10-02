@@ -233,6 +233,11 @@ class DatasetBuilder {
             // v2.3.0: inject secondary y-axis ID when variable is in y2vars
             boolean varIsY2 = isY2Var(var);
             sb.append("{label:'").append(escJs(var.getDisplayName() + statSuffix(o.stats.stat))).append("',data:[");
+            // v3.6.0-t2j fix9y: by() panels carry their OWN per-bar counts on the dataset
+            // (_spkN, aligned with data[]) and the panel's row count (_spkTot), so the
+            // tooltip shows "n = k (x% of panel N)" in every panel. The page-level
+            // _spkTipN0 stays [] in by() mode (one static array cannot serve several panels).
+            StringBuilder panelN = useGlobalAlignment ? new StringBuilder("[") : null;
             for (int gi = 0; gi < groups.size(); gi++) {
                 String gc;
                 if (useGlobalAlignment) {
@@ -240,7 +245,7 @@ class DatasetBuilder {
                     // If absent in this panel -> emit null to keep x-axis aligned.
                     // Applies to ALL chart types (line, bar, area, etc.) in by() mode.
                     String localKey = labelToKey.get(groups.get(gi));
-                    if (localKey == null) { sb.append("null,"); continue; }
+                    if (localKey == null) { sb.append("null,"); panelN.append("null,"); continue; }
                     gc = sdz(localKey);
                 } else {
                     gc = sdz(groupKeys.get(gi));
@@ -259,6 +264,7 @@ class DatasetBuilder {
                     }
                 }
                 lastTipN.append(gi == 0 ? "[" : ",").append(vals.size());
+                if (panelN != null) panelN.append(vals.size()).append(",");
                 if (vals.isEmpty()) sb.append("null,");
                 else {
                     double agg = aggregate(vals, o.stats.stat);
@@ -268,6 +274,7 @@ class DatasetBuilder {
             }
             sb.append("],");
             lastTipN.append("],");
+            if (panelN != null) sb.append("_spkN:").append(panelN).append("],_spkTot:").append(data.getObservationCount()).append(",");   // fix9y
             if (varIsY2) sb.append("yAxisID:'y2',");
             if (colorByCategory) {
                 // Build per-bar color arrays -- one color per group.
@@ -777,9 +784,9 @@ class DatasetBuilder {
     /**
      * v3.6.0-t2j: Stata's DEFAULT histogram bin count (was Sturges, which Stata
      * does not use). Stata [R] histogram: k = min( sqrt(N), 10*ln(N)/ln(10) ),
-     * rounded to the closest integer, with k >= 1. No [5,50] clamp (Stata does not
-     * clamp). Method name kept for callers. (Exact rounding to be confirmed against
-     * a live `histogram` run; formula matches the Stata manual.)
+     * ROUNDED DOWN (truncated), with k >= 1. No [5,50] clamp (Stata does not clamp).
+     * Method name kept for callers. Truncation confirmed on a live `histogram` run
+     * (fix9w: N = 74 -> 8 bins, not 9).
      */
     // t2j fix8: static so the DATA-EMBED (filter) path can use the SAME default-bin rule as
     // the build path. Previously DataEmbedder used its own ceil(log2(N)+1) formula, so a
@@ -799,10 +806,15 @@ class DatasetBuilder {
         return (o.chart.smooth == null || o.chart.smooth.isEmpty()) ? def : o.chart.smooth;
     }
 
+    // v3.6.0-t2j fix9w (2026-09-30): Stata TRUNCATES k, it does not round. Confirmed on
+    //   real Stata: `histogram price` (auto, N = 74) logs "(bin=8, start=3291,
+    //   width=1576.875)"; sqrt(74) = 8.60, so Math.round gave 9 bins and the sparkta
+    //   histogram did not match Stata's. floor() = Stata's rule; shared by the build path
+    //   and the filter (DataEmbedder) path, so both change together.
     static int sturgesBins(int n) {
         if (n <= 1) return 1;
         double k = Math.min(Math.sqrt(n), 10.0 * Math.log(n) / Math.log(10.0));
-        int b = (int) Math.round(k);
+        int b = (int) Math.floor(k + 1e-9);
         return Math.max(1, b);
     }
 

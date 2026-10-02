@@ -471,6 +471,16 @@ class ChartRenderer {
         if (!isX && o.axes.ygrace.isEmpty() && o.axes.yrangeMin.isEmpty() && o.axes.yrangeMax.isEmpty() && o.chart.datalabels && !isLog) {
             sb.append("grace:'12%',");
         }
+        // v3.6.0-t2j fix9y: scatter / bubble value axes get 5% headroom on both axes (no
+        // user range or grace, not log) so points on the data extremes and annotation /
+        // marker labels next to them are not cut by the plot edge. Stata's twoway also
+        // pads the range beyond the data before choosing its ticks.
+        if (!isCategoryAxis && !isLog && (o.type.equals("scatter") || o.type.equals("bubble"))) {
+            if (!isX && o.axes.ygrace.isEmpty() && o.axes.yrangeMin.isEmpty() && o.axes.yrangeMax.isEmpty() && !o.chart.datalabels)
+                sb.append("grace:'5%',");
+            if (isX && o.axes.xrangeMin.isEmpty() && o.axes.xrangeMax.isEmpty())
+                sb.append("grace:'5%',");
+        }
         if (!isX && !o.axes.ygrace.isEmpty() && o.axes.yrangeMin.isEmpty()) {
             String gv = o.axes.ygrace.trim();
             sb.append("grace:");
@@ -4093,8 +4103,9 @@ class ChartRenderer {
             +   "if(v===null||v===undefined)return '';"
             +   "var lbl=ctx.dataset.label||'';"
             +   "var val=" + valExpr + ";"
-            +   "var tn=(window._spkTipN&&window._spkTipN[ctx.datasetIndex])?window._spkTipN[ctx.datasetIndex]:((typeof _spkTipN0!=='undefined'&&_spkTipN0[ctx.datasetIndex])?_spkTipN0[ctx.datasetIndex]:null);"
-            +   "var n=tn?tn[ctx.dataIndex]:null;var tot=window._spkTipTotal||(typeof _spkTipTotal0!=='undefined'?_spkTipTotal0:null);"
+            // fix9y: a by() panel dataset carries its own counts (_spkN) and panel total (_spkTot)
+            +   "var tn=ctx.dataset._spkN?ctx.dataset._spkN:((window._spkTipN&&window._spkTipN[ctx.datasetIndex])?window._spkTipN[ctx.datasetIndex]:((typeof _spkTipN0!=='undefined'&&_spkTipN0[ctx.datasetIndex])?_spkTipN0[ctx.datasetIndex]:null));"
+            +   "var n=tn?tn[ctx.dataIndex]:null;var tot=(ctx.dataset._spkTot!==undefined)?ctx.dataset._spkTot:(window._spkTipTotal||(typeof _spkTipTotal0!=='undefined'?_spkTipTotal0:null));"
             +   "var out=['  " + statLbl + " of '+lbl+':  '+val];"
             +   "if(n!==null&&n!==undefined)out.push('  n = '+_spkFmt(n,'int')+(tot?'  ('+_spkFmt(100*n/tot,'pct')+' of '+_spkFmt(tot,'int')+')':''));"
             +   "return out;"
@@ -4790,7 +4801,9 @@ class ChartRenderer {
 
         // Nothing to emit
         if (sb.length() == 0) return "";
-        return "annotation:{annotations:{\n" + sb.toString() + "}}";
+        // fix9y: clip:false -- a label placed near the plot edge (alabelpos at the data
+        // maximum) is drawn in full instead of being cut at the chart area
+        return "annotation:{clip:false,annotations:{\n" + sb.toString() + "}}";
     }
 
     // -------------------------------------------------------------------------
@@ -4935,11 +4948,18 @@ class ChartRenderer {
                                       String fontSize, int xAdjust, int yAdjust, boolean dark) {
         String fc  = dark ? "rgba(255,255,255,0.9)"  : "rgba(0,0,0,0.75)";
         String bgc = dark ? "rgba(50,50,50,0.85)"    : "rgba(255,255,255,0.85)";
+        // v3.6.0-t2j fix9z: anchor the label's NEAR edge at the offset point instead of its
+        // centre. Centred, a label with the default 15 px gap covered its own point (the
+        // conference deck: "Most expensive car" hid the Cadillac). Right of the point ->
+        // x:'start', left -> 'end'; above -> y:'end', below -> 'start'; 0 -> centre.
+        String px = xAdjust > 0 ? "start" : (xAdjust < 0 ? "end" : "center");
+        String py = yAdjust > 0 ? "start" : (yAdjust < 0 ? "end" : "center");
         return "{type:'label',"
             + "xValue:" + xVal + ","
             + "yValue:" + yVal + ","
             + "xAdjust:" + xAdjust + ","
             + "yAdjust:" + yAdjust + ","
+            + "position:{x:'" + px + "',y:'" + py + "'},"
             + "content:'" + text.replace("'","\\'") + "',"
             + "color:'" + fc + "',"
             + "backgroundColor:'" + bgc + "',"

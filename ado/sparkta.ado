@@ -1,7 +1,7 @@
 *! sparkta version 3.6.0 2026-09-13
 *! sparkta -- interactive self-contained HTML charts and dashboards from Stata
 *! Author: Fahad Mirza. Requires Stata 17 or later (Java 11 backend).
-*! Release v3.6.0 (2026-09-13) = build v3.6.0-t2j fix9v (fix9f, confirmed on real Stata 210/210, +
+*! Release v3.6.0 (2026-09-13) = build v3.6.0-t2j fix9z (fix9f, confirmed on real Stata 210/210, +
 *!   fix9g large-data mode, fix9g-c fit() string cap, fix9h fit line above the points). Full history
 *!   (t-series and fix tags) lives in docs/CHANGELOG_sparkta_full.md; keep THIS header short.
 
@@ -2463,6 +2463,21 @@ program define sparkta
                     continue
                 }
             }
+            // fix9x: levels() inner CI bounds (_pe_lower2/_pe_upper2) must be sorted
+            //   with the rest -- they were left in estimation order, so after coefsort()
+            //   the inner (e.g. 90%) band was drawn on another coefficient's row.
+            local _s2 = ("`_pe_lower2'" != "")
+            foreach _q in l2 u2 {
+                if "`_q'" == "l2" local _tmp "`_pe_lower2'"
+                else                local _tmp "`_pe_upper2'"
+                local _si 0
+                while "`_tmp'" != "" {
+                    gettoken _tok _tmp : _tmp, parse("|")
+                    if "`_tok'" == "|" continue
+                    local _si = `_si' + 1
+                    local _s`_q'_`_si' "`_tok'"
+                }
+            }
             // Build sort key per coefficient
             forvalues _si = 1/`_sk' {
                 if "`coefsort'" == "value" local _skey_`_si' = `_sc_`_si''
@@ -2479,7 +2494,7 @@ program define sparkta
                     local _sj = `_si' + 1
                     if `_skey_`_si'' > `_skey_`_sj'' {
                         // Swap all arrays
-                        foreach _arr in sn sc sl su ss sp st skey {
+                        foreach _arr in sn sc sl su ss sp st skey sl2 su2 {   // fix9x: + inner CI
                             local _stmp "`_`_arr'_`_si''"
                             local _`_arr'_`_si' "`_`_arr'_`_sj''"
                             local _`_arr'_`_sj' "`_stmp'"
@@ -2504,6 +2519,14 @@ program define sparkta
                 local _pe_ses    "`_pe_ses'|`_ss_`_si''"
                 local _pe_pvals  "`_pe_pvals'|`_sp_`_si''"
                 local _pe_tzvals "`_pe_tzvals'|`_st_`_si''"
+            }
+            if `_s2' {   // fix9x: rebuild the inner CI strings in the sorted order
+                local _pe_lower2 "`_sl2_1'"
+                local _pe_upper2 "`_su2_1'"
+                forvalues _si = 2/`_sk' {
+                    local _pe_lower2 "`_pe_lower2'|`_sl2_`_si''"
+                    local _pe_upper2 "`_pe_upper2'|`_su2_`_si''"
+                }
             }
         }
         // v3.6.0: order() -- custom coefficient display order
@@ -2582,6 +2605,21 @@ program define sparkta
                     continue
                 }
             }
+            // fix9x: parse the levels() inner CI bounds too, so they follow order()
+            local _o2 = ("`_pe_lower2'" != "")
+            foreach _q in l2 u2 {
+                if "`_q'" == "l2" local _tmp "`_pe_lower2'"
+                else                local _tmp "`_pe_upper2'"
+                local _oi 0
+                while "`_tmp'" != "" {
+                    gettoken _tok _tmp : _tmp, parse("|")
+                    if "`_tok'" == "|" continue
+                    local _oi = `_oi' + 1
+                    local _o`_q'_`_oi' "`_tok'"
+                }
+            }
+            local _rl2 ""
+            local _ru2 ""
             // Build reordered arrays: first the user-specified names, then remainder
             local _oused ""
             local _rn ""
@@ -2605,6 +2643,8 @@ program define sparkta
                             local _rs "`_rs'|"
                             local _rp "`_rp'|"
                             local _rt "`_rt'|"
+                            local _rl2 "`_rl2'|"
+                            local _ru2 "`_ru2'|"
                         }
                         local _rn "`_rn'`_on_`_oi''"
                         local _rc "`_rc'`_oc_`_oi''"
@@ -2613,6 +2653,8 @@ program define sparkta
                         local _rs "`_rs'`_os_`_oi''"
                         local _rp "`_rp'`_op_`_oi''"
                         local _rt "`_rt'`_ot_`_oi''"
+                        local _rl2 "`_rl2'`_ol2_`_oi''"
+                        local _ru2 "`_ru2'`_ou2_`_oi''"
                         local _oused "`_oused' `_oi'"
                         local _rfirst 0
                     }
@@ -2634,6 +2676,8 @@ program define sparkta
                     local _rs "`_rs'|"
                     local _rp "`_rp'|"
                     local _rt "`_rt'|"
+                    local _rl2 "`_rl2'|"
+                    local _ru2 "`_ru2'|"
                 }
                 local _rn "`_rn'`_on_`_oi''"
                 local _rc "`_rc'`_oc_`_oi''"
@@ -2642,6 +2686,8 @@ program define sparkta
                 local _rs "`_rs'`_os_`_oi''"
                 local _rp "`_rp'`_op_`_oi''"
                 local _rt "`_rt'`_ot_`_oi''"
+                local _rl2 "`_rl2'`_ol2_`_oi''"
+                local _ru2 "`_ru2'`_ou2_`_oi''"
                 local _rfirst 0
             }
             local _pe_names  "`_rn'"
@@ -2651,6 +2697,10 @@ program define sparkta
             local _pe_ses    "`_rs'"
             local _pe_pvals  "`_rp'"
             local _pe_tzvals "`_rt'"
+            if `_o2' {   // fix9x
+                local _pe_lower2 "`_rl2'"
+                local _pe_upper2 "`_ru2'"
+            }
         }
     }
     else if "`type'" == "marginsplot" {

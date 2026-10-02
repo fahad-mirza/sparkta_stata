@@ -18,7 +18,7 @@ sparkta price, type(cibar) over(rep78) title("Mean Price by Repair Record")
 
 *Your browser opens. An interactive, shareable `.html` file is written to disk.*
 
-**[Live chart gallery (GitHub Pages)](https://fahad-mirza.github.io/sparkta_stata/)**
+**[Live chart gallery (GitHub Pages)](https://fahad-mirza.github.io/sparkta_stata/)** -- **[Stata Conference 2026 talk: live slide deck](https://fahad-mirza.github.io/sparkta_stata/talk/)**
 
 </div>
 
@@ -564,6 +564,8 @@ verify_before_zip.py     Pre-release gate (run from the repo root)
 make_ssc_zip.py          Builds the flat zip for the SSC archive
 docs/
   index.html             Live chart gallery (GitHub Pages)
+  talk/                  Stata Conference 2026 slide deck (open talk/index.html; F = full screen, N = notes)
+  .nojekyll              serve docs/ as plain files (no Jekyll processing)
   CHANGELOG_sparkta_full.md
   SSC_SUBMISSION.md
   OPTIONS_VS_STATA.md

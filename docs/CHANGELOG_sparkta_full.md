@@ -3,6 +3,36 @@
 *! FULL CHANGELOG (archive). The live sparkta.ado header keeps only a short
 *! recent list; this file is the complete history. Newest first.
 *! ---------------------------------------------------------------------------
+*! v3.6.0 fix9z (2026-10-01, JAVA ONLY, ChartRenderer.annotLabel; jar rebuilt; ado header line 4 only):
+*!   alabelpos() labels are anchored by their NEAR edge (annotation position start/end) instead
+*!   of their centre: with the default 15 px gap a centred label covered its own point (deck
+*!   slide C03 hid the Cadillac at price 15906). Pos 0 still centres on the point.
+*!   tests/test_fix9y_v360.do v1.2 adds T5 (position:{x:'start' on a pos-15 label).
+*! v3.6.0 fix9y (2026-09-30, JAVA ONLY: FilterRenderer, DatasetBuilder, ChartRenderer; jar rebuilt; ado header line 4 only):
+*!   Four items found on the conference deck. (1) scatter fit + filters: when every filter is
+*!   back at All, the ORIGINAL fit/CI datasets (Stata lowess / Java fit on the full data) are
+*!   restored -- the JS re-estimate differed slightly from Stata's lowess, so the All view
+*!   no longer matched the page on open. (2) by() panel bar tooltips show n and the panel
+*!   share: each panel dataset carries _spkN/_spkTot, refreshed by _updatePanelChart under
+*!   filters (was mean only; the page-level _spkTipN0 is [] in by() mode). (3) scatter and
+*!   bubble value axes get grace 5% (no user range/grace, not log) so edge points are not
+*!   cut. (4) annotation plugin clip:false so an alabelpos() label at the data maximum is
+*!   drawn in full. REAL STATA: tests/test_fix9y_v360.do, then test_release 210/210.
+*! v3.6.0 fix9x (2026-09-30, ADO ONLY, sparkta.ado coefsort()/order() blocks; jar unchanged):
+*!   coefplot levels(# #) with coefsort() or order(): the INNER interval bounds
+*!   (_pe_lower2/_pe_upper2) were not reordered with the coefficients, so the inner (e.g.
+*!   90%) band sat on another coefficient's row. Seen on the conference deck (D02: page
+*!   arrays lo2=[-773,3126,-3306,2457] in estimation order under sorted labels). Both
+*!   reorder blocks now parse, swap and rebuild the inner bounds too (only when levels()
+*!   produced them). New tests/test_fix9x_v360.do: inner band inside outer band on every
+*!   row for coefsort(abs|value), order(), baseline, eform+coefsort; + the fix9w histogram.
+*!   REAL STATA: test_fix9x_v360.do 6/6, then test_release_v360.do 210/210.
+*! v3.6.0 fix9w (2026-09-30, JAVA ONLY, DatasetBuilder.sturgesBins; jar rebuilt; help wording; ado header line 4 only):
+*!   Default histogram bin count now TRUNCATES k = min(sqrt(N), 10*ln(N)/ln(10)) like Stata's
+*!   histogram (was Math.round). Found in the conference side-by-side: auto price, N = 74,
+*!   Stata logs bin=8 width=1576.875, sparkta drew 9 bins. Build and filter paths share the rule.
+*!   Help: 'rounded' -> 'rounded down' (two places, via verify/build_sthlp.py).
+*!   REAL STATA: histogram price vs sparkta price, type(histogram) -> 8 bins, same edges.
 *! v3.6.0 fix9v (2026-09-16, JAVA ONLY, HeadlessBrowser; jar rebuilt; ado header line 4 only):
 *!   THE ALT+TAB WINDOW, ROOT CAUSE FOUND. [stated] Fahad restarted the laptop (clean Alt+Tab),
 *!   ran `procs` (82 processes, none ours), then ONE export with saveas(png pdf svg) -- on his

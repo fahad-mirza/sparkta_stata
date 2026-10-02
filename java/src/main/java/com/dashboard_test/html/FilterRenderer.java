@@ -246,6 +246,12 @@ class FilterRenderer {
             }
             sb.append("  if (!_mainChart) return;\n");
             sb.append("  var dsets = _mainChart.data.datasets;\n");
+            // v3.6.0-t2j fix9y: snapshot the INITIAL fit / CI datasets (drawn by Stata's own
+            // lowess / Java fit on the full data) the first time any filter moves. When the
+            // filters come back to "All" (every row kept) those exact curves are restored, so
+            // the page looks as it did on open. The JS re-estimate is only used for subsets.
+            sb.append("  if (!window._spkFitInit) { window._spkFitInit = dsets.map(function(d){ return d.data; }); window._spkNAll = _sAgg.filterRows(null, null).length; }\n");
+            sb.append("  var _spkAllRows = (rows.length === window._spkNAll);\n");
             sb.append("  for (var di = 0; di < ptGroups.length && di < dsets.length; di++) {\n");
             sb.append("    dsets[di].data = ptGroups[di].data;\n");
             sb.append("  }\n");
@@ -313,6 +319,7 @@ class FilterRenderer {
                     }
                 }
             }
+            sb.append("  if (_spkAllRows && window._spkFitInit) { for (var _ri = ptGroups.length; _ri < dsets.length && _ri < window._spkFitInit.length; _ri++) dsets[_ri].data = window._spkFitInit[_ri]; }   // fix9y\n");
             sb.append("  _mainChart.update('none');\n");
             sb.append("  var nc = document.getElementById('_nObs');\n");
             sb.append("  if (nc) nc.textContent = rows.length + ' obs';\n");
@@ -1171,14 +1178,16 @@ class FilterRenderer {
             sb.append("  return;\n");
         } else {
             // bar / hbar / line / area (stacked or not): the three aggregate layouts above
+            // fix9y: keep the panel tooltip counts (_spkN / _spkTot) in step with the filter
+            sb.append("  function _pCnt(rows, v) { return _sAgg.getValues(rows, v).length; }\n");
             sb.append("  if (_pOv && _pVars.length === 1) {\n");
-            sb.append("    var _dA = []; for (var _gi = 0; _gi < _pNG; _gi++) _dA.push(_pSt(_pGrp(_gi), _pVars[0]));\n");
-            sb.append("    if (dsets.length === 1) dsets[0].data = _dA; else { for (var _gk = 0; _gk < _pNG && _gk < dsets.length; _gk++) dsets[_gk].data = [_dA[_gk]]; }\n");
+            sb.append("    var _dA = [], _nA = []; for (var _gi = 0; _gi < _pNG; _gi++) { var _gr = _pGrp(_gi); _dA.push(_pSt(_gr, _pVars[0])); _nA.push(_pCnt(_gr, _pVars[0])); }\n");
+            sb.append("    if (dsets.length === 1) { dsets[0].data = _dA; if (dsets[0]._spkN) { dsets[0]._spkN = _nA; dsets[0]._spkTot = panelRows.length; } } else { for (var _gk = 0; _gk < _pNG && _gk < dsets.length; _gk++) dsets[_gk].data = [_dA[_gk]]; }\n");
             sb.append("  } else if (!_pOv) {\n");
             sb.append("    var _dB = []; for (var _vi = 0; _vi < _pVars.length; _vi++) _dB.push(_pSt(panelRows, _pVars[_vi]));\n");
             sb.append("    if (dsets.length === 1) dsets[0].data = _dB; else { for (var _vk = 0; _vk < _pVars.length && _vk < dsets.length; _vk++) dsets[_vk].data = [_dB[_vk]]; }\n");
             sb.append("  } else {\n");
-            sb.append("    for (var _vi = 0; _vi < _pVars.length && _vi < dsets.length; _vi++) { var _dC = []; for (var _gi = 0; _gi < _pNG; _gi++) _dC.push(_pSt(_pGrp(_gi), _pVars[_vi])); dsets[_vi].data = _dC; }\n");
+            sb.append("    for (var _vi = 0; _vi < _pVars.length && _vi < dsets.length; _vi++) { var _dC = [], _nC = []; for (var _gi = 0; _gi < _pNG; _gi++) { var _gr2 = _pGrp(_gi); _dC.push(_pSt(_gr2, _pVars[_vi])); _nC.push(_pCnt(_gr2, _pVars[_vi])); } dsets[_vi].data = _dC; if (dsets[_vi]._spkN) { dsets[_vi]._spkN = _nC; dsets[_vi]._spkTot = panelRows.length; } }\n");
             sb.append("  }\n");
             sb.append("  ch.update('none');\n");
         }

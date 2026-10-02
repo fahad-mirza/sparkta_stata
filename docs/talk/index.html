@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<!--
+  sparkta_talk/index.html -- Stata Conference 2026 talk deck for sparkta v3.6.0
+  Version: 2.0 | 2026-10-01 | Fahad Mirza
+  v2.0: 'Under the hood' and the O(N) slides replaced by two option-overview slides,
+        grouped exactly as in help sparkta (18 groups).
+  v1.9: audience review fixes -- accurate counts/timings, platform wording (tested on
+        Windows), valid varlist on the event-study slide, notes match the no-stats pages.
+  v1.8: results() mapping example uses names outside the autodetect lists (regressor, point,
+        lo, hi) so it shows why name()/b()/ci() exist.
+  v1.7: results() card shows the frame:name syntax step by step; new slide with a worked
+        O(N) vs O(N x G) example; timings re-cut (33 slides).
+  v1.6: data-sources slide rebuilt with full syntax (frames verified in the ado + release
+        suite); Neumaier sums named; end slide QR -> GitHub repo, Medium, new e-mail.
+  v1.5: Why I built sparkta = Fahad's four points (verified wording); slides 'How the Java
+        side keeps big data fast' and 'Lessons learned' removed (32 slides).
+  v1.4: + why sparkta (inspiration, DRAFT for Fahad to edit), 100% offline (institutions),
+        under the hood (complexity, lazy work, typed arrays); timings re-cut for 34 slides.
+  v1.3: new slides -- why Java, data sources, large data, lessons learned, beta + roadmap;
+        B01 on nlsw88 with its own filters; D07 event study with whiskers; timings re-cut.
+  v1.2: D02 (levels(90 95) coefsort(abs)) re-made on the fix9x build: the 90% band now
+        sits inside the 95% band on every row.
+  v1.1: charts from talk_demo_v360.do v1.5 on the fix9w build (no statistics panels);
+        side-by-side pairs match Stata (bar, scatter+lfit, histogram 8 bins,
+        marginsplot with whiskers); LOWESS-with-filters moved to its own slide.
+  One self-contained deck. Live sparkta pages sit in charts/ and load inside the
+  slides (iframe), so every chart can be hovered, filtered and dragged on stage.
+  Works from the local folder with no internet, and from GitHub Pages (docs/talk/).
+  Keys: Right/Space/PageDown next, Left/PageUp back, Home/End, N notes + timer,
+        F full screen, O overview, Esc closes a zoomed chart.
+  ?static=1 swaps every live chart for its PNG still (used to build the PDF backup).
+  ASCII only.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sparkta: an interactive graph command for Stata</title>
+<style>
+:root{
+  --paper:#f5f6f8; --ink:#1f2a37; --muted:#5f6c7b; --rule:#d5dbe3;
+  --blue:#4e79a7; --orange:#f28e2b; --card:#ffffff;
+  --serif:Cambria,"Georgia","Times New Roman",serif;
+  --sans:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --mono:Consolas,"Cascadia Mono","SFMono-Regular",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#2b3440;overflow:hidden}
+body{font-family:var(--sans);color:var(--ink)}
+#stage{position:absolute;left:50%;top:50%;width:1600px;height:900px;transform-origin:0 0}
+.slide{position:absolute;inset:0;background:var(--paper);display:none;padding:64px 80px 70px}
+.slide.on{display:block}
+h1,h2{font-family:var(--serif);font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-size:52px;line-height:1.08;max-width:15em}
+p{margin:0}
+.lead{font-size:25px;line-height:1.45;color:var(--muted);margin-top:22px;max-width:30em}
+.small{font-size:19px;line-height:1.5;color:var(--muted)}
+
+/* the Stata command line: the one bold element, repeated on every demo */
+.cmd{font-family:var(--mono);font-size:22px;line-height:1.5;background:var(--card);
+  border:1px solid var(--rule);padding:18px 22px;margin-top:30px;white-space:pre-wrap;
+  color:#16324f}
+.cmd .dot{color:var(--muted);user-select:none}
+.cmd .opt{color:var(--blue)}
+
+/* demo slide: text left, live page right */
+.demo{display:grid;grid-template-columns:600px 1fr;gap:48px;height:100%}
+.demo .txt{display:flex;flex-direction:column}
+.demo .try{margin-top:auto;font-size:19px;line-height:1.5;color:var(--ink);
+  border-top:2px solid var(--orange);padding-top:14px}
+.frame{position:relative;background:#fff;border:1px solid var(--rule);overflow:hidden}
+.frame iframe{position:absolute;left:0;top:0;border:0;transform-origin:0 0;background:#fff}
+.frame img.still{width:100%;display:block}
+
+/* versus: Stata graph | sparkta page */
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:30px;height:640px}
+.vs .col{display:flex;flex-direction:column;min-height:0}
+.vs .cap{font-size:19px;color:var(--muted);margin-bottom:10px}
+.vs .cap b{color:var(--ink);font-weight:600}
+.vs .col>.frame,.vs .col>.pic{flex:1;min-height:0}
+.vs .pic{background:#fff;border:1px solid var(--rule);display:flex;align-items:center;justify-content:center}
+.vs .pic img{max-width:100%;max-height:100%}
+.vs .cmd{margin-top:12px;font-size:18px;padding:12px 16px}
+
+/* wall of tiles */
+.wall{display:grid;gap:16px;margin-top:26px}
+.tile{background:#fff;border:1px solid var(--rule);cursor:pointer;display:flex;flex-direction:column;
+  padding:0;font:inherit;color:inherit;text-align:left}
+.tile:hover,.tile:focus-visible{outline:3px solid var(--blue);outline-offset:0}
+.tile img{width:100%;flex:1;min-height:0;object-fit:contain;object-position:top center;background:#fff}
+.tile span{font-size:16px;padding:7px 10px;border-top:1px solid var(--rule);font-family:var(--mono);color:#16324f}
+
+/* title slide */
+.title{display:grid;grid-template-columns:1fr 700px;gap:60px;align-items:center;height:100%}
+.title h1{font-size:92px;line-height:1}
+.title .sub{font-family:var(--serif);font-size:38px;line-height:1.2;margin-top:22px}
+.title .who{font-size:23px;color:var(--muted);margin-top:46px;line-height:1.6}
+
+/* pipeline diagram */
+.pipe{display:flex;align-items:stretch;gap:0;margin-top:70px}
+.pipe .st{flex:1;background:#fff;border:1px solid var(--rule);padding:24px 22px}
+.pipe .st h3{font-family:var(--serif);font-size:28px;margin:0 0 10px}
+.pipe .st p{font-size:19px;line-height:1.45;color:var(--muted)}
+.pipe .ar{width:54px;display:flex;align-items:center;justify-content:center;font-size:34px;color:var(--orange)}
+.facts{display:flex;gap:70px;margin-top:56px}
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
+.opts .g{background:#fff;border:1px solid var(--rule);padding:14px 18px}
+.opts h3{font-family:var(--serif);font-size:25px;margin:0 0 8px;color:var(--ink)}
+.opts p{font-family:var(--mono);font-size:16.5px;line-height:1.6;color:#16324f;margin:0}
+.src{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:26px}
+.src .card{background:#fff;border:1px solid var(--rule);padding:18px 20px;display:flex;flex-direction:column}
+.src h3{font-family:var(--serif);font-size:28px;margin:0}
+.src .what{font-size:17px;color:var(--muted);margin:6px 0 12px;line-height:1.4}
+.src pre{font-family:var(--mono);font-size:14.5px;line-height:1.55;margin:0;white-space:pre;color:#16324f;background:var(--paper);padding:10px 12px;border:1px solid var(--rule);overflow:hidden}
+.src pre .c{color:#7a8594}
+.src .fits{font-size:15.5px;color:var(--ink);margin-top:12px;line-height:1.45}
+.facts div{font-size:21px;color:var(--muted);line-height:1.4}
+.facts b{display:block;font-family:var(--serif);font-size:44px;color:var(--ink);font-weight:600}
+
+/* syntax table */
+table.syn{border-collapse:collapse;margin-top:30px;font-size:21px;width:100%}
+table.syn th{font-family:var(--serif);font-weight:600;text-align:left;font-size:24px;padding:10px 16px;border-bottom:2px solid var(--ink)}
+table.syn td{padding:9px 16px;border-bottom:1px solid var(--rule);vertical-align:top}
+table.syn td code{font-family:var(--mono);color:#16324f}
+
+/* section opener */
+.opener{display:flex;flex-direction:column;justify-content:center;height:100%}
+.opener .no{font-family:var(--serif);font-size:30px;color:var(--orange)}
+.opener h2{font-size:84px;margin-top:10px}
+.opener .lead{font-size:30px}
+
+/* lists in prose slides */
+ul.pts{margin:34px 0 0;padding:0;list-style:none;max-width:1250px}
+ul.pts li{font-size:26px;line-height:1.45;padding:14px 0;border-bottom:1px solid var(--rule)}
+ul.pts li code{font-family:var(--mono);font-size:23px;color:#16324f}
+
+/* progress rail: five talk sections */
+#rail{position:absolute;left:80px;right:80px;bottom:26px;display:flex;gap:8px;z-index:5}
+#rail div{flex:1;font-size:14px;color:#8a95a3;border-top:4px solid var(--rule);padding-top:6px}
+#rail div.cur{color:var(--ink);border-top-color:var(--blue)}
+#rail div.done{border-top-color:#9fb4cc}
+#num{position:absolute;right:30px;bottom:24px;font-size:14px;color:#8a95a3;z-index:5}
+
+/* zoom overlay for tiles */
+#zoom{position:absolute;inset:0;background:rgba(31,42,55,.55);display:none;z-index:20}
+#zoom.on{display:block}
+#zoom .box{position:absolute;left:60px;right:60px;top:40px;bottom:40px;background:var(--paper);
+  display:grid;grid-template-rows:auto 1fr;padding:18px 22px;gap:12px}
+#zoom .bar{display:flex;align-items:center;gap:20px}
+#zoom .bar .cmd{margin:0;flex:1;font-size:19px;padding:10px 14px}
+#zoom button{font:inherit;font-size:18px;padding:10px 18px;background:var(--ink);color:#fff;border:0;cursor:pointer}
+
+/* notes + timer (presenter only; press N) */
+#notes{position:fixed;left:0;right:0;bottom:0;background:#111c28;color:#e6ebf1;font-size:17px;line-height:1.5;
+  padding:12px 22px;display:none;z-index:50;max-height:34vh;overflow:auto}
+#notes.on{display:block}
+#notes .clock{float:right;font-family:var(--mono);color:#f2b36b;margin-left:20px}
+
+/* overview grid (press O) */
+#over{position:fixed;inset:0;background:#2b3440;display:none;z-index:40;overflow:auto;padding:20px}
+#over.on{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;align-content:start}
+#over button{font:inherit;font-size:14px;text-align:left;background:#f5f6f8;border:0;padding:10px;cursor:pointer;min-height:70px}
+#over button.cur{outline:3px solid var(--orange)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="notes"><span class="clock" id="clock">00:00</span><span id="notetext"></span></div>
+<div id="over"></div>
+
+<script>
+/* ------------------------------------------------------------------
+   Slide content. kind: title | opener | demo | versus | wall | text | pipe
+   chart = file stem in charts/ (live page), still in img/still/, thumb in img/thumb/
+   ------------------------------------------------------------------ */
+var SECTIONS = ["Chart types","Interactivity","Styling","After the regression","Output and scale"];
+var Q = "https://fahad-mirza.github.io/sparkta_stata/talk/";
+
+var SLIDES = [
+{kind:"title", sec:-1, t:"0:00",
+ notes:"Open on the title. One sentence: sparkta is what graph would be if the output were a web page you can touch. 20 minutes, five parts."},
+
+{kind:"versus", sec:-1, t:"0:20",
+ title:"Same command, same data. One of them you can touch.",
+ stata:"S1_graph_bar", stataCmd:"graph bar price, over(rep78)",
+ chart:"A01_bar", cmd:"sparkta price, over(rep78)",
+ notes:"Hover a bar on the right: the tooltip gives the mean, N and the group. Point out the toolbar: PNG, SVG, PDF download. (The statistics panel is switched off on these pages with nostats; by default every chart has one: N, mean, median, SD, percentiles, computed as summarize, detail does.)"},
+
+{kind:"text", sec:-1, t:"1:00",
+ title:"Why I built sparkta",
+ html:'<ul class="pts">'+
+  '<li><b>One program, not three.</b> On locked-down institutional systems such as the World Bank\'s, it is rare to find a user with Stata, R and Python all installed and maintained. Stata is the one people have.</li>'+
+  '<li><b>Sensitive data stays on the machine.</b> Everything is computed in Stata and written to one file locally: no upload, no cloud service, no server.</li>'+
+  '<li><b>&ldquo;Can Stata do interactive charts?&rdquo;</b> Users kept asking. In R and Python, plotly, htmlwidgets and Bokeh all work the same way: the host language writes a JavaScript chart into a web page. sparkta does that from Stata, through the Java bridge Stata already ships.</li>'+
+  '<li><b>One workflow, easy to audit.</b> Data, estimates and charts come from the same do-file and the same log; rerun it and you get the same page.</li>'+
+  '</ul>',
+ notes:"Careful with wording: the R/Python packages use JavaScript in the browser, not Java. Java is Stata's built-in route to the same place: it writes the JavaScript (Chart.js) page. The cloud point: nothing leaves your machine unless you send the file."},
+
+{kind:"text", sec:-1, t:"1:40",
+ title:"If you know graph, you already know sparkta",
+ html:'<table class="syn"><tr><th>Stata word</th><th>in sparkta</th></tr>'+
+  '<tr><td><code>title() subtitle() note() xtitle() ytitle()</code></td><td>same word</td></tr>'+
+  '<tr><td><code>over() by() legend() yline() xline() horizontal</code></td><td>same word</td></tr>'+
+  '<tr><td><code>level(95) keep() drop() msymbol() mcolor() lwidth()</code></td><td>accepted as aliases</td></tr>'+
+  '<tr><td><code>mcolor(navy maroon)</code>, <code>colorpalette</code> names</td><td>Stata colour names, hex, <code>%opacity</code>, <code>*intensity</code></td></tr>'+
+  '<tr><td><code>scheme()</code></td><td><code>theme()</code> &nbsp;light, dark, colour-blind safe</td></tr>'+
+  '<tr><td><code>saving()</code> / <code>graph export</code></td><td><code>export(file.html)</code> and <code>saveas(file.png|pdf|svg)</code></td></tr>'+
+  '</table><p class="small" style="margin-top:22px">Full mapping: docs/OPTIONS_VS_STATA.md in the repository.</p>',
+ notes:"The design rule: sparkta keeps its own flat option names but accepts the Stata word wherever a Stata user reaches for it. Giving both is an error, so there is one code path."},
+
+{kind:"pipe", sec:-1, t:"2:10",
+ title:"What happens when you press Enter",
+ notes:"Keep this under a minute. The ado parses and computes statistics in Stata; the Java 11 runtime that ships with Stata 17+ writes one HTML file with the data and Chart.js inside. Nothing to install beyond the package, no Python, no R, no server. The file opens anywhere, offline."},
+
+{kind:"text", sec:-1, t:"2:40",
+ title:"Why Java, and not Python or R?",
+ html:'<table class="syn"><tr><th></th><th>Java (sparkta)</th><th>Python or R route</th></tr>'+
+  '<tr><td><b>Install</b></td><td>already inside every Stata 17+; nothing to set up</td><td>install Python or R, add packages, point Stata at them</td></tr>'+
+  '<tr><td><b>Portability</b></td><td>one jar of about 400 KB; the same file on every platform Stata runs on</td><td>an environment per machine; package versions drift</td></tr>'+
+  '<tr><td><b>Data</b></td><td>reads variables in place through Stata\'s Java API</td><td>Python\'s sfi can too; R needs an export or a bridge</td></tr>'+
+  '<tr><td><b>Speed</b></td><td>compiled; a 100,000-point page in about 6 seconds</td><td>fast, once the environment exists</td></tr>'+
+  '<tr><td><b>Output</b></td><td>one offline HTML file</td><td>often a server (Shiny, Dash) or online libraries</td></tr>'+
+  '</table><p class="small" style="margin-top:22px">Python and R are excellent; the point is zero friction for a Stata user, inside a do-file.</p>',
+ notes:"Be fair to Python and R. The argument is friction and reproducibility, not capability."},
+
+{kind:"text", sec:-1, t:"3:20",
+ title:"100% offline, by design",
+ html:'<table class="syn"><tr><th>What institutions need</th><th>What sparkta does</th></tr>'+
+  '<tr><td><b>No internet, no server</b></td><td>Chart engine and data are embedded in one HTML file; it opens from a USB stick, a shared drive or an e-mail. Online mode is opt-in only.</td></tr>'+
+  '<tr><td><b>Locked-down machines</b></td><td>Nothing to install beyond the Stata package; no admin rights, no Python or R, no cloud account.</td></tr>'+
+  '<tr><td><b>Data stays in-house</b></td><td>Nothing is uploaded anywhere: the page is built on your machine and only travels where you send it.</td></tr>'+
+  '<tr><td><b>Reproducible and archivable</b></td><td>The same do-file rebuilds the same page; it drops into replication packages and still opens years later.</td></tr>'+
+  '<tr><td><b>Free and open</b></td><td>MIT licence: use it, change it, ship it in your own tools.</td></tr>'+
+  '</table><p class="small" style="margin-top:18px">One caution: the page carries the rows its filters need, so share pages of confidential microdata only as you would the data, or aggregate first.</p>',
+ notes:"This is the pitch for universities, central banks, statistical offices and multilaterals: low-bandwidth country offices, strict IT policies, replication requirements. Say the caution out loud; it builds trust."},
+
+{kind:"opener", sec:0, t:"4:00", no:"Part 1 of 5", title:"Chart types",
+ lead:"The graph bar, twoway, histogram and graph box family, plus a few Stata never had.",
+ notes:"Transition. Next slide is the wall: click any tile to open it live."},
+
+{kind:"wall", sec:0, t:"4:05", cols:5,
+ title:"Eighteen chart types (and a step option) from one command",
+ tiles:[
+  ["A01_bar","type(bar)","sparkta price, over(rep78)"],
+  ["A02_hbar","type(hbar)","sparkta price weight mpg, type(hbar) over(foreign)"],
+  ["A03_stackedbar","type(stackedbar)","sparkta price weight, type(stackedbar) over(rep78)"],
+  ["A04_stack100","type(stackedbar100)","sparkta price weight mpg, type(stackedbar100) over(foreign)"],
+  ["A05_line","type(line)","sparkta price, type(line) over(rep78) smooth(0.4)"],
+  ["A06_stepped","type(line) stepped(after)","sparkta price, type(line) over(rep78) stepped(after)"],
+  ["A07_area","type(area)","sparkta price, type(area) over(rep78) areaopacity(0.4)"],
+  ["A08_stackedarea","type(stackedarea)","sparkta price weight, type(stackedarea) over(foreign)"],
+  ["A09_scatter","type(scatter)","sparkta price mpg, type(scatter) over(foreign)"],
+  ["A10_bubble","type(bubble)","sparkta price mpg weight, type(bubble) over(foreign)"],
+  ["A11_pie","type(pie)","sparkta price, type(pie) over(rep78) pielabels"],
+  ["A12_donut","type(donut)","sparkta price, type(donut) over(foreign) stat(sum)"],
+  ["A13_histogram","type(histogram)","sparkta price, type(histogram)"],
+  ["A14_cibar","type(cibar)","sparkta price, type(cibar) over(rep78) cilevel(95)"],
+  ["A15_ciline","type(ciline)","sparkta price, type(ciline) over(rep78)"],
+  ["A16_box","type(boxplot)","sparkta price, type(boxplot) over(rep78)"],
+  ["A17_hbox","type(hbox)","sparkta price, type(hbox) over(rep78)"],
+  ["A18_violin","type(violin)","sparkta price, type(violin) over(rep78)"],
+  ["A19_hviolin","type(hviolin)","sparkta price, type(hviolin) over(rep78)"]
+ ],
+ notes:"Do not open all of them. Open two: the violin (hover the box: median, IQR, whiskers) and the bubble (bubble size is the third variable). Say: every one of these is the same command with type() changed."},
+
+{kind:"versus", sec:0, t:"5:00",
+ title:"The numbers are Stata's numbers",
+ stata:"S3_histogram", stataCmd:"histogram price",
+ chart:"A13_histogram", cmd:"sparkta price, type(histogram)",
+ notes:"Same default bin rule as histogram: 8 bins, start 3291, width 1576.875, same density scale. Box plots use Stata's percentile definition, CI bars use exact t critical values. Everything the page shows is computed in Stata or checked against it."},
+
+{kind:"opener", sec:1, t:"5:25", no:"Part 2 of 5", title:"Interactivity",
+ lead:"What no static graph can do: the reader asks the next question themselves.",
+ notes:"This is the heart of the talk. Four minutes, four live pages."},
+
+{kind:"demo", sec:1, t:"5:30",
+ title:"Dropdowns that redraw every panel",
+ lead:"filters() adds one dropdown per variable. With by(), every panel and its N redraw together, and each bar's tooltip gives its mean and n.",
+ cmd:"sysuse nlsw88, clear\nsparkta wage, over(race) by(collgrad) ///\n    filters(married union)",
+ chart:"B01_filter_by", h:1500,
+ tryit:"Pick married, then union members: both panels change. Hover a bar for its n.",
+ notes:"Two dropdowns on variables that are neither the bars nor the panels. Hover one bar first (mean and n), then filter and hover again: n and the share follow the filter."},
+
+{kind:"demo", sec:1, t:"6:15",
+ title:"Sliders recompute the statistics, not just hide points",
+ lead:"sliders() adds a two-handled range. Means and 95% intervals are recalculated from the rows that remain.",
+ cmd:"sparkta price, type(cibar) over(rep78) ///\n    filters(foreign) sliders(mpg)",
+ chart:"B02_filter_slider",
+ tryit:"Drag the mpg handles inward: the intervals widen as N falls.",
+ notes:"Drag the lower mpg handle up to about 20. Intervals widen because N drops. Combine with the origin dropdown."},
+
+{kind:"versus", sec:1, t:"6:50",
+ title:"The same fitted line as twoway lfit",
+ stata:"S2_twoway_lfit", stataCmd:"twoway (scatter price mpg) (lfit price mpg)",
+ chart:"P2_scatter_lfit", cmd:"sparkta price mpg, type(scatter) fit(lfit)",
+ notes:"Same OLS line, same points. fit() takes lfit, qfit, lowess, and fitci adds the band. Hover a point to see make-level values. Next slide: what twoway cannot do with it."},
+
+{kind:"demo", sec:1, t:"7:15",
+ title:"Fit lines that follow the filter",
+ lead:"The fit is re-estimated on the rows you keep: drag the weight slider and the LOWESS lines, points and N move together.",
+ cmd:"sparkta price mpg, type(scatter) ///\n    over(foreign) fit(lowess) ///\n    filters(rep78) sliders(weight)",
+ chart:"B03_scatter_fit",
+ tryit:"Drag the weight slider to heavy cars only and watch both smooths change.",
+ notes:"One LOWESS per origin group. Pick repair record 3, drag weight, then set the dropdown back to All: the original Stata lowess lines return exactly. If asked: on a filtered subset the line is re-estimated in the browser (same robust LOWESS method, very close to Stata's, not digit-identical); at All you see Stata's own."},
+
+{kind:"demo", sec:1, t:"7:50",
+ title:"On real survey data",
+ lead:"nlsw88, 2,246 women. One slider on total experience, a fitted line per education group.",
+ cmd:"sysuse nlsw88, clear\nsparkta wage hours, type(scatter) over(collgrad) ///\n    fit(lfit) sliders(ttl_exp)",
+ chart:"B07_nlsw_slider",
+ tryit:"Slide experience to 15+ years and compare the two slopes.",
+ notes:"Hover a point to see its values. Click a legend entry to hide a group; the other group rescales. This is the move for a seminar: someone asks 'what about experienced workers' and you answer by dragging."},
+
+{kind:"opener", sec:2, t:"8:25", no:"Part 3 of 5", title:"Styling",
+ lead:"The options you already type after the comma.",
+ notes:"Two minutes. Open two tiles, not seven."},
+
+{kind:"wall", sec:2, t:"8:30", cols:4,
+ title:"Reference lines, labels, annotations, colours, themes",
+ tiles:[
+  ["C01_yline_band","yline() yband()","sparkta price, over(rep78) yline(6000) yband(4000 8000)"],
+  ["C02_mlabel","mlabel()","sparkta price mpg if price > 10000, type(scatter) mlabel(make)"],
+  ["C03_annotation","alabelpos() alabeltext()","sparkta price mpg, type(scatter) alabelpos(15906 21 15) alabeltext(Most expensive car)"],
+  ["C04_labels","xlabels() yrange() datalabels","sparkta price, type(bar) over(rep78) xlabels(Poor|Fair|Average|Good|Excellent) yrange(0 12000) datalabels"],
+  ["C05_colors","colors(navy maroon)","sparkta price weight, type(bar) over(foreign) colors(navy maroon) legend(bottom)"],
+  ["C06_theme_dark","theme(dark_neon)","sparkta price, type(violin) over(rep78) theme(dark_neon)"],
+  ["C07_theme_cblind","theme(cblind1)","sparkta price, over(rep78) theme(cblind1)"]
+ ],
+ notes:"Open the dark theme and the colour-blind theme. Point out colors(navy maroon): the Stata colour names, and colorpalette output, work directly."},
+
+{kind:"opener", sec:3, t:"9:30", no:"Part 4 of 5", title:"After the regression",
+ lead:"coefplot, marginsplot and event studies, read straight from e() and r().",
+ notes:"Four and a half minutes. This is what the economists in the room will use most."},
+
+{kind:"demo", sec:3, t:"9:35",
+ title:"Two models, one chart, one publication table",
+ lead:"No varlist: the chart reads e(b) and e(V) of stored estimates (z_ = standardised, one SD). The table under it copies as Markdown or LaTeX and downloads as CSV, a standalone .tex file or PDF.",
+ cmd:"regress price z_mpg z_weight z_length foreign\nestimates store full\nregress price z_mpg z_weight\nestimates store reduced\nsparkta, type(coefplot) estnames(full reduced)",
+ chart:"D01_coefplot", h:1600,
+ tryit:"Scroll to the table, press Copy and choose LaTeX.",
+ notes:"Hover a coefficient: estimate, SE, CI, p. Hollow markers mean p above 0.1. Then scroll down in the frame to the table: Publication/Detailed toggle, Copy -> LaTeX. Chart and table come from one source so they cannot disagree."},
+
+{kind:"wall", sec:3, t:"10:30", cols:3,
+ title:"The options coefplot users expect",
+ tiles:[
+  ["D02_levels","levels(90 95) coefsort(value)","sparkta, type(coefplot) levels(90 95) cistyle(band) coefsort(value)"],
+  ["D03_eform","eform","logit foreign mpg weight\nsparkta, type(coefplot) eform"],
+  ["D04_matrix","matrix(r(table))","sparkta, type(coefplot) matrix(r(table))"]
+ ],
+ notes:"coefsort(value) orders by the signed estimate: length -2,059, mpg -78, origin 3,550, weight 4,443. coefsort(abs) would order by magnitude instead (mpg first); pval and se are the other keys. Nested intervals, odds ratios, and matrix mode: any results matrix with Ben Jann's coefplot grammar (rows b/se/ll/ul detected by name), so csdid or jwdid output works too."},
+
+{kind:"versus", sec:3, t:"11:05",
+ title:"marginsplot, same margins call",
+ stata:"S4_marginsplot", stataCmd:"margins foreign, at(mpg=(15(5)35))\nmarginsplot",
+ chart:"D05_margins", cmd:"margins foreign, at(mpg=(15(5)35))\nsparkta, type(marginsplot) cistyle(whisker) connected",
+ notes:"Run margins once and draw it twice. sparkta snapshots r(table) so you can keep calling it. Hover a point: margin, CI, the at() value."},
+
+{kind:"demo", sec:3, t:"11:45",
+ title:"Event studies",
+ lead:"Leads and lags parsed from coefficient names, the omitted period drawn as a hollow marker at zero, pre and post in two colours, nested 90 and 95% bands.",
+ cmd:"regress y lead5 lead4 lead3 lead2 lag0-lag5 i.t i.id\nsparkta, type(eventstudy) show(lead* lag*) ///\n    cistyle(area) connected levels(90 95)",
+ chart:"D06_eventstudy", h:1500,
+ tryit:"Hover t-2 and t+3: coefficient, CI and p for that period.",
+ notes:"Also works from matrix() after csdid / jwdid estat event, and from results() files such as lwdid save(). The command on the slide is shortened; the full one is in examples/postest.do."},
+
+{kind:"demo", sec:3, t:"12:30",
+ title:"The same event study, with whiskers",
+ lead:"cistyle() takes whisker, band, bar or area, so the chart can look like Stata's rcap or like a ribbon. Nothing else changes.",
+ cmd:"sparkta, type(eventstudy) show(lead* lag*) ///\n    cistyle(whisker) levels(90 95)",
+ chart:"D07_eventstudy_ci", h:1500,
+ tryit:"Hover t+3: the same numbers as on the band version.",
+ notes:"Twenty seconds: same estimates, different look. Many journals want whiskers."},
+
+{kind:"text", sec:3, t:"12:55",
+ title:"Draw from the model, a matrix, or a saved dataset",
+ html:'<div class="src">'+
+  '<div class="card"><h3>e()</h3><p class="what">The last estimation, or models kept with <code>estimates store</code>.</p>'+
+  '<pre>regress price mpg weight\nestimates store m1\nregress price mpg weight foreign\nestimates store m2\n\nsparkta, type(coefplot) ///\n    estnames(m1 m2) estlabels(Base~Full)</pre>'+
+  '<p class="fits">regress, logit, probit, reghdfe, ivreg2 ... anything that posts e(b) and e(V). No option = the last model.</p></div>'+
+  '<div class="card"><h3>matrix()</h3><p class="what">Any results matrix: r(table), an estimator\'s output, or one you build.</p>'+
+  '<pre>csdid y, ivar(id) time(t) gvar(g)\nestat event\nsparkta, type(eventstudy) matrix(r(table))\n\n<span class="c">* your own matrix, rows named b se</span>\nsparkta, type(coefplot) matrix(M) df(30)</pre>'+
+  '<p class="fits">Rows found by name (b, se, ll, ul, pvalue) as in coefplot; or say where: <code>ci(ll ul)</code>, <code>se()</code>, <code>df()</code>, <code>pvalue()</code>. <code>matrix(A B)</code> = two models.</p></div>'+
+    '<div class="card"><h3>results()</h3><p class="what"><code>results(file | frame:name [, name() b() se() ci() pvalue() time()])</code></p>'+
+  '<pre><span class="c">* a saved .dta file</span>\nlwdid ..., save(ev)\nsparkta, type(eventstudy) results(ev)\n\n<span class="c">* a frame: create it, fill it, name it</span>\nframe create est\nframe est: use regsave_out, clear\nsparkta, type(coefplot) results(frame:est)\n\n<span class="c">* columns sparkta cannot guess: map them</span>\nsparkta, type(coefplot) ///\n    results(frame:est, name(regressor) ///\n    b(point) ci(lo hi))</pre>'+
+  '<p class="fits">parmest, regsave (var coef stderr), lwdid and margins, saving() layouts are recognised. Your data and frames are left as they were.</p></div>'+
+'</div><p class="small" style="margin-top:16px">The model does not have to be in memory: a saved results file redraws the chart years later.</p>',
+ notes:"Frames are supported and tested: results(frame:name, ...) runs in the 210-check release suite (coefplot and marginsplot from a frame). Several sources or matrices = several models."},
+
+{kind:"opener", sec:4, t:"13:40", no:"Part 5 of 5", title:"Output and scale",
+ lead:"Back to paper when you need it, and big data when you have it.",
+ notes:"Two minutes."},
+
+{kind:"export", sec:4, t:"13:45",
+ title:"One option back to the journal",
+ notes:"saveas() writes PNG, PDF and SVG through a headless Edge or Chrome, vector where possible. The table-only PDF is the publication table on its own. Click the two links to show the PDF and SVG."},
+
+{kind:"demo", sec:4, t:"14:30",
+ title:"100,000 points, still interactive",
+ lead:"Above 20,000 points sparkta switches to large-data mode by itself: the cloud is drawn once, hover and export keep working. This page, 4.8 MB, was built in about 6 seconds.",
+ cmd:"set obs 100000\n...\nsparkta y x, type(scatter) over(group) fit(lfit)",
+ chart:"E02_bigscatter",
+ tryit:"Hover the dense middle: the tooltip still finds single points.",
+ notes:"From the log: 15.0 s for the whole call, of which 9.2 s was the full-page PNG export; the HTML itself about 5.7 s. Hover to show hit-testing is instant."},
+
+{kind:"opts", sec:4, t:"15:10",
+ title:"The options, grouped as in help sparkta (1 of 2)",
+ sub:"Charts from data. Stata words such as keep(), drop(), level(), msymbol(), lwidth() are accepted as aliases.",
+ groups:[
+  ["Essential","type()  over()  by()  filters()  sliders()  stat()  title()  export()  saveas()"],
+  ["Panels and grouping","layout()  yfree  sortgroups()  nomissing  novaluelabels  noallfilter  nostats  collapsestats"],
+  ["Axes","xtitle()  ytitle()  xrange()  yrange()  ystart(zero)  xtype()  ytype()  xreverse  xticks()  xlabels()  xtickangle()  ygrace()  y2()  y2title()"],
+  ["Titles and text","subtitle()  note()  caption()  notimestamp  datalabels  pielabels  titlesize()  titlecolor()  xlabsize()  ylabsize()"],
+  ["Legend","legend(top|bottom|left|right|none)  nolegend  leglabels()  legtitle()  legsize()  legcolor()  legbgcolor()"],
+  ["Colours and theme","theme()  colors()  mcolor()  palette()  bgcolor()  plotcolor()  opacity()  gradient  gradcolors()"],
+  ["Bars","horizontal  stacked  barwidth()  bargroupwidth()  borderradius()"],
+  ["Lines and points","fill  areaopacity()  smooth()  stepped()  spanmissing  lwidth()  lpattern()  msize()  msymbol()  nopoints"],
+  ["Scatter and bubble","fit(lfit|qfit|lowess|exp|log|power|ma)  fitci  mlabel()  mlabpos()  mlabvposition()"]
+ ],
+ notes:"Thirty seconds: this is the map of help sparkta. Point at Essential (what most users need) and at Panels: filters, sliders and by() are the interactive core."},
+
+{kind:"opts", sec:4, t:"15:45",
+ title:"The options, grouped as in help sparkta (2 of 2)",
+ sub:"Distributions, annotations, page settings, and everything after an estimation command. help sparkta lists all 215 with clickable examples.",
+ groups:[
+  ["Distributions","bins()  histtype()  whiskerfence()  bandwidth()  mediancolor()  meancolor()  cibandopacity()"],
+  ["Pie and donut","cutout()  rotation()  circumference()  sliceborder()  hoveroffset()"],
+  ["Reference lines and annotations","yline()  xline()  ylinelabel()  yband()  xband()  apoint()  alabelpos()  alabeltext()  alabelgap()  aellipse()"],
+  ["Tooltip and animation","tooltipformat()  tooltipmode()  tooltipbg()  animate()  animduration()  easing()  aspect()  padding()"],
+  ["Page, export and browser","online  offline  notoolbar  browser()  findbrowser  closebrowser"],
+  ["Post-estimation input","estnames()  matrix()  results()  ci()  se()  df()  pvalue()"],
+  ["Coefficient selection and labels","keep()  drop()  nocons  nobase  order()  coefsort()  coeflabels()  headings()  estlabels()"],
+  ["Post-estimation look","eform  rescale()  level()  levels()  cistyle()  coefstyle()  connected  vertical  refval()  cicolors()  refperiod()"],
+  ["Publication table","stars()  nostars  tstat  interval  nofooter  notable  indicators()  addstats()"]
+ ],
+ notes:"The bottom row is the post-estimation family: inputs, which coefficients and in what order, how they look, and the table under the chart. End with: help sparkta has every option with a clickable example."},
+
+{kind:"text", sec:-1, t:"16:25",
+ title:"3.6 is a public beta: more is coming",
+ html:'<table class="syn"><tr><th>Version</th><th>What</th></tr>'+
+  '<tr><td><b>3.6.1</b></td><td>the fixes found while preparing this talk; feedback from today</td></tr>'+
+  '<tr><td><b>3.7</b></td><td>overlay charts (bar + line, histogram + density), zoom and pan, more chart types, faster very large scatters</td></tr>'+
+  '<tr><td><b>3.8</b></td><td><code>sparkta_dash</code>: several charts on one page with shared filters</td></tr>'+
+  '<tr><td><b>3.9 and 4.0</b></td><td>scrollytelling pages, heatmaps, forest plots; frames integration, user themes</td></tr>'+
+  '</table><p class="small" style="margin-top:22px">Options may still change before 4.0. Issues and pull requests are welcome on GitHub (MIT licence).</p>',
+ notes:"Be explicit: beta means the chart layer is usable today, and the dashboard layer is the next big step."},
+
+{kind:"text", sec:-1, t:"17:10",
+ title:"Try it today",
+ html:'<ul class="pts">'+
+  '<li><code>net install sparkta, from("https://raw.githubusercontent.com/fahad-mirza/sparkta_stata/main/ado/") replace</code></li>'+
+  '<li><code>ssc install sparkta</code> once the SSC archive lists it</li>'+
+  '<li>Stata 17 or later; nothing else to install. Tested on Windows; Mac and Linux run the same jar (feedback welcome). <code>help sparkta</code> has every option with clickable examples.</li>'+
+  '</ul>',
+ notes:"Read the install line out once. Restart Stata after installing so the new jar loads."},
+
+{kind:"end", sec:-1, t:"17:50",
+ notes:"Thank the audience. Leave this slide up during questions: the QR code opens the GitHub repository (install line, help, examples, gallery)."}
+];
+
+/* ------------------------------------------------------------------ */
+var STATIC = /[?&]static=1/.test(location.search);
+var stage = document.getElementById("stage");
+var cur = 0, t0 = null;
+
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+/* colour the command: dot prompt, options before "(" in blue */
+function cmdHtml(c){
+  return c.split("\n").map(function(line){
+    var h = esc(line).replace(/\b([a-z]+)\(/g,'<span class="opt">$1</span>(');
+    var lead = /^\s/.test(line) || /^\.\.\./.test(line) ? "" : '<span class="dot">. </span>';
+    return lead + h;
+  }).join("\n");
+}
+/* a frame that holds a live page (or its still in static mode) */
+function frameHtml(stem, w, h){
+  if (STATIC) return '<div class="frame" style="width:'+w+'px;height:'+h+'px"><img class="still" src="img/still/'+stem+'.jpg" alt=""></div>';
+  return '<div class="frame" style="width:'+w+'px;height:'+h+'px" data-stem="'+stem+'"></div>';
+}
+function railHtml(sec){
+  var s = '<div id="rail">';
+  for (var i=0;i<SECTIONS.length;i++){
+    var c = i===sec ? "cur" : (sec>i ? "done" : "");
+    s += '<div class="'+c+'">'+SECTIONS[i]+'</div>';
+  }
+  return s + '</div>';
+}
+
+function build(){
+  SLIDES.forEach(function(S, i){
+    var d = document.createElement("section");
+    d.className = "slide"; d.id = "s"+(i+1);
+    var h = "";
+    if (S.kind==="title"){
+      h = '<div class="title"><div><h1>sparkta</h1>'+
+          '<p class="sub">An interactive graph command for Stata</p>'+
+          '<p class="who">Fahad Mirza, World Bank<br>Stata Conference, October 2026<br>sparkta 3.6.0</p></div>'+
+          frameHtml("C06_theme_dark", 700, 560)+'</div>';
+    } else if (S.kind==="opener"){
+      h = '<div class="opener"><p class="no">'+S.no+'</p><h2>'+S.title+'</h2><p class="lead">'+S.lead+'</p></div>';
+    } else if (S.kind==="demo"){
+      h = '<div class="demo"><div class="txt"><h2 style="font-size:44px">'+S.title+'</h2>'+
+          '<p class="lead" style="font-size:22px">'+S.lead+'</p>'+
+          '<div class="cmd" style="font-size:17px">'+cmdHtml(S.cmd)+'</div>'+
+          '<p class="try">'+S.tryit+'</p></div>'+
+          frameHtml(S.chart, 792, 766)+'</div>';
+    } else if (S.kind==="versus"){
+      h = '<h2 style="font-size:44px">'+S.title+'</h2><div class="vs">'+
+          '<div class="col"><p class="cap"><b>Stata graph</b>, a picture</p>'+
+          '<div class="pic"><img src="img/stata/'+S.stata+'.png" alt="Stata graph"></div>'+
+          '<div class="cmd">'+cmdHtml(S.stataCmd)+'</div></div>'+
+          '<div class="col"><p class="cap"><b>sparkta</b>, a page you can use</p>'+
+          frameHtml(S.chart, 682, 470)+
+          '<div class="cmd">'+cmdHtml(S.cmd)+'</div></div></div>';
+    } else if (S.kind==="wall"){
+      var n = S.tiles.length, cols = S.cols, rows = Math.ceil(n/cols);
+      var gh = 620;
+      h = '<h2 style="font-size:44px">'+S.title+'</h2><p class="small" style="margin-top:8px">Click a tile to open the live page.</p>';
+      /* row height: fill the slide, but never taller than the thumbnail needs */
+      var colW = (1440-(cols-1)*16)/cols, need = Math.floor(colW/1.52)+40;
+      var rowH = Math.min(Math.floor((gh-(rows-1)*16)/rows), need);
+      h += '<div class="wall" style="grid-template-columns:repeat('+cols+',1fr);grid-template-rows:repeat('+rows+','+rowH+'px)">';
+      S.tiles.forEach(function(t){
+        h += '<button class="tile" data-stem="'+t[0]+'" data-cmd="'+esc(t[2])+'"><img src="img/thumb/'+t[0]+'.jpg" alt="'+esc(t[1])+'" loading="lazy"><span>'+esc(t[1])+'</span></button>';
+      });
+      h += '</div>';
+    } else if (S.kind==="opts"){
+      h = '<h2 style="font-size:44px">'+S.title+'</h2><p class="small" style="margin-top:6px">'+S.sub+'</p><div class="opts">';
+      S.groups.forEach(function(g){ h += '<div class="g"><h3>'+g[0]+'</h3><p>'+esc(g[1])+'</p></div>'; });
+      h += '</div>';
+    } else if (S.kind==="text"){
+      h = '<h2>'+S.title+'</h2>'+S.html;
+    } else if (S.kind==="pipe"){
+      h = '<h2>'+S.title+'</h2><div class="pipe">'+
+        '<div class="st"><h3>Stata</h3><p>The ado parses your options, computes means, percentiles, intervals and fits, reads e() and r().</p></div><div class="ar">&rarr;</div>'+
+        '<div class="st"><h3>Java 11</h3><p>Already inside every Stata 17+ install. Writes the page through javacall; no Python, no R.</p></div><div class="ar">&rarr;</div>'+
+        '<div class="st"><h3>One .html file</h3><p>Your data and the chart engine (Chart.js 4) embedded. About 300 KB for a typical chart.</p></div><div class="ar">&rarr;</div>'+
+        '<div class="st"><h3>Any browser</h3><p>Opens offline, e-mails as an attachment, drops into a website or a replication package.</p></div></div>'+
+        '<div class="facts"><div><b>22</b>ado files, one jar</div><div><b>0</b>servers or extra installs</div><div><b>210</b>release tests on real Stata</div></div>';
+    } else if (S.kind==="export"){
+      h = '<h2>'+S.title+'</h2><div style="display:grid;grid-template-columns:560px 1fr;gap:48px;margin-top:30px">'+
+          '<div><div class="cmd" style="margin-top:0;font-size:19px">'+cmdHtml('sparkta, type(coefplot) export(coef.html) ///\n    saveas(coef.png coef.pdf coef.svg)')+'</div>'+
+          '<div class="cmd" style="font-size:19px">'+cmdHtml('sparkta, type(coefplot) export(coef.html) ///\n    saveas(coef_table.pdf, table)')+'</div>'+
+          '<ul class="pts" style="margin-top:20px"><li style="font-size:21px">PNG at any scale; PDF and SVG stay vector</li>'+
+          '<li style="font-size:21px">Open the results: <a href="files/E01_export.pdf" target="_blank">PDF</a>, <a href="files/E01_export.svg" target="_blank">SVG</a>, <a href="files/E01_table.pdf" target="_blank">table PDF</a></li>'+
+          '<li style="font-size:21px">Headless Edge or Chrome; the browser closes itself when done</li></ul></div>'+
+          '<div class="pic" style="background:#fff;border:1px solid var(--rule);height:640px;display:flex;align-items:center;justify-content:center"><img src="files/E01_export.png" alt="PNG export of a coefficient plot" style="max-width:100%;max-height:100%"></div></div>';
+    } else if (S.kind==="end"){
+      h = '<div class="title" style="grid-template-columns:1fr 420px"><div><h1 style="font-size:80px">Thank you</h1>'+
+          '<p class="sub">Code, help, examples and the gallery on GitHub</p>'+
+          '<p class="who">github.com/fahad-mirza/sparkta_stata<br>medium.com/@fahad-mirza<br>fm.109@hotmail.com</p></div>'+
+          '<div style="background:#fff;border:1px solid var(--rule);padding:30px"><img src="img/qr.svg" alt="QR code to the sparkta GitHub repository" style="width:100%;display:block">'+
+          '<p class="small" style="text-align:center;margin-top:10px">Scan for the GitHub repository</p></div></div>';
+    }
+    if (S.sec >= 0) h += railHtml(S.sec);
+    h += '<div id="num">'+(i+1)+' / '+SLIDES.length+'</div>';
+    d.innerHTML = h;
+    stage.appendChild(d);
+  });
+  /* the zoom overlay lives on the stage so it scales with it */
+  var z = document.createElement("div");
+  z.id = "zoom";
+  z.innerHTML = '<div class="box"><div class="bar"><div class="cmd" id="zcmd"></div><button id="zclose">Close (Esc)</button></div><div class="frame" id="zframe" style="width:100%;height:100%"></div></div>';
+  stage.appendChild(z);
+  document.getElementById("zclose").onclick = closeZoom;
+  z.addEventListener("click", function(e){ if (e.target===z) closeZoom(); });
+  stage.addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".tile") : null;
+    if (b) openZoom(b.getAttribute("data-stem"), b.getAttribute("data-cmd"));
+  });
+}
+
+/* iframe loading: only the current slide's pages are live. The chart page is
+   laid out at 1100 css px (sparkta's page width) and scaled down to the frame. */
+function fill(frame){
+  var stem = frame.getAttribute("data-stem"); if (!stem) return;
+  var w = frame.clientWidth, hgt = frame.clientHeight, pageW = 1100;
+  var k = w / pageW;
+  var f = document.createElement("iframe");
+  f.src = "charts/"+stem+".html";
+  f.title = stem;
+  f.style.width = pageW+"px";
+  f.style.height = Math.ceil(hgt / k)+"px";
+  f.style.transform = "scale("+k+")";
+  frame.innerHTML = ""; frame.appendChild(f);
+}
+function empty(root){
+  root.querySelectorAll(".frame[data-stem]").forEach(function(fr){ fr.innerHTML = ""; });
+}
+function openZoom(stem, cmd){
+  document.getElementById("zcmd").innerHTML = cmdHtml(cmd);
+  document.getElementById("zoom").classList.add("on");
+  var fr = document.getElementById("zframe");
+  if (STATIC){ fr.innerHTML = '<img class="still" src="img/still/'+stem+'.jpg" alt="">'; return; }
+  fr.setAttribute("data-stem", stem);
+  fill(fr);
+}
+function closeZoom(){
+  var z = document.getElementById("zoom");
+  if (!z.classList.contains("on")) return false;
+  z.classList.remove("on"); document.getElementById("zframe").innerHTML = "";
+  return true;
+}
+
+function show(i){
+  i = Math.max(0, Math.min(SLIDES.length-1, i));
+  closeZoom();
+  var old = document.getElementById("s"+(cur+1));
+  if (old){ old.classList.remove("on"); empty(old); }
+  cur = i;
+  var s = document.getElementById("s"+(cur+1));
+  s.classList.add("on");
+  if (!STATIC) s.querySelectorAll(".frame[data-stem]").forEach(fill);
+  if (location.hash !== "#"+(cur+1)) history.replaceState(null, "", "#"+(cur+1));
+  var S = SLIDES[cur];
+  document.getElementById("notetext").textContent = "[target "+S.t+"]  "+(S.notes||"");
+  document.querySelectorAll("#over button").forEach(function(b,k){ b.classList.toggle("cur", k===cur); });
+}
+
+function fit(){
+  var k = Math.min(window.innerWidth/1600, window.innerHeight/900);
+  stage.style.transform = "translate(-50%,-50%) scale("+k+")";
+  stage.style.transformOrigin = "50% 50%";
+  stage.style.left = "50%"; stage.style.top = "50%";
+  stage.style.marginLeft = "0"; stage.style.marginTop = "0";
+}
+
+function overview(){
+  var o = document.getElementById("over");
+  if (!o.childElementCount){
+    SLIDES.forEach(function(S,k){
+      var b = document.createElement("button");
+      b.innerHTML = (k+1)+". "+(S.title || (S.kind==="title" ? "Title" : S.kind==="end" ? "Thank you" : ""));
+      b.onclick = function(){ o.classList.remove("on"); show(k); };
+      o.appendChild(b);
+    });
+  }
+  o.classList.toggle("on");
+  show(cur);
+}
+
+function tick(){
+  if (t0 === null) return;
+  var s = Math.floor((Date.now()-t0)/1000);
+  document.getElementById("clock").textContent =
+    ("0"+Math.floor(s/60)).slice(-2)+":"+("0"+(s%60)).slice(-2);
+}
+
+document.addEventListener("keydown", function(e){
+  /* keys typed inside a chart page stay with the chart */
+  var k = e.key;
+  if (k==="Escape"){ if (closeZoom()) return; document.getElementById("over").classList.remove("on"); return; }
+  if (k==="ArrowRight"||k===" "||k==="PageDown"){ e.preventDefault(); show(cur+1); }
+  else if (k==="ArrowLeft"||k==="PageUp"){ e.preventDefault(); show(cur-1); }
+  else if (k==="Home"){ show(0); } else if (k==="End"){ show(SLIDES.length-1); }
+  else if (k==="n"||k==="N"){ document.getElementById("notes").classList.toggle("on"); if (t0===null) t0 = Date.now(); }
+  else if (k==="f"||k==="F"){ if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(function(){}); else document.exitFullscreen(); }
+  else if (k==="o"||k==="O"){ overview(); }
+});
+/* after clicking into a chart the iframe owns the keyboard; a click on the
+   slide background hands it back so the arrows work again */
+stage.addEventListener("mousedown", function(e){ if (e.target.tagName!=="IFRAME") window.focus(); });
+
+build(); fit();
+window.addEventListener("resize", fit);
+setInterval(tick, 1000);
+show((parseInt(location.hash.slice(1),10)||1)-1);
+</script>
+</body>
+</html>

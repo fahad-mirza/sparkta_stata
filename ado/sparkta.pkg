@@ -1,7 +1,7 @@
 v 3
 d sparkta - Interactive self-contained HTML charts from Stata
 d Author: Fahad Mirza
-d Distribution-Date: 20260930
+d Distribution-Date: 20261001
 d URL: https://github.com/fahad-mirza/sparkta_stata
 d
 d sparkta generates interactive, self-contained HTML charts and dashboards

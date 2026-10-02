@@ -282,6 +282,9 @@ public class Harness {
         { String[] a = dataCase("H-F5 pie over + filter", "h_f5_pie_filter.html", "price", "pie", "rep78", "", ""); a[76] = "foreign"; cases.add(a); }
         { String[] a = dataCase("H-F6 stackedbar100 + filter", "h_f6_stack100_filter.html", "price mpg", "stackedbar100", "rep78", "", ""); a[76] = "foreign"; cases.add(a); }
         { String[] a = dataCase("H-F7 ciline over + filter", "h_f7_ciline_filter.html", "price", "ciline", "rep78", "", ""); a[76] = "foreign"; cases.add(a); }
+        // fix9y: scatter + lowess per over() group + filter -- back at "All" the page must show
+        // the ORIGINAL fit lines again (FilterRenderer restores _spkFitInit)
+        { String[] a = dataCase("H-F17 scatter lowess over + filter", "h_f17_scatter_lowess_filter.html", "price mpg", "scatter", "foreign", "", ""); a[156] = "lowess"; a[76] = "rep78"; cases.add(a); }
         { String[] a = dataCase("H-F8 bar over+by+filter", "h_f8_bar_oby_filter.html", "price", "bar", "rep78", "foreign", ""); a[76] = "rep78"; cases.add(a); }  // \u00e9 = accented label (UTF-8 LaTeX robustness)
         // t2j: by()-panel violin + filter -- exercises _updatePanelChart violin branch
         // (per-panel _vFilter_N KDE recompute via _vAnimateTo). Was silently stale before.
