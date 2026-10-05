@@ -1,9 +1,7 @@
-*! sparkta version 3.6.0 2026-09-13
+*! sparkta version 3.6.1 2026-10-05
 *! sparkta -- interactive self-contained HTML charts and dashboards from Stata
 *! Author: Fahad Mirza. Requires Stata 17 or later (Java 11 backend).
-*! Release v3.6.0 (2026-09-13) = build v3.6.0-t2j fix9z (fix9f, confirmed on real Stata 210/210, +
-*!   fix9g large-data mode, fix9g-c fit() string cap, fix9h fit line above the points). Full history
-*!   (t-series and fix tags) lives in docs/CHANGELOG_sparkta_full.md; keep THIS header short.
+*! Release v3.6.1 (2026-10-05) = refactors graph type syntax to align with graph.
 
 program define sparkta
     version 17
@@ -17,9 +15,47 @@ program define sparkta
     // Save raw argument string BEFORE syntax strips quotes.
     // Used by indicators() and addstats() parsers to extract quoted content.
     local _raw_0 `"`0'"'
+	
+	// Moves graph type to the second token in the command
+	gettoken type 0 : 0, parse(" ,")
+	
+	// Handles the findbrowser and other cases that only include an option 
+	// It may be better to treat those options as sub-commands in the future 
+	// since they don't modify or provide an option to change the behavior of 
+	// the command (e.g., nothing related to graphs) and a sub-command may flow 
+	// a bit easier for users semantically.
+	if "`type'" == "," { 
+		loc 0 `type' `0'
+		loc type ""
+	}
+	
+	// Check for valid type immediately to throw an error if an invalid plot 
+	// type is used 
+	if !inlist("`type'", "bar", "line", "scatter", "pie", "hbar", 			 ///   
+						 "stackedbar", "stackedhbar") & 					 ///   
+	   !inlist("`type'", "stackedarea", "area", "bubble", "donut", 			 ///   
+						 "stackedline", "cibar", "ciline") & 				 ///   
+	   !inlist("`type'", "histogram", "stackedbar100", "stackedhbar100", 	 ///   
+						 "boxplot", "violin", "hboxplot", "hviolinplot") &   /// 
+	   !inlist("`type'", "coefplot", "eventstudy", "marginsplot", "") { 
+
+		// Display an error message for the user to know how to fix the problem
+		di as err "sparkta must be followed by one of the following graph "  ///  
+		          "types: bar, line, scatter, pie, hbar, stackedbar, "		 ///   
+				  "stackedhbar, stackedarea, area, bubble, donut, "			 ///   
+				  "stackedline, cibar, ciline, histogram, stackedbar100, "	 ///   
+				  "stackedhbar100, boxplot, violin, hboxplot, hviolinplot, " ///   
+				  "coefplot, eventstudy, or marginsplot"
+				  
+		// return an error code
+		error 198
+		
+		// Exit executing the program
+		exit
+							
+	} // End IF Block for graph type check
 
     syntax [varlist(default=none)] [if] [in],          ///
-        [TYPE(string)]                  ///  bar line scatter pie hbar stackedbar stackedarea area bubble donut cibar ciline stackedbar100 stackedhbar100
         [TITLE(string)]                 ///  main chart title
         [SUBTitle(string)]              ///  subtitle below title
         [NOTE(string)]                  ///  note below chart
@@ -414,26 +450,7 @@ program define sparkta
         display as error "sparkta requires Stata 17 or later"
         exit 198
     }
-
-    // - Type -
-    if "`type'" == "" local type "bar"
-    local type = lower("`type'")
-    // Aliases
-    if "`type'" == "horizontalbar" local type "hbar"
-    // v2.4.7: horizontal boxplot and violin aliases
-    if "`type'" == "hbox"    local type "hboxplot"
-    if "`type'" == "hviolin" local type "hviolinplot"
-    // v3.5.3: stacked horizontal (non-100%) alias -- passes through to Java
-    // Java aliases stackedhbar -> bar + stack=true + horizontal=true
-    local valid_types "bar line scatter pie hbar stackedbar stackedhbar stackedarea area bubble donut stackedline cibar ciline histogram stackedbar100 stackedhbar100 boxplot violin hboxplot hviolinplot coefplot eventstudy marginsplot"
-    if !`:list type in valid_types' {
-        display as error "Invalid type: `type'"
-        display as error "Valid: bar line scatter pie hbar stackedbar stackedhbar area bubble"
-        display as error "       donut stackedarea stackedline stackedbar100 stackedhbar100"
-        display as error "       cibar ciline histogram boxplot hbox violin hviolin"
-        display as error "       coefplot eventstudy marginsplot"
-        exit 198
-    }
+	
     // t2j fix8p (C2): a stacked type with a single variable has nothing to stack -- it draws
     // as a regular bar/line (this matches Stata's graph bar). Warn so the user is not surprised.
     if inlist("`type'","stackedbar","stackedhbar","stackedarea","stackedline","stackedbar100","stackedhbar100") {
