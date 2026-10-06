@@ -1,5 +1,5 @@
 {smcl}
-{* sparkta.sthlp  v3.6.0  2026-09-14  (rebuilt by verify/build_sthlp.py -- docs item 5, rev 2: Large data)}{...}
+{* sparkta.sthlp  v3.6.0  2026-10-05  (rebuilt by verify/build_sthlp.py -- docs item 5, rev 2: Large data)}{...}
 {hline}
 help for {cmd:sparkta}
 {hline}
@@ -11,15 +11,15 @@ help for {cmd:sparkta}
 {marker syntax}{...}
 {title:Syntax}
 
-{p 4 4 2}Data charts (bar, line, scatter, distributions, pie, CI charts):{p_end}
+{p 4 4 2}Data charts (bar, line, scatter, distributions, pie, CI charts, and more):{p_end}
 
 {p 8 16 2}
-{cmd:sparkta} [{varlist}] {ifin} [{cmd:,} {opt type(charttype)} {it:options}]{p_end}
+{cmd:sparkta} {it:plottype} [{varlist}] {ifin} [{cmd:,} {it:options}]{p_end}
 
 {p 4 4 2}Post-estimation charts, after any estimation command, {cmd:margins}, or from a matrix or dataset of estimates:{p_end}
 
 {p 8 16 2}
-{cmd:sparkta} {cmd:,} {cmd:type(coefplot|marginsplot|eventstudy)} [{opt matrix(M)} | {opt results(source)} | {opt estnames(names)}]
+{cmd:sparkta} {it:plottype} {cmd:,} [{opt matrix(M)} | {opt results(source)} | {opt estnames(names)}]
 [{it:options}]{p_end}
 
 {p 4 4 2}Utilities:{p_end}
@@ -35,7 +35,6 @@ help for {cmd:sparkta}
 {p2colset 8 44 44 2}
 {p2col:{it:Option}}{it:Description}{p_end}
 {p2line}
-{p2col:{helpb sparkta##types:type(charttype)}}chart type (default {cmd:bar}); 24 types{p_end}
 {p2col:{helpb sparkta##grouping:over(varname)}}group the chart by a categorical variable{p_end}
 {p2col:{helpb sparkta##grouping:by(varname)}}one panel per group{p_end}
 {p2col:{helpb sparkta##grouping:filters(varlist)}}live filter dropdowns{p_end}
@@ -70,9 +69,9 @@ histogram, box, violin and CI charts, with live filter dropdowns, range sliders,
 filters.{p_end}
 
 {p 4 4 2}
-{bf:Post-estimation charts} plot what Stata stored: {cmd:type(coefplot)} draws
-coefficients with confidence intervals (one model or several), {cmd:type(marginsplot)}
-draws the results of {cmd:margins}, and {cmd:type(eventstudy)} draws leads and lags
+{bf:Post-estimation charts} plot what Stata stored: {cmd:coefplot} draws
+coefficients with confidence intervals (one model or several), {cmd:marginsplot}
+draws the results of {cmd:margins}, and {cmd:eventstudy} draws leads and lags
 around a reference period. Each comes with a publication table beneath the chart
 (Markdown, LaTeX, CSV, PDF export) built from the same numbers. Inputs can be the last
 estimation ({cmd:e(b)}/{cmd:e(V)}, {cmd:r(table)}), stored estimates, any matrix
@@ -95,16 +94,16 @@ Microsoft Edge or Google Chrome on the machine.{p_end}
 {stata "sysuse auto, clear":sysuse auto, clear}
 
 {p2colset 8 66 66 2}
-{p2col:{stata "sparkta price, over(rep78)":sparkta price, over(rep78)}}mean price by repair record{p_end}
-{p2col:{stata "sparkta price mpg, type(scatter) fit(lfit) fitci":sparkta price mpg, type(scatter) fit(lfit) fitci}}scatter with a fit line{p_end}
-{p2col:{stata "sparkta price, type(cibar) over(rep78) filters(foreign)":sparkta price, type(cibar) over(rep78) filters(foreign)}}CI bars with a live
+{p2col:{stata "sparkta bar price, over(rep78)":sparkta bar price, over(rep78)}}mean price by repair record{p_end}
+{p2col:{stata "sparkta scatter price mpg, fit(lfit) fitci":sparkta scatter price mpg, fit(lfit) fitci}}scatter with a fit line{p_end}
+{p2col:{stata "sparkta cibar price, over(rep78) filters(foreign)":sparkta cibar price, over(rep78) filters(foreign)}}CI bars with a live
 filter{p_end}
-{p2col:{stata "sparkta price, type(violin) over(rep78) theme(dark_neon)":sparkta price, type(violin) over(rep78) theme(dark_neon)}}violins, dark
+{p2col:{stata "sparkta violin price, over(rep78) theme(dark_neon)":sparkta violin price, over(rep78) theme(dark_neon)}}violins, dark
 theme{p_end}
 {p2col:{stata "regress price mpg weight foreign":regress price mpg weight foreign}}{p_end}
-{p2col:{stata "sparkta, type(coefplot) levels(90 95)":sparkta, type(coefplot) levels(90 95)}}coefficient plot with nested CIs and a table{p_end}
+{p2col:{stata "sparkta coefplot, levels(90 95)":sparkta coefplot, levels(90 95)}}coefficient plot with nested CIs and a table{p_end}
 {p2col:{stata "margins rep78":margins rep78}}{p_end}
-{p2col:{stata "sparkta, type(marginsplot)":sparkta, type(marginsplot)}}the margins as a chart{p_end}
+{p2col:{stata "sparkta marginsplot":sparkta marginsplot}}the margins as a chart{p_end}
 {p2colreset}
 
 {marker also_see_quick}{...}
@@ -130,12 +129,6 @@ theme{p_end}
 
 {marker types}{...}
 {title:Chart types}
-
-{p 4 4 2}
-{cmd:type(}{it:charttype}{cmd:)} selects the chart. Default {cmd:bar}. The first
-column is what you write; {bf:needs} says what the type requires.
-
-{p 4 4 2}{bf:Data charts} -- plot the variables in memory (before the comma).{p_end}
 
 {p2colset 6 22 22 2}
 {p2col:{it:type}}{it:needs} -- {it:draws}{p_end}
@@ -194,13 +187,13 @@ The variables before the comma are what gets measured. Post-estimation types tak
 {p2colset 8 44 44 2}
 {p2col:{bf:bar, hbar, stacked*}}one or more numeric variables; {cmd:stat()} is applied per variable and per {cmd:over()} group{p_end}
 {p2col:{bf:line, area, stacked*}}one or more numeric variables plotted as series{p_end}
-{p2col:{bf:scatter}}{bf:y first, then x}: {cmd:sparkta price mpg, type(scatter)}{p_end}
-{p2col:{bf:bubble}}{bf:y, x, size}: {cmd:sparkta price mpg weight, type(bubble)}{p_end}
+{p2col:{bf:scatter}}{bf:y first, then x}: {cmd:sparkta price mpg scatter, }{p_end}
+{p2col:{bf:bubble}}{bf:y, x, size}: {cmd:sparkta price mpg weight bubble, }{p_end}
 {p2col:{bf:histogram}}exactly one numeric variable{p_end}
 {p2col:{bf:boxplot, hbox, violin, hviolin}}one or more numeric variables; {cmd:over()} for groups{p_end}
 {p2col:{bf:cibar, ciline}}one numeric variable; {cmd:over()} required{p_end}
-{p2col:{bf:pie, donut}}three forms: {cmd:sparkta price mpg, type(pie)} (one slice per variable total); {cmd:sparkta price, type(pie) over(rep78)}
-(group sums or shares); {cmd:sparkta, type(pie) over(rep78)} (frequency counts){p_end}
+{p2col:{bf:pie, donut}}three forms: {cmd:sparkta price mpg pie, } (one slice per variable total); {cmd:sparkta  pie price, over(rep78)}
+(group sums or shares); {cmd:sparkta pie,  over(rep78)} (frequency counts){p_end}
 {p2col:{bf:coefplot, marginsplot, eventstudy}}no varlist -- a varlist is an error{p_end}
 {p2colreset}
 
@@ -267,7 +260,6 @@ unchanged; give either the alias or the sparkta name, not both.
 {synopthdr}
 {synoptline}
 {syntab:Essential}
-{synopt:{cmd:type(}{it:charttype}{cmd:)}}chart type (default {cmd:bar}); see {helpb sparkta##types:Chart types}{p_end}
 {synopt:{cmd:over(}{it:varname [, showmissing]}{cmd:)}}group variable: all groups on one chart{p_end}
 {synopt:{cmd:by(}{it:varname [, showmissing]}{cmd:)}}panel variable: one chart per group{p_end}
 {synopt:{cmd:filters(}{it:varlist [, showmissing]}{cmd:)}}live dropdown filters (one per variable, up to 500 levels each){p_end}
@@ -433,14 +425,14 @@ allowed on post-estimation charts{p_end}
 {synopt:{cmd:gradcolors(}{it:start|end}{cmd:)}}custom gradient colours (per-series sets separated by a colon){p_end}
 
 {syntab:Bars}
-{synopt:{cmd:horizontal}}horizontal bars (= {cmd:type(hbar)}){p_end}
+{synopt:{cmd:horizontal}}horizontal bars (= {cmd:hbar}){p_end}
 {synopt:{cmd:stacked}}stack the series{p_end}
 {synopt:{cmd:barwidth(}{it:#}{cmd:)}}bar thickness 0-1 (default 0.8){p_end}
 {synopt:{cmd:bargroupwidth(}{it:#}{cmd:)}}width of a bar group 0-1 (default 0.8){p_end}
 {synopt:{cmd:borderradius(}{it:#}{cmd:)}}rounded bar corners px{p_end}
 
 {syntab:Lines and points}
-{synopt:{cmd:fill}}fill under the line (= {cmd:type(area)}){p_end}
+{synopt:{cmd:fill}}fill under the line (= {cmd:area}){p_end}
 {synopt:{cmd:areaopacity(}{it:#}{cmd:)}}area fill opacity 0-1{p_end}
 {synopt:{cmd:smooth(}{it:#}{cmd:)}}line tension 0-1 (default 0.3){p_end}
 {synopt:{cmd:stepped(}{it:before|after|middle}{cmd:)}}step line{p_end}
@@ -549,7 +541,7 @@ Suboption {cmd:showmissing} includes observations where {it:varname} is missing
 as an explicit {bf:(Missing)} group, displayed last regardless of {cmd:sortgroups()}.
 Without {cmd:showmissing}, missing observations are silently excluded.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price weight, type(bar) over(foreign)} -- one bar per variable per origin group.{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta  bar price weight, over(foreign)} -- one bar per variable per origin group.{p_end}
 
 {phang}
 {opt by(varname [, showmissing])} Creates separate chart panels for each value
@@ -561,8 +553,8 @@ for observations where {it:varname} is missing.{p_end}
 When combined, {cmd:by()} creates the panels and {cmd:over()} groups series within each panel.
 
 {p 8 8 2}{it:Examples:}{p_end}
-{p 12 12 2}{cmd:sparkta price, type(bar) by(foreign) layout(grid)} -- one panel per origin, 2-column grid{p_end}
-{p 12 12 2}{cmd:sparkta price, type(bar) over(rep78) by(foreign)} -- grouped bars by repair record, separate panel per origin{p_end}
+{p 12 12 2}{cmd:sparkta  bar price, by(foreign) layout(grid)} -- one panel per origin, 2-column grid{p_end}
+{p 12 12 2}{cmd:sparkta  bar price, over(rep78) by(foreign)} -- grouped bars by repair record, separate panel per origin{p_end}
 
 {phang}
 {opt layout(string)} Arrangement of {cmd:by()} panels. Options:
@@ -572,7 +564,7 @@ When combined, {cmd:by()} creates the panels and {cmd:over()} groups series with
 whatever is on screen, because a stacked page makes a tall narrow figure; write
 {cmd:layout(vertical)} explicitly to keep the stack in exports too.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price, by(rep78) layout(grid)}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta bar price, by(rep78) layout(grid)}{p_end}
 
 {phang}
 {opt filters(varlist [, showmissing])} Adds one interactive dropdown per variable
@@ -585,14 +577,14 @@ recomputed on the fly, and {cmd:by()} panels are all refreshed. {cmd:noallfilter
 the {it:All} entry.{p_end}
 
 {p 8 8 2}{it:Examples:}{p_end}
-{p 12 12 2}{cmd:sparkta price, over(rep78) filters(foreign)} -- toggle Domestic / Foreign{p_end}
-{p 12 12 2}{cmd:sparkta price weight, over(rep78) filters(foreign headroom)} -- two independent dropdowns{p_end}
+{p 12 12 2}{cmd:sparkta bar price, over(rep78) filters(foreign)} -- toggle Domestic / Foreign{p_end}
+{p 12 12 2}{cmd:sparkta bar price weight, over(rep78) filters(foreign headroom)} -- two independent dropdowns{p_end}
 
 {phang}
 {opt sliders(varlist)} Dual-handle range sliders for numeric variables. The viewer
 drags the handles to restrict the plotted range; everything on the page updates.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price mpg, type(scatter) fit(lfit) fitci sliders(weight)}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta scatter price mpg, fit(lfit) fitci sliders(weight)}{p_end}
 
 {phang}
 {opt sortgroups(string)} Controls the order of {cmd:over()} and {cmd:by()}
@@ -601,7 +593,7 @@ When omitted, groups are sorted ascending (numeric labels sort numerically;
 string labels sort alphabetically). Filter dropdown options are always
 sorted ascending and are unaffected.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price, over(rep78) sortgroups(desc)} -- highest repair-record group shown first.{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta bar price, over(rep78) sortgroups(desc)} -- highest repair-record group shown first.{p_end}
 
 {phang}
 {opt yfree} Give every {cmd:by()} panel its own value axis. By default all panels
@@ -628,14 +620,14 @@ When {cmd:over()} is omitted, one value is computed per variable in
 
 {p 8 8 2}
 {bf:Not applicable to boxplot and violin.} These chart types always show
-the full distribution. Specifying {cmd:stat()} with {cmd:type(boxplot)} or
-{cmd:type(violin)} produces an error (unless {cmd:stat(mean)} is given,
+the full distribution. Specifying {cmd:stat()} with {cmd:boxplot} or
+{cmd:violin} produces an error (unless {cmd:stat(mean)} is given,
 which is silently accepted but has no effect).
 
 {p 8 8 2}{it:Examples:}{p_end}
-{p 12 12 2}{cmd:sparkta price, over(rep78) stat(median)} -- median price per repair-record group{p_end}
-{p 12 12 2}{cmd:sparkta price, over(rep78) stat(count)} -- number of cars per group{p_end}
-{p 12 12 2}{cmd:sparkta price, type(pie) over(rep78) stat(sum)} -- pie slices as raw totals{p_end}
+{p 12 12 2}{cmd:sparkta bar price, over(rep78) stat(median)} -- median price per repair-record group{p_end}
+{p 12 12 2}{cmd:sparkta bar price, over(rep78) stat(count)} -- number of cars per group{p_end}
+{p 12 12 2}{cmd:sparkta pie price, over(rep78) stat(sum)} -- pie slices as raw totals{p_end}
 
 {phang}
 {opt cutout(#)} Donut hole size as a percentage of the chart radius.
@@ -651,7 +643,7 @@ Default {cmd:360} (full circle). A semicircle ({cmd:180}) combined with
 {cmd:rotation(-90)} creates a gauge-style half-donut chart.
 
 {p 8 8 2}{it:Example -- half-donut gauge:}{p_end}
-{p 12 12 2}{cmd:sparkta price, type(donut) over(rep78) circumference(180) rotation(-90)}{p_end}
+{p 12 12 2}{cmd:sparkta  donut price, over(rep78) circumference(180) rotation(-90)}{p_end}
 
 {phang}
 {opt sliceborder(#)} Border width between pie/donut slices in pixels. Default {cmd:1}.{p_end}
@@ -665,7 +657,7 @@ Default {cmd:360} (full circle). A semicircle ({cmd:180}) combined with
 {phang}
 {opt mlabel(varname)} Label each scatter point with the value of {it:varname}.
 Accepts string or numeric variables. Long labels are truncated automatically.
-Requires {cmd:type(scatter)} or {cmd:type(bubble)}.{p_end}
+Requires {cmd:scatter} or {cmd:bubble}.{p_end}
 
 {phang}
 {opt mlabpos(#)} Position of the scatter marker label, specified as a
@@ -677,10 +669,10 @@ Common values: 15 = right, 30 = below, 45 = left, 0 = centered on point.{p_end}
 {opt mlabvposition(varname)} Per-observation label position. Numeric variable
 with values 0-59 (minute-clock), one per row. Overrides {cmd:mlabpos()} for
 individual points. Useful when labels would otherwise overlap.
-Requires {cmd:mlabel()} and {cmd:type(scatter)} or {cmd:type(bubble)}.
+Requires {cmd:mlabel()} and {cmd:scatter} or {cmd:bubble}.
 
 {p 8 8 2}{it:Example -- label points by make with custom positions:}{p_end}
-{p 12 12 2}{stata "sparkta price mpg, type(scatter) mlabel(make)":sparkta price mpg, type(scatter) mlabel(make)}{p_end}
+{p 12 12 2}{stata "sparkta  scatter price mpg, mlabel(make)":sparkta  scatter price mpg, mlabel(make)}{p_end}
 
 {dlgtab:Fit lines and CI bands}
 
@@ -700,9 +692,9 @@ Supported for {cmd:lfit}, {cmd:qfit}, {cmd:exp}, {cmd:log},
 (producing an asymmetric band, wider above the line than below).
 
 {p 8 8 2}{it:Examples:}{p_end}
-{p 12 12 2}{stata "sparkta price mpg, type(scatter) fit(lfit) fitci":sparkta price mpg, type(scatter) fit(lfit) fitci}{p_end}
-{p 12 12 2}{stata "sparkta price mpg, type(scatter) fit(qfit) fitci sliders(mpg)":sparkta price mpg, type(scatter) fit(qfit) fitci sliders(mpg)}{p_end}
-{p 12 12 2}{stata "sparkta price mpg, type(scatter) over(foreign) fit(lfit)":sparkta price mpg, type(scatter) over(foreign) fit(lfit)}{p_end}
+{p 12 12 2}{stata "sparkta  scatter price mpg, fit(lfit) fitci":sparkta scatter price mpg, fit(lfit) fitci}{p_end}
+{p 12 12 2}{stata "sparkta  scatter price mpg, fit(qfit) fitci sliders(mpg)":sparkta scatter price mpg, fit(qfit) fitci sliders(mpg)}{p_end}
+{p 12 12 2}{stata "sparkta  scatter price mpg, over(foreign) fit(lfit)":sparkta scatter price mpg, over(foreign) fit(lfit)}{p_end}
 
 {marker ci_opts}{...}
 {dlgtab:CI charts}
@@ -731,7 +723,7 @@ Stata's own {cmd:histogram} rule is used: k = min(sqrt(N), 10*ln(N)/ln(10)),
 rounded down, so the default matches {cmd:histogram varname} in Stata. Fewer bins reveal
 broad shape, more reveal fine structure.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price, type(histogram) bins(20)}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta histogram price, bins(20)}{p_end}
 
 {phang}
 {opt histtype(string)} Y-axis metric.
@@ -743,8 +735,8 @@ broad shape, more reveal fine structure.
 {p2colreset}
 
 {p 8 8 2}{it:Examples:}{p_end}
-{p 12 12 2}{cmd:sparkta price, type(histogram) histtype(density)} -- area sums to 1, comparable across groups{p_end}
-{p 12 12 2}{cmd:sparkta price, type(histogram) histtype(frequency)} -- raw counts, easiest to interpret{p_end}
+{p 12 12 2}{cmd:sparkta histogram price, histtype(density)} -- area sums to 1, comparable across groups{p_end}
+{p 12 12 2}{cmd:sparkta histogram price, histtype(frequency)} -- raw counts, easiest to interpret{p_end}
 
 {p 8 8 2}
 {cmd:histogram} does not support {cmd:over()}. Use {cmd:by()} to produce
@@ -761,8 +753,8 @@ Use a larger value (e.g. {cmd:3}) to show fewer outliers; a smaller value
 (e.g. {cmd:1}) to show more.
 
 {p 8 8 2}{it:Examples:}{p_end}
-{p 12 12 2}{cmd:sparkta price, type(boxplot) over(rep78) whiskerfence(1.5)} -- standard Tukey (default){p_end}
-{p 12 12 2}{cmd:sparkta price, type(boxplot) over(rep78) whiskerfence(3)} -- extreme-value fences, fewer outliers shown{p_end}
+{p 12 12 2}{cmd:sparkta boxplot price, over(rep78) whiskerfence(1.5)} -- standard Tukey (default){p_end}
+{p 12 12 2}{cmd:sparkta boxplot price, over(rep78) whiskerfence(3)} -- extreme-value fences, fewer outliers shown{p_end}
 
 {phang}
 {opt mediancolor(string)} Override the automatic median marker color with a
@@ -777,7 +769,7 @@ a dark marker.{p_end}
 always shown as a filled circle (dot). Like {cmd:mediancolor()}, the default
 is chosen from fill luminance. Use this option to set a specific color.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price, type(boxplot) over(rep78) mediancolor(#e74c3c) meancolor(#2980b9)}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta boxplot price, over(rep78) mediancolor(#e74c3c) meancolor(#2980b9)}{p_end}
 
 {phang}
 {opt bandwidth(#)} KDE bandwidth for {cmd:violin} and {cmd:hviolin} charts.
@@ -828,14 +820,14 @@ given.{p_end}
 
 {p 4 4 2}
 {bf:r() does not survive sparkta.} The command runs helpers that clear {cmd:r()}. For
-{cmd:type(marginsplot)} it snapshots the margins results first and restores them
-afterwards, so {cmd:sparkta, type(marginsplot)} can be repeated. For anything else,
+{cmd:marginsplot} it snapshots the margins results first and restores them
+afterwards, so {cmd:sparkta marginsplot} can be repeated. For anything else,
 if you need {cmd:r(table)} after the chart, store it first ({cmd:matrix T = r(table)}).{p_end}
 
 {dlgtab:coefplot}
 
 {p 4 4 2}
-{cmd:sparkta, type(coefplot)} after any estimation command draws one marker per
+{cmd:sparkta coefplot} after any estimation command draws one marker per
 coefficient with its confidence interval, coefficients down the y-axis in estimation
 order and a reference line at 0. {cmd:vertical} puts the coefficients along x.
 {cmd:_cons} is dropped by default (as {cmd:coefplot} does); {cmd:cons} keeps it. Base and
@@ -869,7 +861,7 @@ the reference line; {cmd:pexline(#)} adds a second one.{p_end}
 
 {p 4 4 2}{bf:Several models}{p_end}
 {p 8 8 2}
-{cmd:estimates store m1} ... then {cmd:sparkta, type(coefplot) estnames(m1 m2 m3)}
+{cmd:estimates store m1} ... then {cmd:sparkta coefplot,  estnames(m1 m2 m3)}
 draws the models side by side (dodged markers, one colour each), {cmd:estlabels(OLS~IV~GMM)}
 (or Jann's {cmd:plotlabels("OLS" "IV" "GMM")}) names them, {cmd:pointstyles(circle rect triangle)}
 gives each a shape, and the publication table gets one column per model. Several
@@ -883,16 +875,16 @@ the key above the chart says so. {cmd:connected} joins the estimates with a line
 
 {p 8 8 2}{it:Examples:}{p_end}
 {p 12 12 2}{cmd:regress price mpg weight foreign}{p_end}
-{p 12 12 2}{cmd:sparkta, type(coefplot) levels(90 95) cistyle(band)}{p_end}
-{p 12 12 2}{cmd:sparkta, type(coefplot) show(mpg weight) coeflabels(mpg = "Miles per gallon") coefsort(abs)}{p_end}
+{p 12 12 2}{cmd:sparkta coefplot,  levels(90 95) cistyle(band)}{p_end}
+{p 12 12 2}{cmd:sparkta coefplot,  show(mpg weight) coeflabels(mpg = "Miles per gallon") coefsort(abs)}{p_end}
 {p 12 12 2}{cmd:logit foreign mpg weight}{p_end}
-{p 12 12 2}{cmd:sparkta, type(coefplot) eform title("Odds ratios")}{p_end}
-{p 12 12 2}{cmd:estimates store m1} ... {cmd:sparkta, type(coefplot) estnames(m1 m2 m3) estlabels(Base~Controls~Full)}{p_end}
+{p 12 12 2}{cmd:sparkta coefplot,  eform title("Odds ratios")}{p_end}
+{p 12 12 2}{cmd:estimates store m1} ... {cmd:sparkta coefplot,  estnames(m1 m2 m3) estlabels(Base~Controls~Full)}{p_end}
 
 {dlgtab:marginsplot}
 
 {p 4 4 2}
-{cmd:sparkta, type(marginsplot)} after {cmd:margins} draws what Stata's
+{cmd:sparkta marginsplot, } after {cmd:margins} draws what Stata's
 {cmd:marginsplot} would: one point (with CI) per margin, factor levels or {cmd:at()}
 values along x, the variable name as the x title, the value labels as tick labels.
 The axis hugs the data like Stata's (it is not forced to include zero).
@@ -915,22 +907,22 @@ long CI tails.{p_end}
 
 {p 4 4 2}
 {bf:From a saved margins dataset.} {cmd:margins ..., saving(m.dta)} then
-{cmd:sparkta, type(marginsplot) results(m)} reproduces the chart without the model in
+{cmd:sparkta marginsplot,  results(m)} reproduces the chart without the model in
 memory. Any tidy table works when you map its columns:
 {cmd:results(m, b(margin) se(se) at(mpg) factors(foreign))} -- see {helpb sparkta##results:results()}.{p_end}
 
 {p 8 8 2}{it:Examples:}{p_end}
 {p 12 12 2}{cmd:regress price i.rep78 mpg}{p_end}
 {p 12 12 2}{cmd:margins rep78}{p_end}
-{p 12 12 2}{cmd:sparkta, type(marginsplot) cistyle(area whisker) connected}{p_end}
+{p 12 12 2}{cmd:sparkta marginsplot,  cistyle(area whisker) connected}{p_end}
 {p 12 12 2}{cmd:regress price i.foreign##c.mpg}{p_end}
 {p 12 12 2}{cmd:margins foreign, at(mpg=(15 20 25 30 35))}{p_end}
-{p 12 12 2}{cmd:sparkta, type(marginsplot) over(foreign) cistyle(area) levels(90 95)}{p_end}
+{p 12 12 2}{cmd:sparkta marginsplot,  over(foreign) cistyle(area) levels(90 95)}{p_end}
 
 {dlgtab:eventstudy}
 
 {p 4 4 2}
-{cmd:sparkta, type(eventstudy)} draws coefficients against relative event time: leads
+{cmd:sparkta eventstudy, } draws coefficients against relative event time: leads
 (before the event) in one colour, lags (after it) in another, a hollow marker with no
 interval at the reference period, and a vertical line at 0. It needs coefficients whose
 names carry the period. Recognised name patterns: {cmd:lead3 lag2}, {cmd:lead_3 lag_2},
@@ -940,10 +932,10 @@ summary rows (kept off the axis unless {cmd:show(*)}).{p_end}
 
 {p2colset 8 40 40 2}
 {p2col:{bf:from a regression}}{cmd:regress y lead5 ... lead2 lag0 ... lag5 i.t i.id} then
-{cmd:sparkta, type(eventstudy) show(lead5 lead4 lead3 lead2 lag0 lag1 lag2 lag3 lag4 lag5)}. Use {cmd:show()} to leave the fixed effects out.{p_end}
-{p2col:{bf:from csdid / jwdid}}after {cmd:estat event}: {cmd:sparkta, type(eventstudy) matrix(r(table))}{p_end}
-{p2col:{bf:from lwdid}}{cmd:lwdid ..., save(ev)} then {cmd:sparkta, type(eventstudy) results(ev)}{p_end}
-{p2col:{bf:from any matrix}}rows b / se / pvalue (or ll ul), column names = periods: {cmd:sparkta, type(eventstudy) matrix(E)}{p_end}
+{cmd:sparkta eventstudy,  show(lead5 lead4 lead3 lead2 lag0 lag1 lag2 lag3 lag4 lag5)}. Use {cmd:show()} to leave the fixed effects out.{p_end}
+{p2col:{bf:from csdid / jwdid}}after {cmd:estat event}: {cmd:sparkta eventstudy,  matrix(r(table))}{p_end}
+{p2col:{bf:from lwdid}}{cmd:lwdid ..., save(ev)} then {cmd:sparkta eventstudy,  results(ev)}{p_end}
+{p2col:{bf:from any matrix}}rows b / se / pvalue (or ll ul), column names = periods: {cmd:sparkta eventstudy,  matrix(E)}{p_end}
 {p2colreset}
 
 {p 4 4 2}
@@ -986,10 +978,10 @@ estimates only draws points without intervals.{p_end}
 {p 8 8 2}{it:Examples:}{p_end}
 {p 12 12 2}{cmd:regress price mpg weight foreign}{p_end}
 {p 12 12 2}{cmd:matrix T = r(table)}{p_end}
-{p 12 12 2}{cmd:sparkta, type(coefplot) matrix(T)}{p_end}
+{p 12 12 2}{cmd:sparkta coefplot,  matrix(T)}{p_end}
 {p 12 12 2}{cmd:matrix A = (0.5, 1.2, -0.3 \ 0.1, 0.2, 0.15)}{p_end}
 {p 12 12 2}{cmd:matrix colnames A = x1 x2 x3}{p_end}
-{p 12 12 2}{cmd:sparkta, type(coefplot) matrix(A) se(2) df(40)}{p_end}
+{p 12 12 2}{cmd:sparkta coefplot,  matrix(A) se(2) df(40)}{p_end}
 
 {marker results}{...}
 {dlgtab:results()}
@@ -1033,23 +1025,23 @@ variable labels are used for the axis and the key, so a {cmd:results()} page loo
 same whatever is in memory.{p_end}
 
 {p 8 8 2}{it:Examples:}{p_end}
-{p 12 12 2}{cmd:parmest, saving(pe.dta, replace)} ... {cmd:sparkta, type(coefplot) results(pe) omit(_cons)}{p_end}
-{p 12 12 2}{cmd:sparkta, type(coefplot) results(frame:res, name(parm) b(estimate) ci(min95 max95))}{p_end}
-{p 12 12 2}{cmd:margins rep78, saving(mg, replace)} ... {cmd:sparkta, type(marginsplot) results(mg)}{p_end}
+{p 12 12 2}{cmd:parmest, saving(pe.dta, replace)} ... {cmd:sparkta coefplot,  results(pe) omit(_cons)}{p_end}
+{p 12 12 2}{cmd:sparkta coefplot,  results(frame:res, name(parm) b(estimate) ci(min95 max95))}{p_end}
+{p 12 12 2}{cmd:margins rep78, saving(mg, replace)} ... {cmd:sparkta marginsplot,  results(mg)}{p_end}
 {p 12 12 2}{cmd:collapse (mean) margin=price (semean) se=price, by(foreign mpg_bin)}{p_end}
-{p 12 12 2}{cmd:sparkta, type(marginsplot) results(frame:tab, b(margin) se(se) at(mpg_bin) factors(foreign))}{p_end}
+{p 12 12 2}{cmd:sparkta marginsplot,  results(frame:tab, b(margin) se(se) at(mpg_bin) factors(foreign))}{p_end}
 
 {marker pubtable}{...}
 {dlgtab:Publication table (post-estimation)}
 
 {pstd}
-For {cmd:type(coefplot)}, {cmd:type(eventstudy)} and {cmd:type(marginsplot)},
+For {cmd:coefplot}, {cmd:eventstudy} and {cmd:marginsplot},
 sparkta renders a publication-quality table beneath the chart. The chart and the
 table are built from one source, so they can never disagree. For coefficient
 charts the on-page table is an interactive, sortable grid (click a column header
 to sort; coefficients across the rows, models across the columns) with a
 {cmd:[Publication | Detailed]} toggle -- Detailed is the classic estimation-output
-table. For {cmd:type(marginsplot)} the rows are the margin levels / at-values and
+table. For {cmd:marginsplot} the rows are the margin levels / at-values and
 the columns are the series.
 
 {pstd}
@@ -1095,9 +1087,9 @@ results: {cmd:rsq arsq fstat fpval ll chi2 rmse dep_mean}; quoted entries follow
 
 {p 8 8 2}{it:Examples:}{p_end}
 {p 12 12 2}{cmd:regress price mpg weight foreign}{p_end}
-{p 12 12 2}{cmd:sparkta, type(coefplot) tstat interval}{p_end}
-{p 12 12 2}{cmd:sparkta, type(coefplot) estnames(m1 m2 m3) headings(1 "Size"|2 "Origin") indicators("Controls/No No Yes")}{p_end}
-{p 12 12 2}{cmd:sparkta, type(coefplot) stars(0.05 0.01) nofooter}{p_end}
+{p 12 12 2}{cmd:sparkta coefplot,  tstat interval}{p_end}
+{p 12 12 2}{cmd:sparkta coefplot,  estnames(m1 m2 m3) headings(1 "Size"|2 "Origin") indicators("Controls/No No Yes")}{p_end}
+{p 12 12 2}{cmd:sparkta coefplot,  stars(0.05 0.01) nofooter}{p_end}
 
 {marker colours}{...}
 {dlgtab:Colour grammar}
@@ -1127,7 +1119,7 @@ any package.{p_end}
 {p 8 8 2}{it:Examples:}{p_end}
 {p 12 12 2}{cmd:sparkta price weight, over(foreign) colors(navy maroon%60)}{p_end}
 {p 12 12 2}{cmd:sparkta price, over(rep78) palette(okabe)}{p_end}
-{p 12 12 2}{cmd:sparkta, type(coefplot) estnames(m1 m2) colors("230 159 0" "0 114 178") cicolors(gs8|gs8)}{p_end}
+{p 12 12 2}{cmd:sparkta coefplot,  estnames(m1 m2) colors("230 159 0" "0 114 178") cicolors(gs8|gs8)}{p_end}
 
 {phang}
 {opt bgcolor(color)} Page background. {opt plotcolor(color)} chart card background.
@@ -1198,7 +1190,7 @@ Example: {cmd:apoint(15000 25 20000 30)} places markers at (y=15000, x=25)
 and (y=20000, x=30). Note: y comes before x, matching Stata's {cmd:scatteri} convention.
 
 {p 8 8 2}{it:Example -- highlight two points on a scatter:}{p_end}
-{p 12 12 2}{cmd:sparkta price mpg, type(scatter) apoint(4099 22 15906 12) apointcolor(red|navy)}{p_end}
+{p 12 12 2}{cmd:sparkta  scatter price mpg, apoint(4099 22 15906 12) apointcolor(red|navy)}{p_end}
 
 {phang}
 {opt apointcolor(colors)} Colors for annotation points, pipe-separated.
@@ -1229,7 +1221,7 @@ to the right of (15000, 25) and the second label below (20000, 30).
 Must be paired with {cmd:alabeltext()}.
 
 {p 8 8 2}{it:Example -- two labels, first to the right, second below:}{p_end}
-{p 12 12 2}{cmd:sparkta price mpg, type(scatter) alabelpos(4099 22 15|15906 12 30) alabeltext(Economy|Luxury)}{p_end}
+{p 12 12 2}{cmd:sparkta  scatter price mpg, alabelpos(4099 22 15|15906 12 30) alabeltext(Economy|Luxury)}{p_end}
 
 {phang}
 {opt alabeltext(texts)} Text content for annotation labels, pipe-separated.
@@ -1255,7 +1247,7 @@ Example: {cmd:aellipse(10000 20 20000 30)} draws one ellipse;
 {cmd:aellipse(10000 20 20000 30|5000 10 8000 15)} draws two.
 
 {p 8 8 2}{it:Example -- highlight a cluster on a scatter plot:}{p_end}
-{p 12 12 2}{cmd:sparkta price mpg, type(scatter) aellipse(3000 25 6000 35) aellipsecolor(rgba(255,165,0,0.15)) aellipseborder(orange)}{p_end}
+{p 12 12 2}{cmd:sparkta  scatter price mpg, aellipse(3000 25 6000 35) aellipsecolor(rgba(255,165,0,0.15)) aellipseborder(orange)}{p_end}
 
 {phang}
 {opt aellipsecolor(colors)} Fill color per ellipse, pipe-separated.
@@ -1288,7 +1280,7 @@ the CDN instead.
 {phang}
 {opt ytitle(string)} Label for the y-axis.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price mpg, type(scatter) xtitle(Mileage (mpg)) ytitle(Price (USD))}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta  scatter price mpg, xtitle(Mileage (mpg)) ytitle(Price (USD))}{p_end}
 
 {phang}
 {opt xrange(min max)} X-axis minimum and maximum (two numbers). Example: {cmd:xrange(0 100)}.
@@ -1319,14 +1311,14 @@ date on a {cmd:linear} axis.{p_end}
 {opt ytype(string)} Y-axis scale type. Options: {cmd:linear} (default) |
 {cmd:logarithmic}.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price mpg, type(scatter) ytype(logarithmic)} -- compresses right-skewed price values for cleaner scatter
+{p 8 8 2}{it:Example:} {cmd:sparkta  scatter price mpg, ytype(logarithmic)} -- compresses right-skewed price values for cleaner scatter
 patterns.{p_end}
 
 {phang}
 {opt y2(varlist)} One or more variables to plot on the right (secondary) y-axis.
 Each variable must also appear in {it:varlist}. The right axis is independently
-scaled and labelled. Works with {cmd:type(bar)} and {cmd:type(line)} charts that
-include {cmd:over()}. Example: {cmd:sparkta price mpg, type(line) over(foreign) y2(mpg)}.{p_end}
+scaled and labelled. Works with {cmd:bar} and {cmd:line} charts that
+include {cmd:over()}. Example: {cmd:sparkta line price mpg, over(foreign) y2(mpg)}.{p_end}
 
 {phang}
 {opt y2title(string)} Label for the right y-axis.{p_end}
@@ -1381,7 +1373,7 @@ Applied left-to-right across the existing tick positions.
 
 {phang}
 {opt horizontal} Render a bar chart with horizontal bars.
-Equivalent to {cmd:type(hbar)}.{p_end}
+Equivalent to {cmd:hbar}.{p_end}
 
 {phang}
 {opt stacked} Stack multiple series on top of each other.
@@ -1389,22 +1381,22 @@ Applies to bar and area charts.{p_end}
 
 {phang}
 {opt fill} Fill the area between a line chart and the baseline.
-Equivalent to {cmd:type(area)}.{p_end}
+Equivalent to {cmd:area}.{p_end}
 
 {phang}
-{opt areaopacity(#)} Fill opacity for {cmd:type(area)} and {cmd:fill} charts.
+{opt areaopacity(#)} Fill opacity for {cmd:area} and {cmd:fill} charts.
 Accepts values from 0 (invisible) to 1 (fully opaque). Default is {cmd:0.35}.
 When multiple variables share an axis, lower values (0.3{hline 1}0.5) keep
 both fills visible. The y-axis is automatically anchored at zero for area charts.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price weight, type(area) over(foreign) areaopacity(0.4)}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta  area price weight, over(foreign) areaopacity(0.4)}{p_end}
 
 {phang}
 {opt smooth(#)} Line smoothness (Bezier tension), 0 to 1.
 {cmd:smooth(0)} produces sharp corners; {cmd:smooth(0.6)} produces flowing curves.
 Default is {cmd:0.3}.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price, type(line) over(rep78) smooth(0.6)}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta  line price, over(rep78) smooth(0.6)}{p_end}
 
 {phang}
 {opt spanmissing} Connect lines across missing values instead of breaking.{p_end}
@@ -1415,7 +1407,7 @@ Options: {cmd:before} | {cmd:after} | {cmd:middle}.
 {cmd:before} steps up before reaching the x-value; {cmd:after} steps after;
 {cmd:middle} centers the step at the midpoint between x-values.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price, type(line) over(rep78) stepped(after)}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta  line price, over(rep78) stepped(after)}{p_end}
 
 {dlgtab:Bar appearance}
 
@@ -1450,7 +1442,7 @@ Use {cmd:pointsize(0)} to hide markers.{p_end}
 {cmd:circle} (default) | {cmd:cross} | {cmd:dash} | {cmd:line} |
 {cmd:rect} | {cmd:rectRounded} | {cmd:star} | {cmd:triangle}.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price mpg, type(scatter) pointstyle(triangle) pointsize(6)}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta  scatter price mpg, pointstyle(triangle) pointsize(6)}{p_end}
 
 {phang}
 {opt pointborderwidth(#)} Border width of point markers in pixels. Default {cmd:1}.{p_end}
@@ -1499,7 +1491,7 @@ transparent at the bottom, creating a clean fade effect. On bar charts,
 the gradient runs from the full color at the top to 60% opacity at the
 bottom, adding subtle depth.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price, type(area) over(rep78) gradient}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta  area price, over(rep78) gradient}{p_end}
 
 {phang}
 {opt gradcolors(c1|c2)} Set custom start and end colors for the gradient,
@@ -1511,7 +1503,7 @@ needing to also specify {cmd:gradient}. {cmd:gradient} has no effect on line-onl
 scatter, pie/donut, histogram, boxplot, or violin charts.
 
 {p 8 8 2}{it:Example -- blue fade on an area chart:}{p_end}
-{p 12 12 2}{cmd:sparkta price, type(area) over(rep78) gradcolors(#1e40af|transparent)}{p_end}
+{p 12 12 2}{cmd:sparkta  area price, over(rep78) gradcolors(#1e40af|transparent)}{p_end}
 
 {phang}
 {opt leglabels(list)} Rename legend entries using a pipe-separated list, applied
@@ -1671,7 +1663,7 @@ hides when the cursor leaves it.
 {cmd:index} shows all series values at the hovered x-position simultaneously --
 useful for comparing multiple lines at a glance.
 
-{p 8 8 2}{it:Example:} {cmd:sparkta price weight, type(line) over(foreign) tooltipmode(index)}{p_end}
+{p 8 8 2}{it:Example:} {cmd:sparkta  line price weight, over(foreign) tooltipmode(index)}{p_end}
 
 {phang}
 {opt tooltipposition(string)} Tooltip placement. Options: {cmd:average}
@@ -1804,9 +1796,6 @@ Useful when value labels are long or when you need to display the underlying cod
 {dlgtab:Page, title and export}
 
 {phang}
-{opt type(charttype)} Chart type. Default {cmd:bar}. See {helpb sparkta##types:Chart types}.{p_end}
-
-{phang}
 {opt title(string)} Main heading. {opt subtitle(string)} replaces the automatic
 one-line description under it; {opt note(string)} and {opt caption(string)} go below
 the chart; {opt notimestamp} drops the {it:Made with sparkta ...} footer line.{p_end}
@@ -1863,10 +1852,10 @@ faster route (one SVG from the browser, PNG/PDF made in Java); the output is the
 
 {p 8 8 2}{it:Examples:}{p_end}
 {p 12 12 2}{cmd:sparkta price, over(rep78) export(fig1.html) saveas(fig1.png fig1.pdf)}{p_end}
-{p 12 12 2}{cmd:sparkta price, type(boxplot) by(rep78) export(fig2.html) saveas(fig2.pdf)} -- panels two across{p_end}
-{p 12 12 2}{cmd:sparkta price, type(boxplot) by(rep78) layout(vertical) export(fig2.html) saveas(fig2.pdf)} -- stacked{p_end}
-{p 12 12 2}{cmd:sparkta, type(coefplot) export(cp.html) saveas("out/coef table.pdf", table)}{p_end}
-{p 12 12 2}{cmd:sparkta, type(coefplot) export(cp.html) saveas(cp.png, page scale(3) close)}{p_end}
+{p 12 12 2}{cmd:sparkta  boxplot price, by(rep78) export(fig2.html) saveas(fig2.pdf)} -- panels two across{p_end}
+{p 12 12 2}{cmd:sparkta  boxplot price, by(rep78) layout(vertical) export(fig2.html) saveas(fig2.pdf)} -- stacked{p_end}
+{p 12 12 2}{cmd:sparkta coefplot,  export(cp.html) saveas("out/coef table.pdf", table)}{p_end}
+{p 12 12 2}{cmd:sparkta coefplot,  export(cp.html) saveas(cp.png, page scale(3) close)}{p_end}
 
 {marker examples}{...}
 {title:Examples}
@@ -1899,27 +1888,27 @@ Add a title and an interactive filter dropdown:{p_end}
 CI bar chart with live filter and stats panel:{p_end}
 
 {p 8 8 2}
-{stata "sparkta price, type(cibar) over(rep78) filters(foreign)":sparkta price, type(cibar) over(rep78) filters(foreign)}
+{stata "sparkta  cibar price, over(rep78) filters(foreign)":sparkta  cibar price, over(rep78) filters(foreign)}
 
 {dlgtab:Scatter and fit lines}
 
 {p 8 8 2}
-{stata "sparkta price mpg, type(scatter)":sparkta price mpg, type(scatter)}{p_end}
+{stata "sparkta price mpg scatter, ":sparkta price mpg scatter, }{p_end}
 {p 8 8 2}
-{stata "sparkta price mpg, type(scatter) fit(lowess) fitci":sparkta price mpg, type(scatter) fit(lowess) fitci}{p_end}
+{stata "sparkta  scatter price mpg, fit(lowess) fitci":sparkta  scatter price mpg, fit(lowess) fitci}{p_end}
 {p 8 8 2}
-{stata "sparkta price mpg, type(scatter) fit(qfit) fitci sliders(mpg)":sparkta price mpg, type(scatter) fit(qfit) fitci sliders(mpg)}{p_end}
+{stata "sparkta  scatter price mpg, fit(qfit) fitci sliders(mpg)":sparkta  scatter price mpg, fit(qfit) fitci sliders(mpg)}{p_end}
 {p 8 8 2}
-{stata "sparkta price mpg, type(scatter) over(foreign) fit(lfit)":sparkta price mpg, type(scatter) over(foreign) fit(lfit)}
+{stata "sparkta  scatter price mpg, over(foreign) fit(lfit)":sparkta  scatter price mpg, over(foreign) fit(lfit)}
 
 {dlgtab:Distributions}
 
 {p 8 8 2}
-{stata "sparkta price, type(histogram)":sparkta price, type(histogram)}{p_end}
+{stata "sparkta price histogram, ":sparkta price histogram, }{p_end}
 {p 8 8 2}
-{stata "sparkta price, type(boxplot) over(rep78)":sparkta price, type(boxplot) over(rep78)}{p_end}
+{stata "sparkta  boxplot price, over(rep78)":sparkta  boxplot price, over(rep78)}{p_end}
 {p 8 8 2}
-{stata "sparkta price, type(violin) over(rep78) theme(dark_neon)":sparkta price, type(violin) over(rep78) theme(dark_neon)}
+{stata "sparkta  violin price, over(rep78) theme(dark_neon)":sparkta  violin price, over(rep78) theme(dark_neon)}
 
 {dlgtab:Panels}
 
@@ -1942,7 +1931,7 @@ Arrange panels in a grid:{p_end}
 {p 8 8 2}
 {stata "sparkta price, over(rep78) sliders(mpg)":sparkta price, over(rep78) sliders(mpg)}{p_end}
 {p 8 8 2}
-{stata "sparkta price, type(cibar) over(rep78) filters(foreign) sliders(mpg)":sparkta price, type(cibar) over(rep78) filters(foreign) sliders(mpg)}
+{stata "sparkta  cibar price, over(rep78) filters(foreign) sliders(mpg)":sparkta  cibar price, over(rep78) filters(foreign) sliders(mpg)}
 
 {dlgtab:Reference lines and annotations}
 
@@ -1969,28 +1958,28 @@ Arrange panels in a grid:{p_end}
 {p 8 8 2}
 {stata "regress price mpg weight foreign":regress price mpg weight foreign}{p_end}
 {p 8 8 2}
-{stata "sparkta, type(coefplot) nocons levels(90 95)":sparkta, type(coefplot) nocons levels(90 95)}{p_end}
+{stata "sparkta coefplot,  nocons levels(90 95)":sparkta coefplot,  nocons levels(90 95)}{p_end}
 {p 8 8 2}
-{stata "sparkta, type(coefplot) cistyle(band) connected coefsort(abs) tstat":sparkta, type(coefplot) cistyle(band) connected coefsort(abs) tstat}{p_end}
+{stata "sparkta coefplot,  cistyle(band) connected coefsort(abs) tstat":sparkta coefplot,  cistyle(band) connected coefsort(abs) tstat}{p_end}
 {p 8 8 2}
 {stata "regress price i.rep78 mpg":regress price i.rep78 mpg}{p_end}
 {p 8 8 2}
 {stata "margins rep78":margins rep78}{p_end}
 {p 8 8 2}
-{stata "sparkta, type(marginsplot) cistyle(area whisker) connected":sparkta, type(marginsplot) cistyle(area whisker) connected}{p_end}
+{stata "sparkta marginsplot,  cistyle(area whisker) connected":sparkta marginsplot,  cistyle(area whisker) connected}{p_end}
 {p 8 8 2}
 {stata "regress price i.foreign##c.mpg":regress price i.foreign##c.mpg}{p_end}
 {p 8 8 2}
 {stata "margins foreign, at(mpg=(15 20 25 30 35))":margins foreign, at(mpg=(15 20 25 30 35))}{p_end}
 {p 8 8 2}
-{stata "sparkta, type(marginsplot) over(foreign) cistyle(area)":sparkta, type(marginsplot) over(foreign) cistyle(area)}{p_end}
+{stata "sparkta marginsplot,  over(foreign) cistyle(area)":sparkta marginsplot,  over(foreign) cistyle(area)}{p_end}
 
 {dlgtab:Export to files}
 
 {p 8 8 2}
-{stata `"sparkta price, type(cibar) over(rep78) export("prices.html")"':{space 2}sparkta price, type(cibar) over(rep78) export("prices.html")}{p_end}
+{stata `"sparkta  cibar price, over(rep78) export("prices.html")"':{space 2}sparkta  cibar price, over(rep78) export("prices.html")}{p_end}
 {p 8 8 2}
-{cmd:sparkta price, type(cibar) over(rep78) export(prices.html) saveas(prices.png prices.pdf)}
+{cmd:sparkta  cibar price, over(rep78) export(prices.html) saveas(prices.png prices.pdf)}
 
 {marker stats_panel}{...}
 {title:Summary statistics panel}
@@ -2035,7 +2024,7 @@ nothing.
 {p 4 4 2}
 {cmd:sparkta} stores nothing in {cmd:e()} or {cmd:r()}. It is a display command
 that produces files as a side effect. {cmd:e()} survives the call; {cmd:r()} does not
-(margins results are restored for {cmd:type(marginsplot)} only). {cmd:sparkta, findbrowser}
+(margins results are restored for {cmd:marginsplot} only). {cmd:sparkta, findbrowser}
 sets {cmd:global SPARKTA_BROWSER_FOUND}.
 
 {marker mistakes}{...}
@@ -2046,22 +2035,22 @@ The errors that trip up most new users.{p_end}
 
 {p 4 8 4}
 {bf:1. Scatter x/y reversed.}
-{cmd:sparkta mpg price, type(scatter)} puts mpg on the y-axis and price on x.
-If you want price on y: {cmd:sparkta price mpg, type(scatter)}.{p_end}
+{cmd:sparkta mpg price scatter, } puts mpg on the y-axis and price on x.
+If you want price on y: {cmd:sparkta price mpg scatter, }.{p_end}
 {pmore}
 {bf:Rule: y comes first, then x.}{p_end}
 
 {p 4 8 4}
 {bf:2. Pie chart with one variable and no over().}
-{cmd:sparkta price, type(pie)} will error: one variable has nothing to slice. Either
-give several variables ({cmd:sparkta price mpg, type(pie)}), one variable plus
+{cmd:sparkta price pie, } will error: one variable has nothing to slice. Either
+give several variables ({cmd:sparkta price mpg pie, }), one variable plus
 {cmd:over()}, or {cmd:over()} alone for frequency counts.{p_end}
 
 {p 4 8 4}
 {bf:3. histogram with over().}
-{cmd:sparkta price, type(histogram) over(rep78)} is not supported.
+{cmd:sparkta  histogram price, over(rep78)} is not supported.
 For separate histograms per group, use {cmd:by()}:
-{cmd:sparkta price, type(histogram) by(foreign)}.{p_end}
+{cmd:sparkta  histogram price, by(foreign)}.{p_end}
 
 {p 4 8 4}
 {bf:4. Combining over() and by() with pie or donut.}
@@ -2084,13 +2073,13 @@ per-entry options ({cmd:cicolors()}, {cmd:ylinecolor()}) are pipe-separated.{p_e
 
 {p 4 8 4}
 {bf:7. A varlist with a post-estimation type.}
-{cmd:sparkta price, type(coefplot)} is an error: coefplot, marginsplot and eventstudy
-read stored results, never the data. Write {cmd:sparkta, type(coefplot)}.{p_end}
+{cmd:sparkta price coefplot,} is an error: coefplot, marginsplot and eventstudy
+read stored results, never the data. Write {cmd:sparkta coefplot,}.{p_end}
 
 {p 4 8 4}
 {bf:8. Expecting r() to survive.}
 A sparkta call clears {cmd:r()} (except the margins results it restores for
-{cmd:type(marginsplot)}). Save {cmd:r(table)} to a matrix first if you need it after the chart.{p_end}
+{cmd:marginsplot}). Save {cmd:r(table)} to a matrix first if you need it after the chart.{p_end}
 
 {p 4 8 4}
 {bf:9. A rebuilt jar and a version mismatch.}
