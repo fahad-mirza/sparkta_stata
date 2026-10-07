@@ -13,7 +13,7 @@ One command. Zero dependencies. No Python. No R. No server.
 
 ```stata
 sysuse auto, clear
-sparkta price, type(cibar) over(rep78) title("Mean Price by Repair Record")
+sparkta cibar price, over(rep78) title("Mean Price by Repair Record")
 ```
 
 *Your browser opens. An interactive, shareable `.html` file is written to disk.*
@@ -88,7 +88,7 @@ the file makes **zero external network requests** when opened in a browser.
 
 ```stata
 * Fully air-gapped -- all JS bundled inside the HTML (~280 KB)
-sparkta price, type(cibar) over(rep78) offline export("secure/chart.html")
+sparkta cibar price, over(rep78) offline export("secure/chart.html")
 ```
 
 This is appropriate for:
@@ -120,7 +120,7 @@ ssc install sparkta
 
 ```stata
 sysuse auto, clear
-sparkta price, over(rep78)
+sparkta bar price, over(rep78)
 ```
 
 A chart should open in your browser. If you see `[sparkta v3.6.0]` in the Stata output, the installation is working.
@@ -141,32 +141,32 @@ against the Java runtime's folder. The last single-file release stays installabl
 ```stata
 sysuse auto, clear
 
-* The simplest call -- one variable, default bar chart
-sparkta price
+* The simplest call -- one variable
+sparkta bar price
 
 * Group by a categorical variable
-sparkta price, over(rep78)
+sparkta bar price, over(rep78)
 
 * CI bars -- t-distribution intervals matching ci means exactly
-sparkta price, type(cibar) over(rep78)
+sparkta cibar price, over(rep78)
 
 * Violin plot with animated KDE density
-sparkta price, type(violin) over(rep78)
+sparkta violin price, over(rep78)
 
 * Scatter with fit line and live CI band
-sparkta price mpg, type(scatter) fit(lfit) fitci sliders(mpg)
+sparkta scatter price mpg, fit(lfit) fitci sliders(mpg)
 
 * Unlimited live filter dropdowns -- filters data live, no server needed
-sparkta price, over(rep78) filters(foreign headroom)
+sparkta bar price, over(rep78) filters(foreign headroom)
 
 * Dual-handle range sliders -- stats panel updates live
-sparkta price, over(rep78) sliders(mpg price)
+sparkta bar price, over(rep78) sliders(mpg price)
 
 * Save to a file instead of auto-opening browser
-sparkta price, type(cibar) over(rep78) export("~/Desktop/chart.html")
+sparkta cibar price, over(rep78) export("~/Desktop/chart.html")
 
 * Fully offline -- embeds all JS, zero network requests when opened
-sparkta price, over(rep78) offline export("~/secure/chart.html")
+sparkta bar price, over(rep78) offline export("~/secure/chart.html")
 ```
 
 ---
@@ -178,14 +178,14 @@ sparkta price, over(rep78) offline export("~/secure/chart.html")
 ```stata
 sysuse auto, clear
 
-sparkta price, type(bar) over(rep78)               // grouped bar
-sparkta price, type(hbar) over(rep78)              // horizontal bar
-sparkta price, type(line) over(rep78)              // line
-sparkta price, type(area) over(rep78)              // filled area
-sparkta price mpg, type(scatter) over(foreign)     // scatter coloured by group
-sparkta price mpg weight, type(bubble)             // bubble  (y x size)
-sparkta price, type(pie)   over(foreign)           // pie
-sparkta price, type(donut) over(foreign)           // donut
+sparkta bar price, over(rep78)               // grouped bar
+sparkta hbar price, over(rep78)              // horizontal bar
+sparkta line price, over(rep78)              // line
+sparkta area price, over(rep78)              // filled area
+sparkta scatter price mpg, over(foreign)     // scatter coloured by group
+sparkta bubble price mpg weight,             // bubble  (y x size)
+sparkta pie price,   over(foreign)           // pie
+sparkta donut price, over(foreign)           // donut
 ```
 
 ### Scatter fit lines and CI bands
@@ -194,22 +194,22 @@ sparkta price, type(donut) over(foreign)           // donut
 sysuse auto, clear
 
 * 7 fit types -- computed in Stata, rendered in Chart.js
-sparkta price mpg, type(scatter) fit(lfit)         // linear OLS
-sparkta price mpg, type(scatter) fit(qfit)         // quadratic OLS
-sparkta price mpg, type(scatter) fit(lowess)       // locally weighted smoother
-sparkta price mpg, type(scatter) fit(exp)          // exponential
-sparkta price mpg, type(scatter) fit(log)          // logarithmic
-sparkta price mpg, type(scatter) fit(power)        // power
-sparkta price mpg, type(scatter) fit(ma)           // 5-point moving average
+sparkta scatter price mpg, fit(lfit)         // linear OLS
+sparkta scatter price mpg, fit(qfit)         // quadratic OLS
+sparkta scatter price mpg, fit(lowess)       // locally weighted smoother
+sparkta scatter price mpg, fit(exp)          // exponential
+sparkta scatter price mpg, fit(log)          // logarithmic
+sparkta scatter price mpg, fit(power)        // power
+sparkta scatter price mpg, fit(ma)           // 5-point moving average
 
 * Add a CI band that recomputes live when sliders change
-sparkta price mpg, type(scatter) fit(lfit) fitci
+sparkta scatter price mpg, fit(lfit) fitci
 
 * Separate fit + CI band per over() group
-sparkta price mpg, type(scatter) over(foreign) fit(lowess) fitci
+sparkta scatter price mpg, over(foreign) fit(lowess) fitci
 
 * Combine with sliders -- CI band recomputes as you drag
-sparkta price mpg, type(scatter) fit(lfit) fitci sliders(mpg)
+sparkta scatter price mpg, fit(lfit) fitci sliders(mpg)
 ```
 
 ### Statistical charts
@@ -218,31 +218,31 @@ These are unique to sparkta -- no other Stata visualization package produces the
 
 ```stata
 * CI bars -- standard error from t-distribution, matches Stata ci means
-sparkta price, type(cibar) over(rep78)
-sparkta price, type(cibar) over(rep78) cilevel(90)
-sparkta price, type(cibar) over(rep78) stat(median)
+sparkta cibar price, over(rep78)
+sparkta cibar price, over(rep78) cilevel(90)
+sparkta cibar price, over(rep78) stat(median)
 
 * CI line with shaded confidence band
-sparkta price, type(ciline) over(rep78)
+sparkta ciline price, over(rep78)
 
 * Histogram -- auto Sturges bins or user-specified, three display modes
-sparkta price, type(histogram)
-sparkta price, type(histogram) bins(20) histtype(density)
-sparkta price, type(histogram) histtype(fraction)
+sparkta histogram price,
+sparkta histogram price, bins(20) histtype(density)
+sparkta histogram price, histtype(fraction)
 ```
 
 ### Distribution charts
 
 ```stata
 * Box and whisker -- Tukey fences, outlier dots, IQR box
-sparkta price, type(boxplot) over(rep78)
-sparkta price, type(hbox)    over(rep78)           // horizontal
-sparkta price, type(boxplot) over(rep78) whiskerfence(3)  // 3x IQR fence
+sparkta boxplot price, over(rep78)
+sparkta hbox price,    over(rep78)           // horizontal
+sparkta boxplot price, over(rep78) whiskerfence(3)  // 3x IQR fence
 
 * Violin -- animated KDE density + IQR box + whiskers
-sparkta price, type(violin)  over(rep78)
-sparkta price, type(hviolin) over(rep78)           // horizontal
-sparkta price, type(violin)  over(rep78) bandwidth(1500)
+sparkta violin price,  over(rep78)
+sparkta hviolin price, over(rep78)           // horizontal
+sparkta violin price,  over(rep78) bandwidth(1500)
 ```
 
 ### Stacked charts
@@ -250,12 +250,12 @@ sparkta price, type(violin)  over(rep78) bandwidth(1500)
 ```stata
 sysuse nlsw88, clear
 
-sparkta wage, over(race) type(stackedbar)
-sparkta wage, over(race) type(stackedhbar)
-sparkta wage, over(race) type(stackedbar100)       // composition view -- bars sum to 100%
-sparkta wage, over(race) type(stackedhbar100)
-sparkta price weight length, over(rep78) type(stackedline)
-sparkta price weight length, over(rep78) type(stackedarea)
+sparkta stackedbar wage, over(race)
+sparkta stackedhbar wage, over(race)
+sparkta stackedbar100 wage, over(race)      // composition view -- bars sum to 100%
+sparkta stackedhbar100 wage, over(race)
+sparkta stackedline price weight length, over(rep78)
+sparkta stackedarea price weight length, over(rep78)
 ```
 
 ---
@@ -266,26 +266,26 @@ sparkta price weight length, over(rep78) type(stackedarea)
 sysuse auto, clear
 
 * over() -- one coloured series per group, all on one chart
-sparkta price, over(rep78)
+sparkta bar price, over(rep78)
 
 * by() -- separate panel per group value, rendered side by side
-sparkta price, over(rep78) by(foreign)
+sparkta bar price, over(rep78) by(foreign)
 
 * filters() -- unlimited interactive dropdowns, filters data live
-sparkta price, over(rep78) filters(foreign)
-sparkta price, over(rep78) filters(foreign headroom rep78)  // any number of vars
+sparkta bar price, over(rep78) filters(foreign)
+sparkta bar price, over(rep78) filters(foreign headroom rep78)  // any number of vars
 
 * sliders() -- dual-handle numeric range controls
-sparkta price, over(rep78) sliders(mpg)
-sparkta price, over(rep78) sliders(mpg price weight)       // any numeric vars
+sparkta bar price, over(rep78) sliders(mpg)
+sparkta bar price, over(rep78) sliders(mpg price weight)       // any numeric vars
 
 * Combine filters and sliders freely
-sparkta price, over(rep78) filters(foreign) sliders(mpg price)
+sparkta bar price, over(rep78) filters(foreign) sliders(mpg price)
 
 * Stats panel updates live on every filter and slider interaction
 * String variables work exactly the same way
 sysuse nlsw88, clear
-sparkta wage, over(industry) filters(occupation)
+sparkta bar wage, over(industry) filters(occupation)
 ```
 
 ---
@@ -298,32 +298,32 @@ Draw lines, bands, labelled points, and ellipses on any chart.
 sysuse auto, clear
 
 * Horizontal reference line with label and custom color
-sparkta price, over(rep78) ///
+sparkta bar price, over(rep78) ///
     yline(6000) ylinelabel("Avg list price") ylinecolor(#e74c3c)
 
 * Multiple reference lines at different thresholds
-sparkta price, over(rep78) yline(4000 6000 9000)
+sparkta bar price, over(rep78) yline(4000 6000 9000)
 
 * Shaded reference band
-sparkta price, over(rep78) ///
+sparkta bar price, over(rep78) ///
     yband(4500 7500) ybandcolor(rgba(52,152,219,0.15))
 
 * Lines and bands together
-sparkta price, over(rep78) ///
+sparkta bar price, over(rep78) ///
     yline(6000) ylinelabel("Target")          ///
     yband(4500 7500) ybandcolor(rgba(52,152,219,0.12))
 
 * Vertical line on scatter (x-axis)
-sparkta price mpg, type(scatter) ///
+sparkta scatter price mpg, ///
     xline(25) xlinelabel("Fuel threshold") xlinecolor(#e74c3c)
 
 * Annotated point -- Stata scattieri-style  y|x  syntax
-sparkta price mpg, type(scatter) ///
+sparkta scatter price mpg, ///
     apoint(12000|5) apointcolor(#e74c3c) apointsize(10) ///
     alabeltext("Outlier") alabelpos(15)
 
 * Ellipse highlight over a cluster
-sparkta price mpg, type(scatter) ///
+sparkta scatter price mpg, ///
     aellipse(10000 14000|15 25) aellipsecolor(rgba(231,76,60,0.15))
 ```
 
@@ -334,21 +334,21 @@ sparkta price mpg, type(scatter) ///
 ```stata
 sysuse auto, clear
 
-sparkta price, over(rep78) theme(dark)             // dark background
-sparkta price, over(rep78) theme(light)            // light background
-sparkta price, over(rep78) theme(cblind1)          // Okabe-Ito colorblind-safe
-sparkta price, over(rep78) theme(tab1)             // Tableau 10 palette
-sparkta price, over(rep78) theme(tab2)             // ColorBrewer Set1
-sparkta price, over(rep78) theme(viridis)          // perceptually uniform
-sparkta price, over(rep78) theme(neon)             // bright saturated, best on dark
+sparkta bar price, over(rep78) theme(dark)             // dark background
+sparkta bar price, over(rep78) theme(light)            // light background
+sparkta bar price, over(rep78) theme(cblind1)          // Okabe-Ito colorblind-safe
+sparkta bar price, over(rep78) theme(tab1)             // Tableau 10 palette
+sparkta bar price, over(rep78) theme(tab2)             // ColorBrewer Set1
+sparkta bar price, over(rep78) theme(viridis)          // perceptually uniform
+sparkta bar price, over(rep78) theme(neon)             // bright saturated, best on dark
 
 * Compound: background + palette in one option
-sparkta price, over(rep78) theme(dark_viridis)
-sparkta price, over(rep78) theme(dark_neon)
-sparkta price, over(rep78) theme(light_tab2)
+sparkta bar price, over(rep78) theme(dark_viridis)
+sparkta bar price, over(rep78) theme(dark_neon)
+sparkta bar price, over(rep78) theme(light_tab2)
 
 * Manual color list always overrides any theme
-sparkta price, over(rep78) colors(#e74c3c #3498db #2ecc71 #f39c12 #9b59b6)
+sparkta bar price, over(rep78) colors(#e74c3c #3498db #2ecc71 #f39c12 #9b59b6)
 ```
 
 ---
@@ -362,31 +362,26 @@ All size options accept a number in pt or a Stata size keyword (`small`, `medium
 sysuse auto, clear
 
 * Title and axis typography
-sparkta price, over(rep78)                         ///
-    titlesize(26) titlecolor(#2c3e50)              ///
-    xtitlesize(13) xtitlecolor(#7f8c8d)            ///
-    ylabsize(11)   ylabcolor(#95a5a6)
+sparkta bar price, over(rep78) titlesize(26) titlecolor(#2c3e50)            ///
+                   xtitlesize(13) xtitlecolor(#7f8c8d) ylabsize(11)         ///   
+                   ylabcolor(#95a5a6)
 
 * Tooltip appearance
-sparkta price, over(rep78)                         ///
-    tooltipbg(rgba(0,0,0,0.9))                     ///
-    tooltipborder(#3498db)                         ///
-    tooltipfontsize(13) tooltippadding(10)
+sparkta bar price, over(rep78) tooltipbg(rgba(0,0,0,0.9))                   ///   
+                   tooltipborder(#3498db) tooltipfontsize(13) tooltippadding(10)
 
 * Line dash patterns
-sparkta price weight, type(line) over(foreign)     ///
-    lpattern(dash) linewidth(2) nopoints
+sparkta line price weight, over(foreign) lpattern(dash) linewidth(2) nopoints
 
 * Gradient fill on area charts
-sparkta price, type(area) over(rep78) gradient
+sparkta area price, over(rep78) gradient
 
 * PNG download button embedded in the chart header
-sparkta price, type(cibar) over(rep78) download
+sparkta cibar price, over(rep78) download
 
 * Note and subtitle
-sparkta price, over(rep78)                         ///
-    subtitle("Stata auto dataset, 74 automobiles") ///
-    note("Source: Stata built-in dataset, 1978")
+sparkta bar price, over(rep78) subtitle("Stata auto dataset, 74 automobiles") ///   
+                   note("Source: Stata built-in dataset, 1978")
 ```
 
 ---
@@ -397,8 +392,8 @@ sparkta price, over(rep78)                         ///
 sysuse auto, clear
 
 * price on left y-axis, mpg on right y-axis, same chart
-sparkta price mpg, type(line) over(foreign) ///
-    y2(mpg) y2title("Fuel economy (MPG)") ytitle("Price (USD)")
+sparkta line price mpg, over(foreign) y2(mpg) y2title("Fuel economy (MPG)") ///   
+                        ytitle("Price (USD)")
 ```
 
 ---
@@ -419,7 +414,7 @@ with your Stata results window, regardless of filter or display settings.
 
 ## Post-estimation charts (new in 3.6.0)
 
-`type(coefplot)`, `type(marginsplot)` and `type(eventstudy)` take no varlist. They draw
+`coefplot`, `marginsplot` and `eventstudy` take no varlist. They draw
 the numbers Stata stored -- `e(b)`/`e(V)` after estimation, `r(table)` after `margins`,
 stored estimates via `estnames()`, any matrix via `matrix()`, or a `.dta`/frame of
 estimates via `results()` -- and never re-estimate anything. A publication table sits
@@ -429,25 +424,25 @@ Download as CSV, `.tex` or PDF), built from the same source as the chart.
 ```stata
 sysuse auto, clear
 regress price mpg weight foreign
-sparkta, type(coefplot)                                  // markers + CI, reference line at 0
-sparkta, type(coefplot) levels(90 95) cistyle(band)      // nested intervals
-sparkta, type(coefplot) show(mpg weight) coeflabels(mpg = "Miles per gallon") coefsort(abs)
+sparkta coefplot                                  // markers + CI, reference line at 0
+sparkta coefplot, levels(90 95) cistyle(band)      // nested intervals
+sparkta coefplot, show(mpg weight) coeflabels(mpg = "Miles per gallon") coefsort(abs)
 
 logit foreign mpg weight
-sparkta, type(coefplot) eform title("Odds ratios")
+sparkta coefplot, eform title("Odds ratios")
 
 estimates store m1                                       // several models side by side
 regress price mpg weight
 estimates store m2
-sparkta, type(coefplot) estnames(m1 m2) estlabels(Full~Reduced)
+sparkta coefplot, estnames(m1 m2) estlabels(Full~Reduced)
 
 regress price i.rep78##c.mpg
 margins rep78, at(mpg = (15 25 35))
-sparkta, type(marginsplot)                               // what marginsplot would draw
+sparkta marginsplot                               // what marginsplot would draw
 
 * event study: coefficient names carry the period (lead3 lag2, Tm3 Tp2, -3.rel_time, ...)
-sparkta, type(eventstudy) show(lead5 lead4 lead3 lead2 lag0 lag1 lag2 lag3 lag4 lag5)
-sparkta, type(eventstudy) matrix(r(table))               // after csdid/jwdid estat event
+sparkta eventstudy, show(lead5 lead4 lead3 lead2 lag0 lag1 lag2 lag3 lag4 lag5)
+sparkta eventstudy, matrix(r(table))               // after csdid/jwdid estat event
 ```
 
 Table options: `stars()`, `headings()`, `indicators()`, `tstat`, `nostars`, `notable`.
@@ -465,11 +460,11 @@ and writes one or more files; it needs `export()`. PDF and SVG are vector, PNG i
 
 ```stata
 sysuse auto, clear
-sparkta price, over(rep78) export(fig1.html) saveas(fig1.png fig1.pdf)
-sparkta price, type(boxplot) by(rep78) export(fig2.html) saveas(fig2.pdf)    // panels two across
+sparkta bar price, over(rep78) export(fig1.html) saveas(fig1.png fig1.pdf)
+sparkta boxplot price, by(rep78) export(fig2.html) saveas(fig2.pdf)    // panels two across
 regress price mpg weight foreign
-sparkta, type(coefplot) export(cp.html) saveas("out/coef table.pdf", table)  // the table only
-sparkta, type(coefplot) export(cp.html) saveas(cp.png, page scale(3) close)  // whole page, print density
+sparkta coefplot, export(cp.html) saveas("out/coef table.pdf", table)  // the table only
+sparkta coefplot, export(cp.html) saveas(cp.png, page scale(3) close)  // whole page, print density
 sparkta, findbrowser                                     // which browser saveas() would use
 sparkta, closebrowser                                    // quit it (it idles 120 s by default)
 ```
@@ -498,7 +493,7 @@ set obs 100000
 gen x = rnormal()
 gen y = 0.5*x + rnormal()
 gen g = ceil(runiform()*4)
-sparkta y x, type(scatter) over(g) fit(lfit) fitci export(big.html) saveas(big.png big.pdf)
+sparkta scatter y x, over(g) fit(lfit) fitci export(big.html) saveas(big.png big.pdf)
 ```
 
 ---
@@ -511,7 +506,6 @@ help sparkta
 
 | Group | Options |
 |:---|:---|
-| Chart type | `type()` |
 | Grouping | `over()` `by()` `filters()` `sliders()` |
 | Statistics | `stat()` `cilevel()` `histtype()` `bins()` |
 | Fit lines | `fit()` `fitci` |
